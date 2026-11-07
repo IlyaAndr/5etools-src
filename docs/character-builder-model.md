@@ -99,6 +99,10 @@ remain unfinished. No rules from the Valorian campaign example are inherited.
 Future PRs will add catalog normalization, validated builds at levels 1/3/5 and
 the corresponding expected sheets.
 
+The initial species catalog resolves species contributions from these drafts.
+Its six reference cases check levels 1/3/5 against primary rules; they do not
+validate complete builds. See `docs/character-builder-reference-results.md`.
+
 ## Validation
 
 Run the focused tests with:
