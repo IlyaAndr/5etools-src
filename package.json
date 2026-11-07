@@ -33,6 +33,7 @@
 		"test:json": "node test/test-json.js",
 		"test:tags": "node test/test-tags.js",
 		"test:unit": "node --localstorage-file test/temp/localstorage.tmp --experimental-vm-modules node_modules/jest/bin/jest.js",
+		"test:character-builder": "npm run test:unit -- --runInBand test/jest/character-builder",
 		"test": "npm run test:js && npm run test:unit && npm run test:css && npm run test:data",
 		"lint": "npm run lint:js && npm run lint:css && npm run lint:data",
 		"build:css": "sass --style=compressed scss/:css/ && node node/rm.js css/includes/ css/vars/",
