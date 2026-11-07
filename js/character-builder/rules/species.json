@@ -1,0 +1,112 @@
+{
+	"schemaVersion": 1,
+	"ruleset": "2024",
+	"dataset": {
+		"id": "5etools",
+		"version": "2.40.1",
+		"revision": "87471edde497ae786404282fdeabcea168752670"
+	},
+	"sources": [
+		{
+			"id": "srd-5.2.1",
+			"title": "System Reference Document 5.2.1",
+			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+		}
+	],
+	"species": [
+		{
+			"ref": {
+				"name": "Gnome",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					85
+				]
+			},
+			"lineageChoice": "lineage",
+			"commonSpells": [],
+			"savingThrowAdvantages": [
+				{
+					"ability": "int",
+					"condition": null,
+					"feature": "Gnomish Cunning"
+				},
+				{
+					"ability": "wis",
+					"condition": null,
+					"feature": "Gnomish Cunning"
+				},
+				{
+					"ability": "cha",
+					"condition": null,
+					"feature": "Gnomish Cunning"
+				}
+			],
+			"leveledSpellPolicy": {
+				"alwaysPrepared": true,
+				"canCastWithSlots": true,
+				"reset": "long"
+			},
+			"lineages": [
+				{
+					"id": "forest",
+					"additionalSpellsName": "Forest Gnome",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "rock",
+					"additionalSpellsName": "Rock Gnome",
+					"resistance": null,
+					"notes": [
+						"Create up to three Tiny clockwork devices (AC 5, HP 1) with Prestidigitation, spending 10 minutes on each. Choose one spell effect and its options at creation; the device produces only that effect. Each device lasts 8 hours. Activate it with a touch as a Bonus Action, or dismantle it with a touch as a Utilize action."
+					]
+				}
+			]
+		},
+		{
+			"ref": {
+				"name": "Tiefling",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					86
+				]
+			},
+			"lineageChoice": "legacy",
+			"commonSpells": [
+				"thaumaturgy|xphb"
+			],
+			"savingThrowAdvantages": [],
+			"leveledSpellPolicy": {
+				"alwaysPrepared": true,
+				"canCastWithSlots": true,
+				"reset": "long"
+			},
+			"lineages": [
+				{
+					"id": "abyssal",
+					"additionalSpellsName": "Abyssal",
+					"resistance": "poison",
+					"notes": []
+				},
+				{
+					"id": "chthonic",
+					"additionalSpellsName": "Chthonic",
+					"resistance": "necrotic",
+					"notes": []
+				},
+				{
+					"id": "infernal",
+					"additionalSpellsName": "Infernal",
+					"resistance": "fire",
+					"notes": []
+				}
+			]
+		}
+	]
+}

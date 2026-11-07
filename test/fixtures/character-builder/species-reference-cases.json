@@ -1,0 +1,222 @@
+{
+	"description": "Independent species-only expectations checked against primary rules; these drafts are not complete legal character builds.",
+	"sources": [
+		{
+			"title": "System Reference Document 5.2.1",
+			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+			"sections": [
+				"Proficiency Bonus",
+				"Gnome (p. 85)",
+				"Tiefling (p. 86)"
+			]
+		}
+	],
+	"cases": [
+		{
+			"id": "forest-gnome-fighter-level-1",
+			"fixture": "gnome-fighter-draft",
+			"level": 1,
+			"lineage": "forest",
+			"spellcastingAbility": "int",
+			"size": "small",
+			"expected": {
+				"proficiencyBonus": 2,
+				"size": "small",
+				"speed": 30,
+				"darkvision": 60,
+				"savingThrowAdvantages": [
+					"cha",
+					"int",
+					"wis"
+				],
+				"resistances": [],
+				"spellcastingAbility": "int",
+				"cantrips": [
+					"Minor Illusion"
+				],
+				"leveledSpells": [
+					{
+						"name": "Speak with Animals",
+						"level": 1,
+						"maxFreeUses": 2,
+						"reset": "long",
+						"alwaysPrepared": true,
+						"canCastWithSlots": true
+					}
+				],
+				"unresolvedChoiceCount": 0
+			}
+		},
+		{
+			"id": "forest-gnome-fighter-level-3",
+			"fixture": "gnome-fighter-draft",
+			"level": 3,
+			"lineage": "forest",
+			"spellcastingAbility": "int",
+			"size": "small",
+			"expected": {
+				"proficiencyBonus": 2,
+				"size": "small",
+				"speed": 30,
+				"darkvision": 60,
+				"savingThrowAdvantages": [
+					"cha",
+					"int",
+					"wis"
+				],
+				"resistances": [],
+				"spellcastingAbility": "int",
+				"cantrips": [
+					"Minor Illusion"
+				],
+				"leveledSpells": [
+					{
+						"name": "Speak with Animals",
+						"level": 1,
+						"maxFreeUses": 2,
+						"reset": "long",
+						"alwaysPrepared": true,
+						"canCastWithSlots": true
+					}
+				],
+				"unresolvedChoiceCount": 0
+			}
+		},
+		{
+			"id": "forest-gnome-fighter-level-5",
+			"fixture": "gnome-fighter-draft",
+			"level": 5,
+			"lineage": "forest",
+			"spellcastingAbility": "int",
+			"size": "small",
+			"expected": {
+				"proficiencyBonus": 3,
+				"size": "small",
+				"speed": 30,
+				"darkvision": 60,
+				"savingThrowAdvantages": [
+					"cha",
+					"int",
+					"wis"
+				],
+				"resistances": [],
+				"spellcastingAbility": "int",
+				"cantrips": [
+					"Minor Illusion"
+				],
+				"leveledSpells": [
+					{
+						"name": "Speak with Animals",
+						"level": 1,
+						"maxFreeUses": 3,
+						"reset": "long",
+						"alwaysPrepared": true,
+						"canCastWithSlots": true
+					}
+				],
+				"unresolvedChoiceCount": 0
+			}
+		},
+		{
+			"id": "infernal-tiefling-warlock-level-1",
+			"fixture": "tiefling-warlock-draft",
+			"level": 1,
+			"lineage": "infernal",
+			"spellcastingAbility": "int",
+			"size": "medium",
+			"expected": {
+				"proficiencyBonus": 2,
+				"size": "medium",
+				"speed": 30,
+				"darkvision": 60,
+				"savingThrowAdvantages": [],
+				"resistances": [
+					"fire"
+				],
+				"spellcastingAbility": "int",
+				"cantrips": [
+					"Fire Bolt",
+					"Thaumaturgy"
+				],
+				"leveledSpells": [],
+				"unresolvedChoiceCount": 0
+			}
+		},
+		{
+			"id": "infernal-tiefling-warlock-level-3",
+			"fixture": "tiefling-warlock-draft",
+			"level": 3,
+			"lineage": "infernal",
+			"spellcastingAbility": "int",
+			"size": "medium",
+			"expected": {
+				"proficiencyBonus": 2,
+				"size": "medium",
+				"speed": 30,
+				"darkvision": 60,
+				"savingThrowAdvantages": [],
+				"resistances": [
+					"fire"
+				],
+				"spellcastingAbility": "int",
+				"cantrips": [
+					"Fire Bolt",
+					"Thaumaturgy"
+				],
+				"leveledSpells": [
+					{
+						"name": "Hellish Rebuke",
+						"level": 1,
+						"maxFreeUses": 1,
+						"reset": "long",
+						"alwaysPrepared": true,
+						"canCastWithSlots": true
+					}
+				],
+				"unresolvedChoiceCount": 0
+			}
+		},
+		{
+			"id": "infernal-tiefling-warlock-level-5",
+			"fixture": "tiefling-warlock-draft",
+			"level": 5,
+			"lineage": "infernal",
+			"spellcastingAbility": "int",
+			"size": "medium",
+			"expected": {
+				"proficiencyBonus": 3,
+				"size": "medium",
+				"speed": 30,
+				"darkvision": 60,
+				"savingThrowAdvantages": [],
+				"resistances": [
+					"fire"
+				],
+				"spellcastingAbility": "int",
+				"cantrips": [
+					"Fire Bolt",
+					"Thaumaturgy"
+				],
+				"leveledSpells": [
+					{
+						"name": "Darkness",
+						"level": 2,
+						"maxFreeUses": 1,
+						"reset": "long",
+						"alwaysPrepared": true,
+						"canCastWithSlots": true
+					},
+					{
+						"name": "Hellish Rebuke",
+						"level": 1,
+						"maxFreeUses": 1,
+						"reset": "long",
+						"alwaysPrepared": true,
+						"canCastWithSlots": true
+					}
+				],
+				"unresolvedChoiceCount": 0
+			}
+		}
+	]
+}
