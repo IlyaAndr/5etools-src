@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "tiefling-warlock-draft",
-	"name": "Тифлинг-колдун — черновик",
+	"name": "Tiefling Warlock draft",
 	"status": "draft",
 	"ruleset": "2024",
 	"dataset": {
@@ -65,6 +65,6 @@
 				"spent": 0
 			}
 		],
-		"notes": "Пример сохранения отметок; предыстория, подкласс, черты, инвокации и классовые заклинания ещё не выбраны."
+		"notes": "Example of saved resource marks; background, subclass, feats, invocations, and class spells are still unselected."
 	}
 }

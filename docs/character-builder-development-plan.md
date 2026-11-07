@@ -1,197 +1,197 @@
-# План разработки character builder D&D 2024
+# D&D 2024 Character Builder Development Plan
 
-Статус: начата реализация первого PR с форматом данных. Порядок работы и ревью описан в [character-builder-workflow.md](character-builder-workflow.md). Следующие PR направляются в `character-builder` и сливаются после ревью пользователя.
+Status: implementation of the first PR, covering the document format, has started. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
 
-## Цель и первая версия
+## Goal and Initial Release
 
-Пользователь выбирает параметры персонажа и получает рассчитанный лист для онлайн-просмотра и печати в PDF. На листе есть числовые показатели, важные пометки возле них, описания способностей, заклинания и простой трекер расходуемых ресурсов.
+The user selects a character's options and receives a calculated sheet for online viewing and PDF printing. The sheet includes numerical values, relevant annotations beside them, feature descriptions, spells, and a simple tracker for expendable resources.
 
-Оформление основывается на шаблоне навыка `dnd-2024-character-sheets`: компактный основной лист A4 и отдельный справочник магии. При большом объёме сведений добавляются страницы, сохраняется читаемость. Персональные правила кампании из примера Валориана не становятся общими правилами билдера.
+The layout follows the `dnd-2024-character-sheets` skill template: a compact A4 character sheet and a separate magic reference. Additional pages accommodate larger amounts of information while preserving readability. Campaign-specific rules from the Valorian example do not become general builder rules.
 
-Предлагаемый объём первой полезной версии:
+Proposed scope of the first usable release:
 
-- D&D 2024, ограниченный проверенный набор из PHB 2024;
-- один класс, уровни 1–5;
-- Fighter / Champion и Warlock / Fiend;
-- гном и тифлинг, нужные предыстории и связанные с ними черты;
-- стандартный набор, point buy и ручной ввод характеристик;
-- локальное хранение персонажей, экспорт и импорт файла персонажа;
-- русский интерфейс и лист, английские названия рядом при необходимости;
-- онлайн-просмотр, отметки ресурсов и PDF для печати.
+- D&D 2024 with a limited, verified selection from PHB 2024;
+- a single class, levels 1–5;
+- Fighter / Champion and Warlock / Fiend;
+- Gnome and Tiefling, the required backgrounds, and their associated feats;
+- standard array, point buy, and manual ability score entry;
+- local character storage and character file import/export;
+- a Russian UI and sheet, with English names alongside translations where useful;
+- online viewing, resource marks, and a printable PDF.
 
-Гном и тифлинг нужны для первого сквозного прототипа. Поддержка остальных видов — отдельное обязательное направление разработки: после прототипа и до расширения списка классов поддержать все десять базовых видов PHB 2024 и предусмотренные ими варианты. Прогрессии видов выше 5-го уровня проверяются при расширении диапазона уровней персонажа.
+Gnome and Tiefling provide the first end-to-end prototype. Supporting the remaining species is a separate required workstream: after the prototype and before expanding the class list, support all ten PHB 2024 species and their available variants. Species progressions above level 5 are verified when the supported character level range expands.
 
-Конкретные подклассы, язык и ограничения первой версии — рабочее предложение, а не ранее подтверждённые предпочтения пользователя. Поддерживаемые варианты явно перечисляются в интерфейсе. Расширение до остальных видов, классов и уровней идёт следующими этапами.
+The specific subclasses, localization, and initial release limits are working proposals, not previously confirmed user preferences. Supported options are listed explicitly in the UI. Other species, classes, and levels follow in subsequent stages. Proposed Russian UI localization is separate from the project's English source code, comments, and documentation.
 
-## Устройство данных
+## Data Architecture
 
-Основные JSON 5etools служат каталогом контента. Преобразователь переносит нужные данные в единый формат билдера; небольшие проверенные дополнения описывают недостающие связи, ограничения и эффекты. Исходные JSON сохраняют upstream-формат. Данные Foundry могут помочь при подготовке дополнений, но работающий билдер от них не зависит.
+The main 5etools JSON files provide the content catalog. An adapter converts the required data into the builder's unified format; small, reviewed additions describe missing relationships, constraints, and effects. Source JSON files retain their upstream format. Foundry data may inform those additions, but the running builder does not depend on it.
 
-Разделяем четыре части:
+Keep four parts separate:
 
-1. **Каталог правил:** классы, виды, предыстории, черты, предметы, заклинания, особенности, выборы и прогрессии.
-2. **Решения игрока:** выбранные сущности, характеристики, последовательность повышения уровней и разрешённые замены.
-3. **Рассчитанный персонаж:** итоговые показатели, пометки, доступные действия, заклинания и максимумы ресурсов. Пересчитывается из правил и решений.
-4. **Игровое состояние:** текущие HP, потраченные применения, отметки и заметки. Сохраняется отдельно от расчётов и имеет стабильные идентификаторы.
+1. **Rules catalog:** classes, species, backgrounds, feats, items, spells, features, choices, and progressions.
+2. **Player decisions:** selected entities, ability scores, level advancement history, and permitted replacements.
+3. **Calculated character:** final values, annotations, available actions, spells, and resource maxima. Rebuilt from rules and decisions.
+4. **Session state:** current HP, spent uses, marks, and notes. Stored separately from calculations and addressed by stable identifiers.
 
-В идентификаторах учитываются сущность и источник; сохраняются редакция, версия формата и версия набора данных. Перевод названия не меняет идентификатор. При обновлении правил персонаж не должен незаметно переключаться на другой источник или редакцию.
+Identifiers account for the entity and its source; retain the rules edition, format version, and dataset version. Translating a display name does not change its identifier. Rules updates must not silently switch a character to another source or edition.
 
-Общие типы механик: владение и экспертиза, бонус, преимущество с условием, сопротивление/иммунитет, выбор из набора, зависимые выборы, получение особенности по уровню, полученное заклинание, способ его сотворения, расходуемый ресурс и восстановление. Сначала реализуются типы, нужные первым персонажам; полный универсальный язык правил заранее не разрабатывается.
+Shared mechanic types include proficiency and expertise, bonuses, conditional advantage, resistance/immunity, selection from a set, dependent choices, level-based feature grants, granted spells, casting methods, expendable resources, and recovery. Implement the types needed by the first characters first; do not design a complete universal rules language in advance.
 
-Вид — самостоятельный источник эффектов наравне с классом, подклассом, предысторией и чертой. Сведения о виде не зашиваются в обработчики конкретных классов. В D&D 2024 повышение характеристик связано с предысторией; автоматическое применение прибавок рас 2014 к видам 2024 недопустимо.
+Species is an independent source of effects alongside class, subclass, background, and feat. Species information is not embedded in individual class handlers. D&D 2024 ability score increases come from backgrounds; do not automatically apply 2014 racial increases to 2024 species.
 
-## Порядок работ
+## Development Sequence
 
-### 1. Модель и два контрольных персонажа
+### 1. Model and Two Reference Characters
 
-Определить минимальный формат четырёх частей данных, стабильные ID и правила пересчёта. Подготовить проверенные примеры гнома-воина и тифлинга-колдуна на уровнях 1, 3 и 5. В примерах фиксировать разрешённые выборы и основания расчётов.
+Define the minimal format for the four data parts, stable IDs, and recalculation rules. Prepare verified Gnome/Fighter and Tiefling/Warlock examples at levels 1, 3, and 5. Record their permitted choices and the basis for calculations.
 
-На этих примерах определить границу автоматического покрытия: какие показатели рассчитываются, какие пометки выводятся, какие способности пока представлены только описанием. Способность без реализованного эффекта не считается полностью учтённой.
+Use these examples to define the limits of automatic coverage: which values are calculated, which annotations are displayed, and which features currently appear only as descriptions. A feature without an implemented effect does not count as fully supported.
 
-**Готово, когда:** формат представляет оба примера, различает преимущество и числовой бонус, Pact Magic и бесплатное расовое применение, а также решения игрока и отметки текущей игры.
+**Done when:** the format represents both examples and distinguishes advantage from a numerical bonus, Pact Magic from a free species spell use, and player decisions from current session marks.
 
-### 2. Преобразование данных и ранний лист
+### 2. Data Conversion and an Early Sheet
 
-Подключить только нужные исходные сущности, ссылки между ними и проверенные дополнения. Сформировать оба контрольных персонажа из этих данных без полного мастера создания.
+Connect only the required source entities, their references, and reviewed additions. Build both reference characters from this data before implementing the full creation wizard.
 
-Адаптировать шаблон скилла: характеристики, спасброски, все навыки, основные боевые показатели, атаки, ресурсы, защиты, особенности и справочник заклинаний. Готовый рассчитанный персонаж становится общим источником для экранного и печатного представления.
+Adapt the skill template for ability scores, saving throws, all skills, core combat values, attacks, resources, defenses, features, and the spell reference. The calculated character becomes the shared source for screen and print presentations.
 
-Рано проверить экспорт A4 в PDF, кириллицу, длинные названия, несколько страниц и место для отметок. Использовать печать браузера; для воспроизводимых проверок PDF можно адаптировать имеющийся экспорт из скилла.
+Check A4 PDF export, Cyrillic text, long names, multiple pages, and space for marks early. Use browser printing; the skill's existing exporter can be adapted for reproducible PDF checks.
 
-**Готово, когда:** оба примера отображаются в браузере и дают читаемый PDF без обрезания; гномье преимущество стоит рядом со спасбросками, а наследие тифлинга связано с правильными заклинаниями и сопротивлением.
+**Done when:** both examples appear in the browser and produce readable PDFs without clipping; Gnome advantage is shown beside the relevant saves, and Tiefling legacy grants the correct spells and resistance together.
 
-### 3. Общие расчёты и создание воина
+### 3. Shared Calculations and Fighter Creation
 
-Реализовать расчёты характеристик, PB, владений и навыков, HP, AC, инициативы и основных атак. Затем подключить пошаговый выбор вида, предыстории, характеристик, класса, навыков, языков, снаряжения и черт.
+Implement calculations for ability scores, proficiency bonus (PB), proficiencies and skills, HP, AC, initiative, and primary attacks. Then connect step-by-step selection of species, background, ability scores, class, skills, languages, equipment, and feats.
 
-Интерфейс получает допустимые варианты и число выборов из модели. Он показывает причины недоступности, дубли владений и незавершённые решения. Условия черт и зависимые выборы проверяются, а не определяются только по названию.
+The UI obtains valid options and selection counts from the model. It explains unavailable options, duplicate proficiencies, and unfinished decisions. Feat prerequisites and dependent choices are validated rather than inferred only from names.
 
-Для Fighter поддержать Fighting Style, Weapon Mastery, подкласс Champion и особенности до 5-го уровня. Краткие правила и ресурсы появляются на листе по выбранному уровню.
+For Fighter, support Fighting Style, Weapon Mastery, the Champion subclass, and features through level 5. Concise rules and resources appear on the sheet according to the selected level.
 
-**Готово, когда:** пользователь самостоятельно создаёт гнома-воина на 1-м, 3-м и 5-м уровнях, меняет выборы и получает согласованный лист. Удалённая особенность не оставляет бонусов или пометок.
+**Done when:** the user can independently create a Gnome/Fighter at levels 1, 3, and 5, revise choices, and obtain a consistent sheet. Removing a feature leaves no stale bonuses or annotations.
 
-### 4. Магия и создание колдуна
+### 4. Magic and Warlock Creation
 
-Добавить модель магии: доступные списки, заговоры, подготовленные/полученные заклинания, магическая характеристика каждого источника, DC и атака. Обычные ячейки, Pact Magic и бесплатные применения представляются разными ресурсами.
+Add the magic model: available spell lists, cantrips, prepared/granted spells, each source's spellcasting ability, save DCs, and attack bonuses. Ordinary spell slots, Pact Magic, and free uses are separate resources.
 
-Поддержать Warlock / Fiend до 5-го уровня, нужные инвокации и их требования. У тифлинга один выбор наследия определяет сопротивление, заклинания и доступные уровни; отдельно выбирается предусмотренная характеристика магии. Уровень получения расовых заклинаний считается по общему уровню персонажа.
+Support Warlock / Fiend through level 5, the required invocations, and their prerequisites. A Tiefling's legacy selection determines its resistance, spells, and grant levels; the permitted spellcasting ability is selected separately. Species spell grants use total character level.
 
-Одно заклинание имеет одно описание и несколько возможных источников и способов сотворения. Самостоятельные бесплатные применения сохраняют отдельные ID. Информация о минимальном уровне бесплатного сотворения и использовании ячеек не теряется при объединении описаний.
+Each spell has one description and may have multiple sources and casting methods. Independent free uses retain separate IDs. Combining descriptions must preserve the minimum level of free casting and the option to spend spell slots.
 
-**Готово, когда:** тифлинг-колдун 5-го уровня имеет правильный список магии, отдельные счётчики Hellish Rebuke и Darkness и отдельный ресурс Pact Magic; заговоры не получают расходуемых отметок.
+**Done when:** a level-5 Tiefling/Warlock has the correct magic list, separate Hellish Rebuke and Darkness counters, and a separate Pact Magic resource; cantrips do not receive expendable-use marks.
 
-### 5. Простой трекер, сохранение и перенос
+### 5. Simple Tracker, Saving, and Transfer
 
-Подключить интерактивные отметки ресурсов, текущие и временные HP и нужные поля листа. Для ресурсов с заданным восстановлением добавить короткий и продолжительный отдых; особые способы частичного восстановления описывать отдельно. Изменения других полей при отдыхе делать только по явно реализованным правилам.
+Add interactive resource marks, current and temporary HP, and the required sheet fields. Provide Short Rest and Long Rest recovery for resources with explicit recovery rules; describe special partial-recovery methods separately. Rest changes other fields only according to explicitly implemented rules.
 
-Сохранять данные отдельно для каждого персонажа. Добавить список персонажей, загрузку, дублирование, экспорт и импорт JSON с версией формата. Сохранять заметки и совместимые отметки при пересчёте; изменение максимума ресурса обрабатывать явно.
+Store each character independently. Add a character list, loading, duplication, and versioned JSON import/export. Preserve notes and compatible marks during recalculation; handle changes to resource maxima explicitly.
 
-При печати предлагать чистый лист для карандаша и, отдельно, печать текущих отметок. Подпись объясняет, означает ли отметка потраченное применение.
+For printing, offer a clean sheet for pencil marks and a separate option to print current marks. A visible label explains whether a mark represents a spent use.
 
-**Готово, когда:** перезагрузка восстанавливает персонажа и отметки, персонажи не делят состояние, отдых восстанавливает нужные ресурсы, экспорт/импорт сохраняет решения и игровое состояние. Чистая печать не уничтожает сохранённые отметки.
+**Done when:** reloading restores the character and marks, characters do not share state, rests recover the appropriate resources, and import/export preserves decisions and session state. Clean printing does not erase saved marks.
 
-### 6. Повышение уровня и первая полезная версия
+### 6. Level Advancement and the First Usable Release
 
-Сделать последовательное повышение уровня с показом новых выборов, новых возможностей и разрешённых замен. Использовать историю решений, чтобы отличать допустимую замену при повышении от произвольного редактирования билда.
+Implement sequential level advancement that shows new choices, new features, and permitted replacements. Use decision history to distinguish a permitted level-up replacement from arbitrary build editing.
 
-Добавить перерасчёт после изменения вида, предыстории и других решений. При уменьшении уровня или удалении зависимости сообщать о потерявших допустимость выборах. Предлагать исправления и не сохранять скрытые эффекты удалённых способностей.
+Recalculate after changes to species, background, or other decisions. When reducing level or removing a dependency, report choices that are no longer valid. Offer corrections and remove the hidden effects of deleted features.
 
-**Готово, когда:** оба контрольных персонажа проходят путь с 1-го по 5-й уровень; результаты совпадают с проверенными примерами. Все нерешённые или недопустимые выборы видны до финального экспорта. Это первая полезная версия для реального использования.
+**Done when:** both reference characters advance from level 1 to level 5 with results matching the verified examples. Unfinished or invalid choices are visible before final export. This is the first release usable in actual play.
 
-### 7. Все виды PHB 2024 и их варианты
+### 7. All PHB 2024 Species and Their Variants
 
-Поддержать все десять видов из `data/races.json` с источником `XPHB`. Обрабатывать также связанные варианты, которые в исходных данных могут быть представлены через `_versions`, наследия и вложенные выборы. Одного появления базового вида в списке недостаточно: все его допустимые варианты должны давать согласованные эффекты.
+Support all ten species in `data/races.json` with source `XPHB`. Also handle related variants represented in the source data through `_versions`, lineages, and nested choices. Listing the base species is insufficient: all of its permitted variants must produce consistent effects.
 
-Порядок добавления после сквозного прототипа:
+Addition order after the end-to-end prototype:
 
-| Порядок | Вид | Что реализовать и проверить |
+| Order | Species | Implementation and Verification |
 | --- | --- | --- |
-| 1, в прототипе | Гном / Gnome | Преимущество на три спасброска, лесное/скальное наследие, видовая магия, выбор характеристики магии; Speak with Animals с применениями от PB у лесного гнома, памятка об устройствах скального гнома |
-| 2, в прототипе | Тифлинг / Tiefling | Три наследия; связанный выбор сопротивления и магии; отдельные бесплатные применения на уровнях 3/5 |
-| 3 | Человек / Human | Выбор размера, дополнительного навыка и Origin feat; вложенные выборы от черты; Героическое вдохновение после продолжительного отдыха |
-| 4 | Полурослик / Halfling | Условное преимущество против испуга, переброс единицы и краткие пометки об особенностях движения и скрытности |
-| 5 | Дварф / Dwarf | Прибавка максимальных HP за каждый уровень, тёмное зрение, сопротивление яду, условное преимущество и Stonecunning с числом применений от PB |
-| 6 | Орк / Orc | Раздельные ресурсы Adrenaline Rush и Relentless Endurance; разные условия восстановления; временные HP от PB |
-| 7 | Эльф / Elf | Три наследия; связанные скорость/зрение/магия; выбор навыка; преимущество против очарования и Trance; допустимая замена заговора высшего эльфа после отдыха |
-| 8 | Драконорождённый / Dragonborn | Десять вариантов происхождения; связь типа урона дыхания и сопротивления; DC от CON; урон от уровня; число применений от PB; отдельный ресурс полёта с 5-го уровня |
-| 9 | Голиаф / Goliath | Шесть вариантов происхождения; способность и её ресурс по выбору; грузоподъёмность и условные пометки; Large Form с отдельным ресурсом с 5-го уровня |
-| 10 | Аасимар / Aasimar | Сопротивления, Healing Hands с величиной от PB, Light от CHA и Celestial Revelation с 3-го уровня; варианты превращения и их общий ресурс |
+| 1, in the prototype | Gnome | Advantage on three saving throws, Forest/Rock lineage, species magic, and spellcasting ability selection; PB-based Speak with Animals uses for Forest Gnomes and a device reminder for Rock Gnomes |
+| 2, in the prototype | Tiefling | Three legacies; linked resistance and magic choices; independent free spell uses at levels 3/5 |
+| 3 | Human | Size selection, an additional skill and Origin feat; nested feat choices; Heroic Inspiration after a Long Rest |
+| 4 | Halfling | Conditional advantage against fear, rerolling a 1, and concise movement and hiding annotations |
+| 5 | Dwarf | Additional maximum HP at every level, Darkvision, Poison resistance, conditional advantage, and PB-based Stonecunning uses |
+| 6 | Orc | Independent Adrenaline Rush and Relentless Endurance resources; different recovery rules; PB-based temporary HP |
+| 7 | Elf | Three lineages; linked speed/vision/magic; skill selection; advantage against Charmed; Trance; permitted High Elf cantrip replacement after a rest |
+| 8 | Dragonborn | Ten ancestry options; linked breath damage type and resistance; CON-based DC; level-based damage; PB-based uses; a separate flight resource from level 5 |
+| 9 | Goliath | Six ancestry options; the selected ability and its resource; carrying capacity and conditional annotations; Large Form with a separate resource from level 5 |
+| 10 | Aasimar | Resistances, PB-based Healing Hands, CHA-based Light, and Celestial Revelation from level 3; transformation options and their shared resource |
 
-При добавлении следующих видов дорабатывать уже готовые общие механики. Например, магия эльфа использует тот же механизм получения заклинаний, что и магия тифлинга, а ресурсы дварфа и драконорождённого используют общую формулу максимума от PB.
+Extend existing shared mechanics as additional species are added. For example, Elf magic uses the same spell-grant mechanism as Tiefling magic, while Dwarf and Dragonborn resources use a shared PB-based maximum formula.
 
-Нормализация `_versions` включает проверку соответствия базовому виду и тексту наследия. Обнаруженные расхождения помечать для сверки по первичному источнику, а не молча выбирать одно из значений. Отдельный пункт первичного аудита: у базового Tiefling / XPHB в текущем JSON `darkvision: 60`, а у версии Abyssal Legacy указано `120`, при этом в таблице наследий это отличие не объяснено. До сверки это расхождение данных, а не установленное правило.
+Normalizing `_versions` includes checking consistency with the base species and lineage text. Flag discrepancies for verification against primary sources rather than silently choosing a value. One initial audit item: the current JSON gives the base Tiefling / XPHB `darkvision: 60`, while its Abyssal Legacy version specifies `120`, without an explanation in the legacy table. Until verified, this is a data discrepancy rather than an established rule.
 
-Различать решения, принимаемые при создании персонажа, после отдыха и при каждом использовании способности. Происхождение голиафа — решение билда; вариант Celestial Revelation аасимара и форма области дыхания драконорождённого выбираются при использовании. На листе показывать доступные варианты без ошибочного закрепления одного из них навсегда. У вариантов аасимара один ресурс превращения, а не по отдельному бесплатному применению на каждый вариант.
+Distinguish decisions made during character creation, after a rest, and each time an ability is used. Goliath ancestry is a build decision; an Aasimar's Celestial Revelation option and a Dragonborn's breath area shape are selected when used. Show the available options on the sheet without permanently locking one by mistake. Aasimar transformation options share one resource rather than each receiving an independent free use.
 
-Временные и условные эффекты описывать рядом с нужными показателями или в блоке способности. Полёт от способности не превращать в постоянную скорость полёта; преимущество только против состояния не показывать как безусловное преимущество на весь спасбросок. Для печатного листа достаточно точных пометок, значений и трекеров, автоматическое определение текущих боевых условий не требуется.
+Describe temporary and conditional effects beside the relevant values or in the feature block. Flight granted by an ability must not become a permanent Fly Speed; advantage against a particular condition must not appear as unconditional advantage on the entire saving throw. Accurate annotations, values, and trackers are sufficient for the printable sheet; automatic detection of current combat conditions is unnecessary.
 
-**Готово, когда:** все десять видов и их варианты доступны с поддерживаемыми классами на уровнях 1–5, выборы валидируются, эффекты и ресурсы правильно отображаются онлайн и в PDF. Воин получает магию от вида даже при отсутствии классовых ячеек. Смена вида или наследия удаляет только зависимые от него способности и запрашивает новые необходимые выборы.
+**Done when:** all ten species and their variants are available with supported classes at levels 1–5, choices are validated, and effects and resources appear correctly online and in PDF. A Fighter receives species magic even without class spell slots. Changing species or lineage removes only its dependent features and requests any newly required choices.
 
-### 8. Расширение классов и контента
+### 8. Expand Class and Content Coverage
 
-Добавлять классы по новым механикам, переиспользуя уже готовые обработчики:
+Add classes according to the new mechanics they introduce, reusing existing handlers:
 
-| Очерёдность | Новое покрытие |
+| Order | New Coverage |
 | --- | --- |
-| Wizard | Полный заклинатель, книга заклинаний и подготовка |
-| Cleric | Подготовка из списка класса, доменные заклинания, Channel Divinity |
-| Rogue | Экспертиза, Sneak Attack и связанные пометки |
-| Barbarian | Rage, альтернативный расчёт AC и условные бонусы |
-| Bard | Совмещение заклинаний, экспертизы и ресурсов поддержки |
-| Sorcerer | Sorcery Points и Metamagic |
-| Paladin и Ranger | Прогрессия полу-заклинателей и связанные ресурсы |
-| Monk | Focus Points, особенности атак и прогрессии |
-| Druid | Wild Shape и необходимые дополнительные формы/блоки |
+| Wizard | Full spellcasting, spellbook, and preparation |
+| Cleric | Preparation from the class list, domain spells, and Channel Divinity |
+| Rogue | Expertise, Sneak Attack, and related annotations |
+| Barbarian | Rage, alternative AC calculations, and conditional bonuses |
+| Bard | Combined spellcasting, expertise, and support resources |
+| Sorcerer | Sorcery Points and Metamagic |
+| Paladin and Ranger | Half-caster progression and associated resources |
+| Monk | Focus Points, attack features, and progressions |
+| Druid | Wild Shape and the required additional forms/stat blocks |
 
-Это порядок проверки новых семейств механик, а не обязательные полностью изолированные реализации. По мере повторного использования общих правил можно объединять работу. Добавление каждого класса включает подклассы выбранного набора источников и контрольные сборки.
+This order tests new families of mechanics; implementations need not be entirely isolated. Work may be combined as shared rules are reused. Adding a class includes subclasses from the selected source set and reference builds.
 
-Расширять предыстории и черты PHB 2024, используя уже проверенные правила их взаимодействия с видами. Отдельно проверить более сложные подклассы, например Battle Master и Eldritch Knight: выборы манёвров, ресурсы и магия подкласса не должны теряться за общим названием класса.
+Expand PHB 2024 backgrounds and feats using the already verified interaction rules for species. Separately test more complex subclasses such as Battle Master and Eldritch Knight: maneuver choices, resources, and subclass spellcasting must remain represented beyond the class name.
 
-Сначала проверенные классы поддерживаются на уровнях 1–5. После этого расширять их прогрессии и прогрессии видов до 20-го уровня, включая высокоуровневые черты, изменения ресурсов и допустимые замены. Проверить границы роста PB и видовых способностей, например урон дыхания драконорождённого на уровнях 5/11/17 и прибавку HP дварфа на каждом уровне. Полная поддержка PHB 2024 считается завершённой только после покрытия всех выбранных сущностей и уровней, а не после появления их названий в каталоге.
+Initially, verified classes support levels 1–5. Then extend class and species progressions through level 20, including higher-level feats, resource changes, and permitted replacements. Check PB increases and species progression boundaries, such as Dragonborn breath damage at levels 5/11/17 and the Dwarf HP increase at every level. Full PHB 2024 support is complete only after all selected entities and levels are covered, rather than merely listed in the catalog.
 
-### 9. Устойчивый выпуск и дальнейшие возможности
+### 9. Reliable Release and Future Features
 
-Довести удобство работы на телефоне, исправление ошибок выбора, повторную генерацию, перенос данных и миграцию сохранений. Закрепить процесс обновления 5etools: версия источника, отчёт об изменениях и проверка контрольных сборок перед обновлением данных персонажей.
+Refine mobile usability, choice correction, regeneration, data transfer, and save migration. Establish the 5etools update process: source version, change report, and reference-build checks before updating character data.
 
-Затем планировать мультикласс, дополнительные книги, домашние правила и редакцию 2014. Мультикласс требует собственных проверок требований, стартовых владений, магических прогрессий, дублирующихся способностей и ресурсов. Полноценный боевой движок, автоматическое определение условий на поле боя, аккаунты и синхронизация не входят в предложенную первую версию.
+Then plan multiclassing, additional books, house rules, and the 2014 edition. Multiclassing needs its own checks for prerequisites, starting proficiencies, spellcasting progressions, overlapping features, and resources. A full combat engine, automatic battlefield-condition detection, accounts, and synchronization are outside the proposed initial release.
 
-## Проверки на протяжении разработки
+## Checks Throughout Development
 
-Проверки добавляются вместе с механиками, а не откладываются на последний этап:
+Add checks alongside their mechanics rather than postponing them until the final stage:
 
-- одинаковые решения дают одинаковые рассчитанные показатели;
-- гномье преимущество не меняет числовой бонус и не даёт владение;
-- наследие тифлинга связывает сопротивление и заклинания; получение на уровнях 3/5 и восстановление корректны;
-- виды и их варианты проверены с обоими первыми классами; выбор класса не отключает видовую магию;
-- человек получает все положенные выборы навыков и черт, дубли и требования черт обрабатываются по правилам;
-- прибавка HP дварфа, величины от PB и уровни получения видовых способностей пересчитываются при изменении уровня;
-- условные защиты полурослика, дварфа и эльфа не превращаются в безусловные бонусы;
-- происхождение драконорождённого связывает сопротивление и дыхание, происхождение голиафа определяет нужную способность;
-- варианты Celestial Revelation используют один общий ресурс, а не самостоятельные бесплатные применения;
-- отдых восстанавливает ресурсы орка с учётом разных правил восстановления и позволяет только предусмотренные замены;
-- два бесплатных заклинания не делят одну отметку; Pact Magic и другие источники магии не смешиваются;
-- два источника одного заклинания дают одно описание, сохраняя самостоятельные способы сотворения и ресурсы;
-- ограничения характеристик, числа навыков, требований черт и инвокаций соблюдаются;
-- изменение решений удаляет устаревшие эффекты и выявляет недопустимые зависимости;
-- обновление листа сохраняет заметки и совместимое игровое состояние;
-- онлайн-лист и PDF используют одинаковые рассчитанные значения;
-- PDF проверяется по реальному превью A4, включая длинный текст и многостраничный справочник;
-- в общей конфигурации нет персональных правил кампании из примера скилла.
+- identical decisions produce identical calculated values;
+- Gnome advantage changes neither the numerical save bonus nor saving throw proficiency;
+- Tiefling legacy links resistance and spells; grants at levels 3/5 and recovery are correct;
+- species and variants are tested with both initial classes; class selection does not disable species magic;
+- Humans receive their full skill and feat choices, with duplicates and feat prerequisites handled by the rules;
+- Dwarf HP increases, PB-based values, and species feature grant levels recalculate when level changes;
+- conditional Halfling, Dwarf, and Elf defenses do not become unconditional bonuses;
+- Dragonborn ancestry links resistance and breath, while Goliath ancestry determines the appropriate ability;
+- Celestial Revelation options use one shared resource rather than independent free uses;
+- rests recover Orc resources according to their different recovery rules and permit only the allowed replacements;
+- independent free spells do not share a single mark; Pact Magic and other magic sources remain separate;
+- two sources of one spell produce one description while preserving independent casting methods and resources;
+- ability score limits, skill selection counts, feat prerequisites, and invocation prerequisites are enforced;
+- changing decisions removes obsolete effects and reveals invalid dependencies;
+- rebuilding a sheet preserves notes and compatible session state;
+- online sheets and PDFs use the same calculated values;
+- PDF checks use actual A4 previews, including long text and multi-page spell references;
+- the shared configuration contains no campaign-specific rules from the skill example.
 
-## Технические ориентиры
+## Technical Guidelines
 
-- Код билдера изолировать в отдельном модуле внутри форка, чтобы уменьшить пересечения с обновлениями 5etools.
-- Расчёты, преобразование данных и интерфейс разделить. HTML/PDF получают готовую модель листа.
-- Выбор UI-инструментов сделать после раннего сквозного примера; он должен подтвердить удобство форм, сохранения и печати.
-- Источники и причины расчётов хранить для диагностики; на игровом листе показывать полезные игроку сведения.
-- Оценивать сроки после этапа 2: он покажет реальные затраты на нормализацию, недостающие правила и печатную верстку.
+- Isolate builder code in a separate module within the fork to reduce overlap with 5etools updates.
+- Separate calculations, data conversion, and UI. HTML/PDF receive a prepared sheet model.
+- Choose UI tools after the early end-to-end example confirms support for forms, saving, and printing.
+- Retain sources and calculation rationale for diagnostics; show information useful to the player on the game sheet.
+- Estimate delivery times after stage 2 reveals the actual cost of normalization, missing rules, and print layout.
 
-## Материалы для реализации
+## Implementation References
 
-- Репозиторий исследован на коммите `87471edde497ae786404282fdeabcea168752670`.
-- Базовые данные: `data/class/`, `data/races.json`, `data/backgrounds.json`, `data/feats.json`, `data/optionalfeatures.json`, `data/spells/` и связанные справочники предметов и источников.
-- Данные преимуществ гнома: `data/races.json`, запись Gnome / XPHB; вспомогательная Foundry-разметка — `data/foundry-races.json`, Gnomish Cunning / XPHB.
-- Данные магии тифлинга: `data/races.json`, Tiefling / XPHB, `additionalSpells` и описание Fiendish Legacy.
-- Текущий генератор характеристик: `js/statgen/statgen-ui.js`.
-- Навык листов: `/home/ilya/.codex/skills/dnd-2024-character-sheets/SKILL.md`.
-- Шаблон: `assets/sheet.css`, `assets/sheet.js` и формат `references/character-data.md` внутри этого навыка.
+- Repository inspected at commit `87471edde497ae786404282fdeabcea168752670`.
+- Base data: `data/class/`, `data/races.json`, `data/backgrounds.json`, `data/feats.json`, `data/optionalfeatures.json`, `data/spells/`, and related item/source catalogs.
+- Gnome advantage: `data/races.json`, Gnome / XPHB; supplementary Foundry data: `data/foundry-races.json`, Gnomish Cunning / XPHB.
+- Tiefling magic: `data/races.json`, Tiefling / XPHB, `additionalSpells`, and the Fiendish Legacy description.
+- Existing ability score generator: `js/statgen/statgen-ui.js`.
+- Character sheet skill: `/home/ilya/.codex/skills/dnd-2024-character-sheets/SKILL.md`.
+- Template: `assets/sheet.css`, `assets/sheet.js`, and `references/character-data.md` within that skill.

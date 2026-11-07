@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "gnome-fighter-draft",
-	"name": "Гном-воин — черновик",
+	"name": "Gnome Fighter draft",
 	"status": "draft",
 	"ruleset": "2024",
 	"dataset": {
@@ -45,6 +45,6 @@
 			"temporary": 0
 		},
 		"resources": [],
-		"notes": "Нужно выбрать предысторию, характеристики, навыки и снаряжение."
+		"notes": "Choose a background, ability scores, skills, and equipment."
 	}
 }
