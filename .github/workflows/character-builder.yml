@@ -1,0 +1,27 @@
+name: Character Builder
+
+on:
+  pull_request:
+    branches: [character-builder]
+  push:
+    branches: [character-builder]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: character-builder-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx --no-install vet-eslint js/character-builder test/jest/character-builder
+      - run: npm run test:character-builder

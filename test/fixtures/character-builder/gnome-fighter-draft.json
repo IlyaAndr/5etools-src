@@ -1,0 +1,50 @@
+{
+	"schemaVersion": 1,
+	"id": "gnome-fighter-draft",
+	"name": "Гном-воин — черновик",
+	"status": "draft",
+	"ruleset": "2024",
+	"dataset": {
+		"id": "5etools",
+		"version": "2.40.1",
+		"revision": "87471edde497ae786404282fdeabcea168752670"
+	},
+	"build": {
+		"level": 1,
+		"class": {
+			"name": "Fighter",
+			"source": "XPHB"
+		},
+		"species": {
+			"name": "Gnome",
+			"source": "XPHB"
+		},
+		"background": null,
+		"abilities": {
+			"method": "standard",
+			"scores": null
+		},
+		"choices": [
+			{
+				"id": "species:gnome|xphb:lineage",
+				"selected": [
+					"forest"
+				]
+			},
+			{
+				"id": "species:gnome|xphb:spellcasting-ability",
+				"selected": [
+					"int"
+				]
+			}
+		]
+	},
+	"session": {
+		"hp": {
+			"current": null,
+			"temporary": 0
+		},
+		"resources": [],
+		"notes": "Нужно выбрать предысторию, характеристики, навыки и снаряжение."
+	}
+}
