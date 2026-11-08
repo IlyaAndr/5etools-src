@@ -1,0 +1,286 @@
+import {readFileSync} from "node:fs";
+import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
+import {parseCharacterDocument, serializeCharacterDocument} from "../../../js/character-builder/character-document.js";
+import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
+import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
+
+const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
+const rawSpells = readJson("../../../data/spells/spells-xphb.json");
+const rules = readJson("../../../js/character-builder/rules/character-sheet.json");
+const sources = {
+	races: readJson("../../../data/races.json"),
+	fighter: readJson("../../../data/class/class-fighter.json"),
+	warlock: readJson("../../../data/class/class-warlock.json"),
+	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
+	feats: readJson("../../../data/feats.json"),
+	itemMasteries: readJson("../../../data/items-base.json"),
+};
+const catalog = createSpeciesCatalog({
+	races: readJson("../../../data/races.json"),
+	spells: rawSpells,
+	rules: readJson("../../../js/character-builder/rules/species.json"),
+});
+const context = {rules, spells: rawSpells, sources};
+const example = (characterClass = "Fighter", level = 5) => createSheetExamples(catalog.dataset).find(candidate => candidate.document.build.class.name === characterClass && candidate.document.build.level === level).document;
+const project = document => createCharacterSheetModel(document, catalog, context);
+const choice = (document, suffix) => document.build.choices.find(candidate => candidate.id.endsWith(suffix));
+
+describe("Reviewed character sheet calculations", () => {
+	it.each(["Fighter", "Warlock"])("copies full canonical source entries for %s features", characterClass => {
+		const model = project(example(characterClass));
+		const race = sources.races.race.find(record => record.name === model.document.build.species.name && record.source === "XPHB");
+		const classData = sources[characterClass.toLowerCase()];
+		const dataByType = {
+			race: race.entries,
+			classFeature: classData.classFeature,
+			subclassFeature: classData.subclassFeature,
+			feat: sources.feats.feat,
+			itemMastery: sources.itemMasteries.itemMastery,
+			optionalfeature: sources.optionalFeatures.optionalfeature,
+		};
+		for (const feature of model.features) {
+			const ref = feature.sourceRef;
+			const original = dataByType[ref.type].find(record => record.name === ref.name
+				&& (ref.type === "race" || record.source === ref.source)
+				&& (ref.level === undefined || record.level === ref.level)
+				&& (!ref.subclassShortName || record.subclassShortName === ref.subclassShortName));
+			expect(original).toBeDefined();
+			expect(feature.entries).toEqual(original.entries);
+			expect(feature.entries).not.toBe(original.entries);
+			expect(feature).not.toHaveProperty("summary");
+		}
+		model.features[0].entries.push("Changed output only");
+		expect(race.entries[0].entries).not.toContain("Changed output only");
+	});
+
+	it.each([["Fighter", "Champion", "Improved Critical"], ["Warlock", "Fiend Patron", "Dark One's Blessing"]])("expands the original %s subclass references without rewriting them", (characterClass, containerName, referencedName) => {
+		const model = project(example(characterClass));
+		const container = model.features.find(feature => feature.name === containerName);
+		const classData = sources[characterClass.toLowerCase()];
+		const original = classData.subclassFeature.find(feature => feature.name === referencedName && feature.source === "XPHB");
+		const expanded = container.displayEntries.find(entry => entry.name === referencedName);
+		expect(expanded.entries).toEqual(original.entries);
+		expect(model.features.filter(feature => feature.name === referencedName)).toHaveLength(0);
+	});
+
+	it.each([["Fighter", "Gnomish Lineage", "Selected lineage", "Forest Gnome"], ["Warlock", "Fiendish Legacy", "Selected legacy", "Infernal"]])("marks the selected %s species option alongside the complete original trait", (characterClass, traitName, label, value) => {
+		const model = project(example(characterClass));
+		const feature = model.features.find(candidate => candidate.name === traitName);
+		expect(feature.selection).toEqual({label, value});
+		expect(model.speciesLineage.name).toBe(value);
+		const race = sources.races.race.find(record => record.name === model.document.build.species.name && record.source === "XPHB");
+		expect(feature.entries).toEqual(race.entries.find(entry => entry.name === traitName).entries);
+	});
+
+	it("preserves canonical invocation prerequisite metadata separately from the description", () => {
+		const model = project(example("Warlock"));
+		const feature = model.features.find(candidate => candidate.name === "Agonizing Blast");
+		const original = sources.optionalFeatures.optionalfeature.find(candidate => candidate.name === feature.name && candidate.source === "XPHB");
+		expect(feature.prerequisite).toEqual(original.prerequisite);
+		expect(feature.prerequisite).not.toBe(original.prerequisite);
+		feature.prerequisite[0].level.level = 20;
+		expect(original.prerequisite[0].level.level).toBe(2);
+	});
+
+	it("does not claim a complete sheet when original feature descriptions are missing", () => {
+		const model = createCharacterSheetModel(example(), catalog, {rules, spells: rawSpells});
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual({id: "source-descriptions", message: "Original feature descriptions are unavailable. Reload the source data."});
+	});
+
+	it("keeps class hit dice, saves, and level tables aligned with the pinned 5etools records", () => {
+		for (const id of ["fighter", "warlock"]) {
+			const raw = readJson(`../../../data/class/class-${id}.json`).class.find(record => record.source === "XPHB");
+			const reviewed = rules.classes[`${id}|xphb`];
+			expect(reviewed.hitDie).toBe(raw.hd.faces);
+			expect(reviewed.saveProficiencies).toEqual(raw.proficiency);
+			expect(reviewed.skillOptions).toEqual(raw.startingProficiencies.skills[0].choose.from.map(skill => skill.replaceAll(" ", "-")));
+			const rows = raw.classTableGroups[0].rows.slice(0, 5);
+			const expectedRows = reviewed.levels.map(level => id === "fighter" ? [String(level.secondWind), String(level.masteries)] : [level.invocations, level.cantrips, level.prepared, level.slots, level.slotLevel]);
+			expect(expectedRows).toEqual(rows);
+		}
+	});
+
+	it("keeps the reviewed backgrounds aligned with their ability options, skills, and gold", () => {
+		const backgrounds = readJson("../../../data/backgrounds.json").background;
+		for (const reviewed of Object.values(rules.backgrounds)) {
+			const raw = backgrounds.find(record => record.name === reviewed.name && record.source === "XPHB");
+			expect(reviewed.abilities).toEqual(raw.ability[0].choose.weighted.from);
+			expect(reviewed.skills).toEqual(Object.keys(raw.skillProficiencies[0]));
+			expect(reviewed.gold * 100).toBe(raw.startingEquipment[0].B[0].value);
+		}
+	});
+
+	it("recalculates imported builds instead of using an example ID or cached statistics", () => {
+		const document = example();
+		const expected = project(document);
+		const imported = parseCharacterDocument(serializeCharacterDocument(document));
+		expect(project(imported)).toEqual(expected);
+		imported.id = "another-character";
+		imported.name = "Another character";
+		const renamed = project(imported);
+		expect(renamed.hp).toEqual(expected.hp);
+		expect(renamed.attacks).toEqual(expected.attacks);
+		expect(renamed.abilities).toEqual(expected.abilities);
+	});
+
+	it("recalculates all affected statistics when a valid base ability assignment changes", () => {
+		const document = example();
+		[document.build.abilities.scores.str, document.build.abilities.scores.con] = [document.build.abilities.scores.con, document.build.abilities.scores.str];
+		const model = project(document);
+		expect(model.status).toBe("complete");
+		expect(model.abilities.find(ability => ability.id === "str").score).toBe(17);
+		expect(model.abilities.find(ability => ability.id === "con").score).toBe(17);
+		expect(model.hp.maximum).toBe(49);
+		expect(model.attacks[0].toHit).toBe(6);
+		expect(model.attacks[0].damage).toBe("1d8+3 slashing");
+	});
+
+	it("applies Constitution increases retroactively to all fixed-average hit points", () => {
+		const document = example("Warlock");
+		const before = project(document);
+		document.build.abilities.method = "manual";
+		document.build.abilities.scores.con = 15;
+		const after = project(document);
+		expect(after.status).toBe("complete");
+		expect(after.hp.maximum - before.hp.maximum).toBe(5);
+		expect(after.concentration.modifier - before.concentration.modifier).toBe(1);
+	});
+
+	it("keeps species, class, and feat casting abilities independent", () => {
+		const document = example("Warlock");
+		choice(document, "species:tiefling|xphb:spellcasting-ability").selected = ["wis"];
+		choice(document, "feat:magic-initiate-cleric|xphb:ability").selected = ["int"];
+		const model = project(document);
+		expect(model.status).toBe("complete");
+		expect(model.spellcasting.map(source => [source.label, source.ability, source.dc])).toEqual([["Species", "wis", 11], ["Warlock", "cha", 15], ["Magic Initiate", "int", 12]]);
+		expect(model.spells.find(spell => spell.ref.name === "Hellish Rebuke").sources[0]).toMatchObject({ability: "wis", dc: 11, freeLevel: 1, slotLevel: 3});
+		expect(model.spells.find(spell => spell.ref.name === "Healing Word").sources[0]).toMatchObject({ability: "int", dc: 12, freeLevel: 1, slotLevel: 3});
+		expect(model.spells.find(spell => spell.ref.name === "Healing Word").metadata.entries).toEqual(rawSpells.spell.find(spell => spell.name === "Healing Word").entries);
+	});
+
+	it("keeps conditional Concentration advantage separate from the ordinary Constitution save", () => {
+		const model = project(example("Warlock"));
+		expect(model.concentration).toEqual({modifier: 2, advantage: true});
+		expect(model.abilities.find(ability => ability.id === "con")).toMatchObject({save: 2, saveProficient: false, savingThrowAdvantages: [{condition: "to maintain Concentration", feature: "Eldritch Mind"}]});
+		expect(model.abilities.find(ability => ability.id === "wis")).toMatchObject({save: 3, saveProficient: true, savingThrowAdvantages: []});
+	});
+
+	it("preserves all class, subclass, feat, species, and invocation spell sources", () => {
+		const model = project(example("Warlock"));
+		expect(model.spells).toHaveLength(23);
+		expect(new Set(model.spells.map(spell => spell.id)).size).toBe(23);
+		expect(new Set(model.spells.flatMap(spell => spell.sources.map(source => source.kind)))).toEqual(new Set(["class", "subclass", "species", "feat", "invocation"]));
+		expect(model.spells.find(spell => spell.ref.name === "Mage Armor").sources[0]).toMatchObject({kind: "invocation", atWill: true, canCastWithSlots: false, freeLevel: 1});
+		expect(model.spells.find(spell => spell.ref.name === "Fireball").sources[0]).toMatchObject({kind: "subclass", alwaysPrepared: true, slotLevel: 3});
+	});
+
+	it.each([[1, 2], [3, 4], [5, 6]])("distinguishes selected prepared spells from automatic feature grants at level %i", (level, count) => {
+		const model = project(example("Warlock", level));
+		const selected = model.spells.flatMap(spell => spell.sources).filter(source => source.prepared);
+		expect(selected).toHaveLength(count);
+		expect(selected.every(source => source.kind === "class" && source.alwaysPrepared === false)).toBe(true);
+		expect(model.spells.find(spell => spell.ref.name === "Healing Word").sources[0]).toMatchObject({prepared: false, alwaysPrepared: true});
+		if (level >= 3) {
+			expect(model.spells.find(spell => spell.ref.name === "Hellish Rebuke").sources[0]).toMatchObject({prepared: false, alwaysPrepared: true});
+			expect(model.spells.find(spell => spell.ref.name === "Burning Hands").sources[0]).toMatchObject({prepared: false, alwaysPrepared: true});
+		}
+		expect(model.features.find(feature => feature.name === "Pact Magic").entries).toEqual(sources.warlock.classFeature.find(feature => feature.name === "Pact Magic" && feature.source === "XPHB").entries);
+	});
+
+	it("models Second Wind's partial Short Rest recovery and the distinct Pact resources", () => {
+		const fighter = project(example());
+		expect(fighter.resources.find(resource => resource.name === "Second Wind")).toMatchObject({maxUses: 3, reset: "partial-short", recovery: "Short Rest: regain 1 spent use. Long Rest: regain all uses."});
+		const warlock = project(example("Warlock"));
+		expect(warlock.resources.find(resource => resource.name === "Pact Magic")).toMatchObject({id: "class:warlock|xphb:pact-magic", maxUses: 2, slotLevel: 3, reset: "short"});
+		expect(warlock.resources.find(resource => resource.name === "Magical Cunning")).toMatchObject({maxUses: 1, reset: "long"});
+	});
+
+	it("retains session state while deriving maximum resources and hit points", () => {
+		const document = example();
+		document.session.hp = {current: 23, temporary: 4};
+		document.session.resources = [{id: "class:fighter|xphb:second-wind", spent: 2}];
+		const model = project(document);
+		expect(model.status).toBe("complete");
+		expect(model.hp).toEqual({maximum: 49, current: 23, temporary: 4});
+		expect(model.resources.find(resource => resource.name === "Second Wind").spent).toBe(2);
+	});
+
+	it("does not mutate the document, catalog, raw spells, or reviewed rules", () => {
+		const document = example("Warlock");
+		const before = JSON.stringify({document, catalog, context});
+		const model = project(document);
+		model.document.name = "Changed output";
+		model.spells[0].metadata.entries[0] = "Changed output metadata";
+		model.species.resistances.push("cold");
+		expect(JSON.stringify({document, catalog, context})).toBe(before);
+	});
+
+	it.each([
+		["missing base scores", document => { document.build.abilities.scores = null; }, "ability-scores"],
+		["invalid standard array", document => { document.build.abilities.scores.str = 16; }, "ability-scores"],
+		["manual score outside the supported cap", document => { document.build.abilities.method = "manual"; document.build.abilities.scores.int = 30; }, "ability-scores"],
+		["missing equipment", document => { choice(document, ":equipment").selected = []; }, ":equipment"],
+		["missing class skill", document => { choice(document, ":skills").selected.pop(); }, ":skills"],
+		["unavailable subclass", document => { choice(document, ":subclass").selected = ["eldritch-knight|xphb"]; }, ":subclass"],
+		["unknown decision", document => { document.build.choices.push({id: "class:fighter|xphb:unknown", selected: ["yes"]}); }, ":unknown"],
+		["background ability outside its options", document => { choice(document, ":ability-increases").selected = ["cha-2.con-1"]; }, ":ability-increases"],
+		["overfull current HP", document => { document.session.hp.current = 999; }, "current-hit-points"],
+		["overfull spent resources", document => { document.session.resources.push({id: "class:fighter|xphb:second-wind", spent: 4}); }, ":second-wind"],
+		["unknown session resource", document => { document.session.resources.push({id: "unknown", spent: 1}); }, "unknown"],
+	])("returns an explicit incomplete result for %s", (label, change, expectedId) => {
+		const document = example();
+		change(document);
+		const model = project(document);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues.some(issue => issue.id.endsWith(expectedId))).toBe(true);
+	});
+
+	it("rejects an otherwise valid higher-level spell at a lower Pact slot level", () => {
+		const document = example("Warlock", 1);
+		choice(document, ":prepared-spells").selected[0] = "spell:counterspell|xphb";
+		const model = project(document);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues.find(issue => issue.id === "spell:counterspell|xphb").message).toContain("slot level");
+	});
+
+	it("does not grant an invocation's effect without its required selected cantrip", () => {
+		const document = example("Warlock");
+		choice(document, ":cantrips").selected = ["spell:eldritch-blast|xphb", "spell:mind-sliver|xphb", "spell:mage-hand|xphb"];
+		choice(document, ":agonizing-blast-cantrip").selected = ["spell:mage-hand|xphb"];
+		expect(project(document).status).toBe("incomplete");
+	});
+
+	it("requires new level decisions rather than silently choosing spells at intermediate levels", () => {
+		const document = example("Warlock", 3);
+		document.build.level = 2;
+		document.build.choices = document.build.choices.filter(candidate => !candidate.id.endsWith(":subclass"));
+		choice(document, ":prepared-spells").selected = ["spell:armor-of-agathys|xphb", "spell:hex|xphb", "spell:charm-person|xphb"];
+		const secondLevel = project(document);
+		expect(secondLevel.status).toBe("complete");
+		expect(secondLevel.resources.find(resource => resource.name === "Pact Magic")).toMatchObject({maxUses: 2, slotLevel: 1});
+		expect(secondLevel.spells.some(spell => spell.ref.name === "Mirror Image")).toBe(false);
+		document.build.level = 4;
+		expect(project(document).status).toBe("incomplete");
+	});
+
+	it("distinguishes missing source metadata from a completed spell reference", () => {
+		const model = createCharacterSheetModel(example("Warlock"), catalog, {rules, spells: [], sources});
+		expect(model.status).toBe("incomplete");
+		expect(model.issues.some(issue => issue.id === "spell:eldritch-blast|xphb")).toBe(true);
+	});
+
+	it("keeps unsupported classes and incomplete imports compact, without invented statistics", () => {
+		const document = example();
+		document.build.class = {name: "Wizard", source: "XPHB"};
+		const model = project(document);
+		expect(model.status).toBe("incomplete");
+		expect(model.abilities).toEqual([]);
+		expect(model.attacks).toEqual([]);
+		expect(model).not.toHaveProperty("hp");
+	});
+
+	it("refuses reviewed rules from a different pinned dataset", () => {
+		expect(() => createCharacterSheetModel(example(), catalog, {rules: {...rules, dataset: {...rules.dataset, revision: "0".repeat(40)}}, spells: rawSpells})).toThrow("sheetRules.dataset");
+	});
+});

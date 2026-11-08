@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the local draft preview in an installed browser and export review PDFs."""
+"""Check complete reference sheets, compact drafts, and A4 review PDFs."""
 
 import argparse
 from contextlib import contextmanager
@@ -49,7 +49,7 @@ def export_pdf(page, target, expected_pages=None):
         width: page.getBoundingClientRect().width,
         overflow: page.scrollWidth > page.clientWidth + 1
     }))''')
-    assert bounds and all(abs(item['width'] - 793.7) < 2 for item in bounds), bounds
+    assert bounds and all(abs(item['width'] - 725.7) < 2 for item in bounds), bounds
     assert not any(item['overflow'] for item in bounds), bounds
     page.pdf(path=str(target), prefer_css_page_size=True, print_background=True)
     info = subprocess.check_output(['pdfinfo', str(target)], text=True)
@@ -87,6 +87,7 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     errors = []
+    layout_errors = []
     results = []
     with preview_server() as url, sync_playwright() as playwright:
         browser = playwright.chromium.launch(
@@ -107,16 +108,49 @@ def main():
             for option in options:
                 page.select_option('#example-select', option['value'])
                 page.wait_for_selector('.cb-spell-reference')
-                sheet_text = page.locator('.cb-character-sheet').inner_text()
-                assert 'Draft' in sheet_text or 'draft' in sheet_text
+                sheet = page.locator('.cb-character-sheet')
+                assert sheet.get_attribute('data-sheet-status') == 'complete'
+                assert sheet.locator('.cb-abilities tbody tr').count() == 6
+                assert sheet.locator('.cb-skill').count() == 18
+                assert sheet.locator('.cb-attack-panel').count() == 1
+                assert sheet.locator('.cb-resource').count() >= 3
+                assert 'Class statistics are pending' not in sheet.inner_text()
                 assert '{@' not in page.locator('#sheet-preview').inner_text()
                 check_width(page)
+                page.emulate_media(media='print')
+                height = sheet.bounding_box()['height']
+                if height > 1055:
+                    sheet.screenshot(path=str(output / f'{option["value"]}-overflow.png'))
+                    bounds = sheet.evaluate('''element => [...element.children].map(child => ({
+                        className:child.className,
+                        height:child.getBoundingClientRect().height,
+                        text:child.textContent.slice(0,80)
+                    }))''')
+                    layout_errors.append({'example': option['value'], 'height': height, 'bounds': bounds})
+                page.emulate_media(media='screen')
                 pdf = output / f'{option["value"]}.pdf'
-                pages = export_pdf(page, pdf, expected_pages=2)
-                results.append({'example': option['value'], 'pages': pages})
+                pages = export_pdf(page, pdf)
+                assert pages >= 3, f'{option["value"]}: missing reference pages ({pages})'
+                names = page.locator('.cb-spell h3').all_text_contents()
+                pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(pdf), '-'], text=True))
+                assert all(name in pdf_text for name in names), 'A spell is missing from the printed reference.'
+                features = page.locator('.cb-feature-reference h3').all_text_contents()
+                assert all(name in pdf_text for name in features), 'A feature is missing from the printed reference.'
+                assert 'Complete source descriptions' in pdf_text
+                paragraphs = page.locator('.cb-feature-reference .cb-spell-body p, .cb-spell .cb-spell-body p, .cb-spell-body th, .cb-spell-body td').all_text_contents()
+                for paragraph in paragraphs:
+                    original = re.sub(r'\s+', ' ', paragraph).strip()
+                    if original:
+                        assert original in pdf_text, f'Missing description text in {option["value"]}: {original[:100]}'
+                if 'tiefling' in option['value'] and not option['value'].endswith('-1'):
+                    assert 'The creature that damaged you is momentarily surrounded by green flames.' in pdf_text
+                    assert 'The damage increases by 1d10 for each spell slot level above 1.' in pdf_text
+                results.append({'example': option['value'], 'pages': pages, 'spells': len(names)})
                 if '5' in option['value']:
                     page.locator('.cb-character-sheet').screenshot(path=str(output / f'{option["value"]}-sheet.png'))
                     page.locator('.cb-spell-reference').screenshot(path=str(output / f'{option["value"]}-spells.png'))
+                    if shutil.which('pdftoppm'):
+                        subprocess.run(['pdftoppm', '-scale-to', '1400', '-png', str(pdf), str(output / f'{option["value"]}-print')], check=True)
                 page.set_viewport_size({'width': 390, 'height': 844})
                 check_width(page)
                 if '5' in option['value']:
@@ -132,8 +166,11 @@ def main():
             assert page.locator('#sheet-preview').inner_html() == before
             assert page.locator('#example-select').input_value() == selected
 
-            document = json.loads((ROOT / 'test/fixtures/character-builder/tiefling-warlock-draft.json').read_text())
-            document['build']['choices'].append({'id': 'species:tiefling|xphb:size', 'selected': ['medium']})
+            document = page.evaluate('''async () => {
+                const {createSheetExamples} = await import('/js/character-builder/sheet-examples.js');
+                const rules = await (await fetch('/js/character-builder/rules/species.json')).json();
+                return createSheetExamples(rules.dataset).find(example => example.id === 'infernal-tiefling-warlock-level-5').document;
+            }''')
 
             # A disabled placeholder must not invalidate an in-flight file read.
             page.evaluate('''() => {
@@ -189,8 +226,10 @@ def main():
             upload(page, pending)
             page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Pending species choices'")
             assert page.locator('.cb-unresolved').count() > 0
-            assert page.locator('.cb-spell').count() == 1
-            assert 'Thaumaturgy' in page.locator('.cb-spell').inner_text()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            assert page.locator('.cb-draft-summary').count() == 1
+            assert page.locator('.cb-abilities').count() == 0
+            assert page.locator('.cb-spell').count() == 0
 
             document['name'] = ('A very long character name for print layout ' * 4).strip()
             document['session']['notes'] = 'START OF LONG NOTE\n' + ('A long note must wrap and remain readable on paper. ' * 170) + '\nEND OF LONG NOTE'
@@ -214,6 +253,7 @@ def main():
         finally:
             browser.close()
     (output / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+    assert not layout_errors, f'Main sheets exceed A4: {json.dumps(layout_errors)}'
     print(f'Browser, import, mobile, and PDF checks passed. Artifacts: {output}')
 
 

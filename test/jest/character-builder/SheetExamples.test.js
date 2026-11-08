@@ -12,7 +12,7 @@ const catalog = createSpeciesCatalog({
 });
 
 describe("Browser preview examples", () => {
-	it("creates six valid drafts with complete species choices at levels 1, 3, and 5", () => {
+	it("creates six complete reference decisions at levels 1, 3, and 5 without saving derived statistics", () => {
 		const examples = createSheetExamples(catalog.dataset);
 		expect(examples).toHaveLength(6);
 		expect(new Set(examples.map(example => example.id)).size).toBe(6);
@@ -20,7 +20,10 @@ describe("Browser preview examples", () => {
 		for (const example of examples) {
 			expect(validateCharacterDocument(example.document)).toBe(true);
 			expect(projectSpecies(example.document, catalog).unresolvedChoices).toEqual([]);
-			expect(example.document.build.abilities.scores).toBe(null);
+			expect(example.document.build.abilities.scores).not.toBe(null);
+			expect(example.document.build.background).not.toBe(null);
+			expect(example.document.build.choices.some(choice => choice.id.endsWith(":equipment"))).toBe(true);
+			expect(example.document.build).not.toHaveProperty("hp");
 			expect(example.document.session.resources).toEqual([]);
 		}
 	});

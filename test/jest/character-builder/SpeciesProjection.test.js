@@ -130,11 +130,10 @@ describe("Species-only sheet contributions", () => {
 		expect(JSON.stringify(catalog)).toBe(catalogBefore);
 	});
 
-	it("keeps Rock Gnome devices as a reminder rather than a spell-use resource", () => {
+	it("does not add an invented spell-use resource or abbreviated reminder for Rock Gnome devices", () => {
 		const projection = projectSpecies(character("Gnome", "rock"), catalog);
 		expect(projection.resources).toEqual([]);
-		expect(projection.notes[0]).toContain("three Tiny clockwork devices");
-		expect(projection.notes[0]).toContain("8 hours");
+		expect(projection.notes).toEqual([]);
 	});
 
 	it.each(["id", "version", "revision"])("rejects a mismatched pinned dataset %s", field => {

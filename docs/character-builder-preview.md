@@ -1,8 +1,8 @@
 # Online draft sheet and PDF preview
 
-`characterbuilder.html` is the first browser view of the reviewed species data.
-It displays the six Forest Gnome/Fighter and Infernal Tiefling/Warlock examples
-at levels 1, 3, and 5, and accepts existing v1 draft character JSON files.
+`characterbuilder.html` displays six calculated Forest Gnome/Fighter and
+Infernal Tiefling/Warlock reference builds at levels 1, 3, and 5. It also
+accepts existing v1 draft character JSON files.
 
 ## Run locally
 
@@ -19,21 +19,24 @@ the page does not load test fixtures or require Foundry or application globals.
 
 Choose an example or open a saved character file, then select **Print / Save PDF**.
 Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
-examples produce a main sheet and a separate spell reference. Long imported notes
-may add pages; they remain plain text and are not clipped to fit one page.
+examples produce a main sheet and separate references. Full descriptions and
+long imported notes may add pages; they are not clipped to fit one page.
 
 ## Current scope
 
 The sheet follows the compact A4 layout from the character-sheet skill: ability
-and skill rows, save annotations, constant values, a combat strip, resources,
-vitals, and a separate magic reference. Species values and Gnomish Cunning
-annotations are populated from the reviewed catalog. All 18 skills are shown.
-Known current and temporary HP are displayed from the imported session.
+and skill rows, save annotations, combat values, resources, vitals, and separate
+references. The model calculates ability scores, saving throws, skills, maximum
+HP, AC, attacks, spellcasting values, and supported features from the selected
+build. Gnomish Cunning is annotated alongside the relevant saving throws.
+All 18 skills are shown. Known current and temporary HP are displayed from the
+imported session.
 
-Final ability scores, save bonuses, maximum HP, AC, class features, and class
-spells remain pending. Base scores are labeled separately; the renderer does
-not treat them as final scores or infer class spell attacks and DCs from them.
-Unfinished species choices remain visible without arbitrary defaults.
+This is a limited prototype for the represented class, subclass, species,
+background, equipment, feat, and invocation choices; it is not a general
+character creation interface. An imported build with missing or unsupported
+choices produces an incomplete draft summary instead of a calculated complete
+sheet. No choice is filled in with an arbitrary default.
 
 These examples intentionally choose **Intelligence for species magic**. The
 Warlock class uses **Charisma** for its own magic. The 2024 species choice is
@@ -46,16 +49,18 @@ using resources, rests, and browser persistence belong to the later tracker PR.
 
 ## Import behavior and safety
 
-Import uses the existing document validator and reviewed species projector.
-Unsupported versions, source pins, species, or choices produce an actionable
-error and keep the previous successful preview. A new example selection cancels
-an older pending file read. The imported-character placeholder cannot leave the
-page stuck in a loading state.
+Import uses the existing document validator, reviewed species projector, and
+limited character-sheet model. Invalid documents and unsupported source pins
+produce an actionable error and keep the previous successful preview. Builds
+requiring unsupported or unfinished choices show a draft summary. A new example
+selection cancels an older pending file read. The imported-character placeholder
+cannot leave the page stuck in a loading state.
 
-Names, notes, and source descriptions are escaped. 5etools tags become readable
-text, with reaction triggers, ritual metadata, concentration, components, and
-higher-slot descriptions retained. Numeric class calculations are not added by
-the text formatter. Inputs are not mutated.
+Names, notes, and source descriptions are escaped. Full ability and spell
+descriptions must retain the original 5etools content, with tags rendered as
+readable text and higher-slot descriptions included. Structured mechanics and
+numeric class calculations are displayed separately; text is not rewritten or
+shortened. Inputs are not mutated.
 
 ## Validation and review artifacts
 

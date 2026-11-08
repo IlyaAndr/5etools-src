@@ -1,0 +1,399 @@
+{
+	"schemaVersion": 1,
+	"ruleset": "2024",
+	"dataset": {
+		"id": "5etools",
+		"version": "2.40.1",
+		"revision": "87471edde497ae786404282fdeabcea168752670"
+	},
+	"sources": [
+		{
+			"id": "srd-5.2.1",
+			"title": "System Reference Document 5.2.1",
+			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+		}
+	],
+	"coverage": "Single-class Fighter (Champion) and Warlock (Fiend), levels 1–5; explicitly selected reference equipment, feats, invocations, and spells. Fixed-average hit points. Other decisions remain incomplete.",
+	"standardLanguages": {
+		"common": "Common",
+		"common-sign-language": "Common Sign Language",
+		"draconic": "Draconic",
+		"dwarvish": "Dwarvish",
+		"elvish": "Elvish",
+		"giant": "Giant",
+		"gnomish": "Gnomish",
+		"goblin": "Goblin",
+		"halfling": "Halfling",
+		"orc": "Orc"
+	},
+	"backgrounds": {
+		"soldier|xphb": {
+			"name": "Soldier",
+			"abilities": [
+				"str",
+				"dex",
+				"con"
+			],
+			"skills": [
+				"athletics",
+				"intimidation"
+			],
+			"toolOptions": {
+				"dice-set|xphb": "Dice Set"
+			},
+			"feat": "Savage Attacker",
+			"gold": 50,
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					83
+				]
+			}
+		},
+		"acolyte|xphb": {
+			"name": "Acolyte",
+			"abilities": [
+				"int",
+				"wis",
+				"cha"
+			],
+			"skills": [
+				"insight",
+				"religion"
+			],
+			"tool": "Calligrapher's Supplies",
+			"feat": "Magic Initiate (Cleric)",
+			"gold": 50,
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					83
+				]
+			}
+		}
+	},
+	"classes": {
+		"fighter|xphb": {
+			"name": "Fighter",
+			"hitDie": 10,
+			"saveProficiencies": [
+				"str",
+				"con"
+			],
+			"skillOptions": [
+				"acrobatics",
+				"animal-handling",
+				"athletics",
+				"history",
+				"insight",
+				"intimidation",
+				"persuasion",
+				"perception",
+				"survival"
+			],
+			"training": [
+				"Simple and Martial weapons",
+				"Light, Medium, and Heavy armor; Shields"
+			],
+			"gold": 155,
+			"subclass": {
+				"id": "champion|xphb",
+				"name": "Champion"
+			},
+			"levels": [
+				{
+					"secondWind": 2,
+					"masteries": 3,
+					"attacks": 1
+				},
+				{
+					"secondWind": 2,
+					"masteries": 3,
+					"attacks": 1
+				},
+				{
+					"secondWind": 2,
+					"masteries": 3,
+					"attacks": 1
+				},
+				{
+					"secondWind": 3,
+					"masteries": 4,
+					"attacks": 1
+				},
+				{
+					"secondWind": 3,
+					"masteries": 4,
+					"attacks": 2
+				}
+			],
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					47,
+					48,
+					49
+				]
+			}
+		},
+		"warlock|xphb": {
+			"name": "Warlock",
+			"hitDie": 8,
+			"saveProficiencies": [
+				"wis",
+				"cha"
+			],
+			"skillOptions": [
+				"arcana",
+				"deception",
+				"history",
+				"intimidation",
+				"investigation",
+				"nature",
+				"religion"
+			],
+			"training": [
+				"Simple weapons",
+				"Light armor"
+			],
+			"gold": 100,
+			"subclass": {
+				"id": "fiend|xphb",
+				"name": "Fiend"
+			},
+			"levels": [
+				{
+					"invocations": 1,
+					"cantrips": 2,
+					"prepared": 2,
+					"slots": 1,
+					"slotLevel": 1
+				},
+				{
+					"invocations": 3,
+					"cantrips": 2,
+					"prepared": 3,
+					"slots": 2,
+					"slotLevel": 1
+				},
+				{
+					"invocations": 3,
+					"cantrips": 2,
+					"prepared": 4,
+					"slots": 2,
+					"slotLevel": 2
+				},
+				{
+					"invocations": 3,
+					"cantrips": 3,
+					"prepared": 5,
+					"slots": 2,
+					"slotLevel": 2
+				},
+				{
+					"invocations": 5,
+					"cantrips": 3,
+					"prepared": 6,
+					"slots": 2,
+					"slotLevel": 3
+				}
+			],
+			"cantripOptions": [
+				"spell:eldritch-blast|xphb",
+				"spell:mind-sliver|xphb",
+				"spell:mage-hand|xphb"
+			],
+			"preparedOptions": [
+				"spell:armor-of-agathys|xphb",
+				"spell:hex|xphb",
+				"spell:charm-person|xphb",
+				"spell:mirror-image|xphb",
+				"spell:misty-step|xphb",
+				"spell:invisibility|xphb",
+				"spell:counterspell|xphb",
+				"spell:hunger-of-hadar|xphb"
+			],
+			"subclassSpells": [
+				{
+					"minimumLevel": 3,
+					"spells": [
+						"spell:burning-hands|xphb",
+						"spell:command|xphb",
+						"spell:scorching-ray|xphb",
+						"spell:suggestion|xphb"
+					]
+				},
+				{
+					"minimumLevel": 5,
+					"spells": [
+						"spell:fireball|xphb",
+						"spell:stinking-cloud|xphb"
+					]
+				}
+			],
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					70,
+					71,
+					72,
+					73,
+					74,
+					76
+				]
+			}
+		}
+	},
+	"invocations": {
+		"eldritch-mind|xphb": {
+			"name": "Eldritch Mind",
+			"minimumLevel": 1
+		},
+		"armor-of-shadows|xphb": {
+			"name": "Armor of Shadows",
+			"minimumLevel": 1
+		},
+		"agonizing-blast|xphb": {
+			"name": "Agonizing Blast",
+			"minimumLevel": 2,
+			"cantripChoice": "agonizing-blast-cantrip",
+			"cantripOptions": [
+				"spell:eldritch-blast|xphb"
+			]
+		},
+		"devils-sight|xphb": {
+			"name": "Devil's Sight",
+			"minimumLevel": 2
+		},
+		"repelling-blast|xphb": {
+			"name": "Repelling Blast",
+			"minimumLevel": 2,
+			"cantripChoice": "repelling-blast-cantrip",
+			"cantripOptions": [
+				"spell:eldritch-blast|xphb"
+			]
+		}
+	},
+	"weapons": {
+		"longsword|xphb": {
+			"name": "Longsword",
+			"damage": "1d8",
+			"type": "slashing",
+			"range": "5 ft",
+			"mastery": "Sap"
+		},
+		"javelin|xphb": {
+			"name": "Javelin",
+			"damage": "1d6",
+			"type": "piercing",
+			"range": "5 ft / thrown 30/120 ft",
+			"mastery": "Slow"
+		},
+		"handaxe|xphb": {
+			"name": "Handaxe",
+			"damage": "1d6",
+			"type": "slashing",
+			"range": "5 ft / thrown 20/60 ft",
+			"mastery": "Vex"
+		},
+		"flail|xphb": {
+			"name": "Flail",
+			"damage": "1d8",
+			"type": "bludgeoning",
+			"range": "5 ft",
+			"mastery": "Sap"
+		},
+		"dagger|xphb": {
+			"name": "Dagger",
+			"damage": "1d4",
+			"type": "piercing",
+			"range": "5 ft / thrown 20/60 ft",
+			"finesse": true,
+			"mastery": "Nick"
+		}
+	},
+	"equipment": {
+		"soldier-sword-and-shield": {
+			"classId": "fighter|xphb",
+			"backgroundId": "soldier|xphb",
+			"cost": 158.1,
+			"armor": {
+				"name": "Chain Mail",
+				"base": 16,
+				"dexterity": false,
+				"shield": 2,
+				"strength": 13,
+				"stealthDisadvantage": true
+			},
+			"weapons": [
+				"longsword|xphb",
+				"javelin|xphb",
+				"handaxe|xphb",
+				"flail|xphb"
+			],
+			"gear": [
+				"Chain Mail (75 GP)",
+				"Shield (10 GP)",
+				"Longsword (15 GP)",
+				"8 Javelins (4 GP)",
+				"Handaxe (5 GP)",
+				"Flail (10 GP)",
+				"Dungeoneer's Pack (12 GP)",
+				"Dice Set (1 SP)",
+				"Traveler's Clothes (2 GP)",
+				"Component Pouch (25 GP)"
+			],
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					91,
+					92,
+					93,
+					94,
+					95,
+					96,
+					97,
+					99
+				]
+			}
+		},
+		"acolyte-pact-mage": {
+			"classId": "warlock|xphb",
+			"backgroundId": "acolyte|xphb",
+			"cost": 140,
+			"armor": {
+				"name": "Leather Armor",
+				"base": 11,
+				"dexterity": true,
+				"shield": 0
+			},
+			"weapons": [
+				"dagger|xphb"
+			],
+			"gear": [
+				"Leather Armor (10 GP; carried when using Mage Armor)",
+				"2 Daggers (4 GP)",
+				"Arcane Focus: Orb (20 GP)",
+				"Book: Occult Lore (25 GP)",
+				"Scholar's Pack (40 GP)",
+				"Calligrapher's Supplies (10 GP)",
+				"Holy Symbol: Amulet (5 GP)",
+				"Robe (1 GP)",
+				"Component Pouch (25 GP)"
+			],
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					91,
+					92,
+					93,
+					94,
+					95,
+					96,
+					97,
+					99
+				]
+			}
+		}
+	}
+}

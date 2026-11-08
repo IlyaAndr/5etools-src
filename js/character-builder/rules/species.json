@@ -60,9 +60,7 @@
 					"id": "rock",
 					"additionalSpellsName": "Rock Gnome",
 					"resistance": null,
-					"notes": [
-						"Create up to three Tiny clockwork devices (AC 5, HP 1) with Prestidigitation, spending 10 minutes on each. Choose one spell effect and its options at creation; the device produces only that effect. Each device lasts 8 hours. Activate it with a touch as a Bonus Action, or dismantle it with a touch as a Utilize action."
-					]
+					"notes": []
 				}
 			]
 		},

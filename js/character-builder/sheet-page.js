@@ -1,6 +1,7 @@
 import {parseCharacterDocument} from "./character-document.js";
 import {createSpeciesCatalog} from "./species-catalog.js";
-import {renderSpeciesSheet} from "./sheet-renderer.js";
+import {renderCharacterSheet} from "./sheet-renderer.js";
+import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createSheetExamples} from "./sheet-examples.js";
 
 const exampleSelect = document.getElementById("example-select");
@@ -12,6 +13,7 @@ const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
 
 let catalog;
+let sheetContext;
 let examples = [];
 let selectedExample = "";
 let hasPreview = false;
@@ -28,15 +30,18 @@ function showError (message) {
 }
 
 function showDocument (character, exampleId = "") {
-	const html = renderSpeciesSheet(character, catalog);
+	const model = createCharacterSheetModel(character, catalog, sheetContext);
+	const html = renderCharacterSheet(model, catalog);
 	preview.innerHTML = html;
 	document.title = `${character.name} — Character Builder`;
 	selectedExample = exampleId;
 	exampleSelect.value = exampleId;
 	hasPreview = true;
 	printButton.disabled = false;
+	printButton.textContent = model.status === "complete" ? "Print / Save PDF" : "Print draft summary";
 	preview.setAttribute("aria-busy", "false");
 	clearError();
+	return model.status;
 }
 
 async function fetchJson (path) {
@@ -55,13 +60,20 @@ async function loadData () {
 	status.textContent = "Loading character data…";
 	clearError();
 	try {
-		const [races, spells, rules] = await Promise.all([
+		const [races, spells, speciesRules, characterSheetRules, fighter, warlock, optionalFeatures, feats, itemMasteries] = await Promise.all([
 			fetchJson("../../data/races.json"),
 			fetchJson("../../data/spells/spells-xphb.json"),
 			fetchJson("./rules/species.json"),
+			fetchJson("./rules/character-sheet.json"),
+			fetchJson("../../data/class/class-fighter.json"),
+			fetchJson("../../data/class/class-warlock.json"),
+			fetchJson("../../data/optionalfeatures.json"),
+			fetchJson("../../data/feats.json"),
+			fetchJson("../../data/items-base.json"),
 		]);
 		if (currentRequest !== requestId) return;
-		catalog = createSpeciesCatalog({races, spells, rules});
+		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
+		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries}};
 		examples = createSheetExamples(catalog.dataset);
 		const importedOption = new Option("Imported character", "");
 		importedOption.disabled = true;
@@ -70,7 +82,7 @@ async function loadData () {
 		showDocument(examples[0].document, examples[0].id);
 		exampleSelect.disabled = false;
 		importInput.disabled = false;
-		status.textContent = "Example ready. You can choose another example or open a saved character.";
+		status.textContent = "Reference character ready. Choose another example or open a saved character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
 		preview.setAttribute("aria-busy", "false");
@@ -88,8 +100,8 @@ exampleSelect.addEventListener("change", () => {
 	}
 	++requestId;
 	try {
-		showDocument(example.document, example.id);
-		status.textContent = `${example.label} is ready to preview and print.`;
+		const result = showDocument(example.document, example.id);
+		status.textContent = result === "complete" ? `${example.label} is ready to preview and print.` : "This draft needs the choices listed below before a full sheet can be calculated.";
 	} catch (error) {
 		exampleSelect.value = selectedExample;
 		printButton.disabled = !hasPreview;
@@ -110,8 +122,8 @@ importInput.addEventListener("change", async () => {
 		const text = await file.text();
 		if (currentRequest !== requestId) return;
 		const character = parseCharacterDocument(text);
-		showDocument(character);
-		status.textContent = `Opened ${file.name}. The draft preview is ready to print.`;
+		const result = showDocument(character);
+		status.textContent = result === "complete" ? `Opened ${file.name}. The character sheet is ready to print.` : `Opened ${file.name}. Complete the listed choices to calculate a full character sheet.`;
 	} catch (error) {
 		if (currentRequest !== requestId) return;
 		status.textContent = hasPreview ? "Your previous preview is unchanged." : "No character is ready to print.";

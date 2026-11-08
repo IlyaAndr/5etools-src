@@ -12,11 +12,17 @@ Create each new feature branch from the updated `character-builder` after the pr
 
 Use English for source code, identifiers, comments, error messages, tests, example fixtures, project documentation, commit messages, and PR titles and descriptions. Keep translated UI and sheet text in dedicated localization resources. Player-entered names and notes may use any language.
 
+Preserve full original ability and spell descriptions from 5etools. Do not
+shorten or paraphrase them. Source markup can be rendered as readable text or
+HTML, and mechanics can be extracted as separate structured data for choices,
+calculations, and trackers. Add print pages when necessary to keep the original
+descriptions readable.
+
 ## Development cycle
 
 1. Choose a small, complete outcome from the development plan and define the PR's scope.
 2. Delegate implementation to a subagent working on the feature branch.
-3. The main agent reviews the changes, runs appropriate checks, and resolves findings. Use a separate agent for an independent review when useful.
+3. The main agent reviews the changes, runs appropriate checks, and resolves findings. Use a separate Sol agent for an independent review when useful.
 4. Publish a PR targeting `character-builder`, describing the result, limitations, and validation. GitHub Actions runs the module checks.
 5. Share the PR with the user for review. Feedback may be left on GitHub or in chat; the main agent addresses it in the same PR.
 6. Merge only after explicit user approval. Keep auto-merge disabled. Do not update `main` as part of this cycle.
