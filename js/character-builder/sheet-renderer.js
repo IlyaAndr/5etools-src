@@ -137,7 +137,7 @@ function checks (count, label) {
 
 function abilityTable (model) {
 	const rows = model.abilities.map(ability => {
-		const advantage = ability.savingThrowAdvantages.map(note => `<span class="cb-save-advantage${note.condition ? " cb-save-conditional" : ""}" title="${escape(note.feature)}">Advantage${note.condition ? `: ${escape(note.condition)}` : ""}</span>`).join("");
+		const advantage = ability.savingThrowAdvantages.map(note => `<span class="cb-save-advantage${note.condition ? " cb-save-conditional" : ""}" title="${escape(note.feature)}" aria-label="Advantage${note.condition ? `: ${escape(note.condition)}` : ""}">Adv.${note.condition ? `: ${escape(note.condition)}` : ""}</span>`).join("");
 		const save = ability.saveProficient ? `<strong>${signed(ability.save)}</strong>` : signed(ability.save);
 		const skills = ability.skills.map(skill => `<span class="cb-skill${skill.proficient ? " cb-trained" : ""}" data-skill="${escape(skill.id)}">${escape(skill.name)} ${signed(skill.modifier)}${skill.advantage ? " <small>(advantage)</small>" : ""}${skill.disadvantage ? " <small>(disadvantage)</small>" : ""}</span>`).join(" · ");
 		return `<tr data-ability="${escape(ability.id)}"><th scope="row" title="${escape(ability.name)}">${escape(ability.id.toUpperCase())}</th><td class="cb-number">${ability.score}</td><td class="cb-number">${signed(ability.modifier)}</td><td class="cb-save">${save}${advantage}</td><td class="cb-skills">${skills}</td></tr>`;

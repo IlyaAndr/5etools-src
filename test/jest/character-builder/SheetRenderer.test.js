@@ -62,7 +62,7 @@ describe("Calculated character sheet renderer", () => {
 		expect(abilityRow(html, "str")).toContain("cb-trained\" data-skill=\"athletics\">Athletics +7 <small>(advantage)</small>");
 		expect(abilityRow(html, "dex")).toContain("Stealth +1 <small>(disadvantage)</small>");
 		for (const id of ["int", "wis", "cha"]) {
-			expect(abilityRow(html, id)).toContain("class=\"cb-save-advantage\" title=\"Gnomish Cunning\">Advantage");
+			expect(abilityRow(html, id)).toContain("class=\"cb-save-advantage\" title=\"Gnomish Cunning\" aria-label=\"Advantage\">Adv.");
 		}
 		for (const id of ["str", "dex", "con"]) expect(abilityRow(html, id)).not.toContain("class=\"cb-save-advantage\"");
 		expect(html).toContain("Passive Perception <strong>13</strong>");
