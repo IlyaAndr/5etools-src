@@ -1,6 +1,6 @@
 # D&D 2024 Character Builder Development Plan
 
-Status: PR #1, covering the draft save format, is merged. PR #2 introduces the species catalog, reviewed rule annotations, and species-only reference results. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
+Status: PRs #1 and #2 are merged, covering the draft save format and reviewed species catalog. PR #3 adds the early online sheet and PDF preview described in [character-builder-preview.md](character-builder-preview.md). The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
 
 The first six reference cases cover species contributions for the two draft characters at levels 1/3/5. Full-build legality, class calculations, and complete character sheets remain later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations.
 
