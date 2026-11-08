@@ -45,6 +45,9 @@ def check_width(page):
 def export_pdf(page, target, expected_pages=None):
     page.emulate_media(media='print')
     assert not page.locator('#print-sheet').is_visible(), 'Print controls appear on paper.'
+    assert not page.locator('#navigation').is_visible(), 'Site navigation appears on paper.'
+    assert page.locator('.cb-page-head').first.is_visible(), 'Character sheet headings are hidden on paper.'
+    assert page.locator('.cb-spell-head').first.is_visible(), 'Spell headings are hidden on paper.'
     bounds = page.locator('.cb-page').evaluate_all('''pages => pages.map(page => ({
         width: page.getBoundingClientRect().width,
         overflow: page.scrollWidth > page.clientWidth + 1
@@ -98,6 +101,26 @@ def main():
         try:
             page = browser.new_page(viewport={'width': 1100, 'height': 1300})
             page.on('pageerror', lambda error: errors.append(str(error)))
+            # The shared Player menu opens the builder and links back on mobile.
+            page.goto(url.replace('characterbuilder.html', 'statgen.html'), wait_until='domcontentloaded')
+            builder_link = page.locator('#navbar li[data-page="characterbuilder.html"]')
+            builder_link.wait_for(state='attached')
+            assert builder_link.evaluate("element => element.previousElementSibling.dataset.page") == 'statgen.html'
+            player = page.locator('#navbar > li.dropdown').filter(has=page.locator('li[data-page="characterbuilder.html"]'))
+            assert player.locator(':scope > a').inner_text().strip() == 'Player'
+            player.locator(':scope > a').click()
+            builder_link.locator('a').click()
+            page.wait_for_url('**/characterbuilder.html')
+            page.wait_for_selector('.cb-character-sheet')
+            assert 've-active' in page.locator('#navbar li[data-page="characterbuilder.html"]').get_attribute('class')
+            assert 've-active' in page.locator('#navbar > li.dropdown').filter(has=page.locator('li[data-page="characterbuilder.html"]')).get_attribute('class')
+            page.set_viewport_size({'width': 390, 'height': 844})
+            page.locator('#navigation button.page__btn-toggle-nav').click()
+            player = page.locator('#navbar > li.dropdown').filter(has=page.locator('li[data-page="statgen.html"]'))
+            player.locator(':scope > a').click()
+            page.locator('#navbar li[data-page="statgen.html"] a').click()
+            page.wait_for_url('**/statgen.html')
+            page.set_viewport_size({'width': 1100, 'height': 1300})
             page.goto(url, wait_until='networkidle')
             page.wait_for_selector('.cb-character-sheet')
             assert page.locator('#print-sheet').is_enabled()

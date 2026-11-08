@@ -12,7 +12,9 @@ From the repository root:
 npm run serve:dev
 ```
 
-Open `http://localhost:5050/characterbuilder.html`. The page uses native ES modules
+Open **Player → Character Builder** in the 5etools navigation, immediately below
+**Stat Generator**, or open `http://localhost:5050/characterbuilder.html` directly.
+The page uses native ES modules
 and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
@@ -78,7 +80,8 @@ Chrome/Chromium, plus `pdfinfo` and `pdftotext`. It starts a temporary server on
 `scratch/character-builder-preview/`. It does not install browsers or packages.
 Use `--browser /path/to/chrome` or `--output /path/to/artifacts` when needed.
 
-The check covers all six examples, 390-pixel mobile layouts, A4 dimensions and
+The check covers desktop and mobile navigation, all six examples, 390-pixel
+mobile layouts, A4 dimensions and
 page counts, invalid imports, delayed file-read races, pending choices, escaped
 HTML input, print-button behavior, and the full text of long notes in the PDF.
 Desktop/mobile screenshots and PDF samples support visual review. Browser QA

@@ -361,6 +361,24 @@ class _PageGeneratorSearch extends PageGeneratorGeneric {
 	];
 }
 
+class _PageGeneratorCharacterbuilder extends PageGeneratorGeneric {
+	_filename = "page/template-page-characterbuilder.hbs";
+	_page = "characterbuilder.html";
+
+	_pageTitle = "Character Builder";
+	_pageDescription = "Review D&D 2024 character sheets with calculated statistics, attacks, resources, and a printable spell reference.";
+	_navbarDescription = "Review and print character sheets.";
+
+	_isFontAwesome = true;
+	_stylesheets = [
+		"character-builder",
+	];
+
+	_scriptsModules = [
+		"character-builder/sheet-page.js",
+	];
+}
+
 class _PageGeneratorStatgen extends PageGeneratorGeneric {
 	_filename = "page/template-page-statgen.hbs";
 	_page = "statgen.html";
@@ -411,4 +429,5 @@ export const PAGE_GENERATORS = 	[
 	new _PageGeneratorRenderdemo(),
 	new _PageGeneratorSearch(),
 	new _PageGeneratorStatgen(),
+	new _PageGeneratorCharacterbuilder(),
 ];

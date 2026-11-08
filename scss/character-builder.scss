@@ -736,7 +736,9 @@
 		background: #fff;
 		print-color-adjust: exact;
 	}
-	.cb-toolbar {
+	.cb-toolbar,
+	.cb-site-header,
+	.cb-spell-reference .cb-page-footer {
 		display: none;
 	}
 	.cb-preview {
@@ -794,5 +796,14 @@
 	.cb-notes {
 		orphans: 3;
 		widows: 3;
+	}
+}
+
+@layer vetools {
+	@media print {
+		.cb-app header.cb-page-head,
+		.cb-app header.cb-spell-head {
+			display: flex !important;
+		}
 	}
 }
