@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<!--5ETOOLS_CMP-->
+	<!--5ETOOLS_ANALYTICS-->
+	<!--5ETOOLS_ADCODE-->
+	<meta charset="utf-8">
+	<meta name="description" content="Review D&amp;D 2024 character sheets with calculated statistics, attacks, resources, and a printable spell reference.">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<meta name="mobile-web-app-capable" content="yes">
+
+	<title>Character Builder - 5etools</title>
+
+	<link rel="stylesheet" href="css/bootstrap.css">
+	<link rel="stylesheet" href="css/fontawesome.css">
+	<link rel="stylesheet" href="css/main.css">
+	<link rel="stylesheet" href="css/character-builder.css">
+
+	<!-- Favicons -->
+	<link rel="icon" type="image/svg+xml" href="favicon.svg">
+	<link rel="icon" type="image/png" sizes="256x256" href="favicon-256x256.png">
+	<link rel="icon" type="image/png" sizes="144x144" href="favicon-144x144.png">
+	<link rel="icon" type="image/png" sizes="128x128" href="favicon-128x128.png">
+	<link rel="icon" type="image/png" sizes="64x64" href="favicon-64x64.png">
+	<link rel="icon" type="image/png" sizes="48x48" href="favicon-48x48.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+
+	<!-- Chrome Web App Icons -->
+	<link rel="manifest" href="manifest.webmanifest">
+	<meta name="application-name" content="5etools">
+	<meta name="theme-color" content="#006bc4">
+
+	<!-- Windows Start Menu tiles -->
+	<meta name="msapplication-config" content="browserconfig.xml"/>
+	<meta name="msapplication-TileColor" content="#006bc4">
+
+	<!-- Apple Touch Icons -->
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180x180.png">
+	<link rel="apple-touch-icon" sizes="360x360" href="apple-touch-icon-360x360.png">
+	<link rel="apple-touch-icon" sizes="167x167" href="apple-touch-icon-167x167.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152x152.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120x120.png">
+	<meta name="apple-mobile-web-app-title" content="5etools">
+
+	<!-- macOS Safari Pinned Tab and Touch Bar -->
+	<link rel="mask-icon" href="safari-pinned-tab.svg" color="#006bc4">
+
+	<!-- OpenSearch -->
+	<link rel="search" href="open-search.xml" title="Search 5etools" type="application/opensearchdescription+xml">
+
+	<script type="text/javascript" src="sw-injector.js"></script>
+
+	<script blocking="render" type="module" src="js/styleswitch.js"></script>
+	<script type="text/javascript" src="js/navigation.js"></script>
+	<script type="module" src="js/browsercheck.js"></script>
+</head>
+
+<body>
+	<div class="cb-site-header ve-print__hidden">
+		<div class="ve-flex-col" data-cancer-id="cancer-header">
+			<header class="ve-mobile-sm__hidden page__header">
+				<div class="container ve-flex-v-baseline">
+					<h1 class="page__title ve-no-wrap ve-my-0" id="page__title">Character Builder</h1>
+					<p class="page__subtitle ve-no-wrap ve-my-0" id="page__subtitle">Review and print character sheets.</p>
+				</div>
+			</header>
+
+			<nav class="container page__nav" id="navigation">
+				<ul class="nav nav-pills page__nav-inner" id="navbar"></ul>
+			</nav>
+		</div>
+	</div>
+	<div class="cb-app">
+	<header class="cb-toolbar">
+		<p class="cb-toolbar__eyebrow">D&amp;D 2024 · Character Builder</p>
+		<h1 class="cb-toolbar__title">Your character, on paper.</h1>
+		<p class="cb-toolbar__intro">Review a reference character's statistics, attacks, and resources, then print its sheet and spell reference.</p>
+		<div class="cb-controls">
+			<div class="cb-control">
+				<label for="example-select">Example character</label>
+				<select id="example-select" disabled>
+					<option value="">Choose an example</option>
+				</select>
+			</div>
+			<div class="cb-control">
+				<label for="character-import">Open character JSON</label>
+				<input id="character-import" type="file" accept=".json,application/json" disabled>
+			</div>
+			<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
+		</div>
+		<p id="status" class="cb-status" role="status" aria-live="polite">Loading character data…</p>
+		<p id="error-message" class="cb-error" role="alert" hidden></p>
+		<button id="retry-load" class="cb-button" type="button" hidden>Try again</button>
+		<p class="cb-print-hint">Print on A4 at 100% scale, with browser headers and footers turned off. Resource boxes are left empty for pencil marks.</p>
+		<noscript><p class="cb-error">JavaScript is required to load and preview a character.</p></noscript>
+	</header>
+	<main id="sheet-preview" class="cb-preview" aria-label="Character sheet preview" aria-busy="true"></main>
+	</div>
+
+<script type="text/javascript" defer src="js/parser.js"></script>
+<script type="text/javascript" defer src="js/utils.js"></script>
+<script type="text/javascript" defer src="js/utils-ui.js"></script>
+<script type="text/javascript" defer src="lib/localforage.js"></script>
+<script type="module" defer src="js/omnidexer.js"></script>
+<script type="module" src="js/omnisearch.js"></script>
+<script type="module" src="js/filter.js"></script>
+<script type="module" src="js/utils-dataloader.js"></script>
+<script type="module" src="js/utils-font.js"></script>
+<script type="module" src="js/utils-brew.js"></script>
+<script type="module" src="js/utils-config.js"></script>
+<script type="text/javascript" defer src="js/render.js"></script>
+<script type="text/javascript" defer src="js/render-dice.js"></script>
+<script type="module" src="js/shim-esmodules.js"></script>
+<script type="text/javascript" defer src="js/hist.js"></script>
+<script type="module" src="js/character-builder/sheet-page.js"></script>
+<script type="module" defer src="js/list2.js"></script>
+<script type="text/javascript" defer src="lib/elasticlunr.js"></script>
+
+</body>
+</html>

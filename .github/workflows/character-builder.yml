@@ -25,3 +25,6 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npx --no-install vet-eslint js/character-builder test/jest/character-builder
       - run: npm run test:character-builder
+      - run: npx --no-install stylelint scss/character-builder.scss
+      - run: npm run build:character-builder-css
+      - run: git diff --exit-code -- css/character-builder.css

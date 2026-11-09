@@ -40,8 +40,8 @@ The supplemental JSON adds the relationships and effects that the builder needs:
 - Thaumaturgy belongs to Otherworldly Presence independently of legacy. It is
   extracted from the repeated source spell groups and granted once, even while
   legacy selection is pending.
-- Rock Gnome clockwork devices receive a concise reminder, including the limit
-  of three and duration of 8 hours, without automated timers or spent-use marks.
+- Rock Gnome clockwork devices do not create automated timers or spent-use
+  marks. Their rules are available in the original species description.
 
 Spell lists, levels, counts, and references remain sourced from `additionalSpells`
 and the spell catalog. Unsupported reference/progression shapes, missing or
@@ -58,7 +58,7 @@ verified base value of 60 feet here; the upstream source files remain unchanged.
 
 A projection has `coverage: "species-only"`. It contains size, speed in feet,
 Darkvision in feet, creature types, saving throw annotations, resistance types,
-species spells, independent resource definitions, reminder text, and unresolved
+species spells, independent resource definitions, and unresolved
 species choices. It is a contribution to a future character sheet rather than a
 complete legal build or a calculated class sheet.
 
@@ -99,7 +99,9 @@ Species annotations reference the **System Reference Document 5.2.1**, pages
 [the official SRD URL](https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf).
 The SRD is licensed under
 [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/legalcode).
-Rules are represented as structured data and concise summaries.
+Mechanics are represented as structured data. When presenting ability or spell
+descriptions, preserve the full original 5etools text; do not substitute
+concise summaries.
 
 Tests read the actual local 5etools source JSON and cover all five lineages,
 levels 1/3/5, missing and invalid choices, source/edition isolation, spell

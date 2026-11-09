@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+{{> "head" }}
+
+<body>
+	<div class="cb-site-header ve-print__hidden">
+		{{> "navbar" }}
+	</div>
+	<div class="cb-app">
+	<header class="cb-toolbar">
+		<p class="cb-toolbar__eyebrow">D&amp;D 2024 · Character Builder</p>
+		<h1 class="cb-toolbar__title">Your character, on paper.</h1>
+		<p class="cb-toolbar__intro">Review a reference character's statistics, attacks, and resources, then print its sheet and spell reference.</p>
+		<div class="cb-controls">
+			<div class="cb-control">
+				<label for="example-select">Example character</label>
+				<select id="example-select" disabled>
+					<option value="">Choose an example</option>
+				</select>
+			</div>
+			<div class="cb-control">
+				<label for="character-import">Open character JSON</label>
+				<input id="character-import" type="file" accept=".json,application/json" disabled>
+			</div>
+			<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
+		</div>
+		<p id="status" class="cb-status" role="status" aria-live="polite">Loading character data…</p>
+		<p id="error-message" class="cb-error" role="alert" hidden></p>
+		<button id="retry-load" class="cb-button" type="button" hidden>Try again</button>
+		<p class="cb-print-hint">Print on A4 at 100% scale, with browser headers and footers turned off. Resource boxes are left empty for pencil marks.</p>
+		<noscript><p class="cb-error">JavaScript is required to load and preview a character.</p></noscript>
+	</header>
+	<main id="sheet-preview" class="cb-preview" aria-label="Character sheet preview" aria-busy="true"></main>
+	</div>
+
+{{> "scripts" }}
+
+</body>
+</html>

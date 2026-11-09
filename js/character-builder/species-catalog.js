@@ -66,7 +66,7 @@ function spellMetadata (raw, key) {
 	}
 	if (raw.scalingLevelDice !== undefined) object(raw.scalingLevelDice, `spell ${key}.scalingLevelDice`);
 	return copy(Object.fromEntries([
-		"school", "time", "range", "components", "duration", "entries", "meta",
+		"school", "page", "time", "range", "components", "duration", "entries", "meta",
 		"savingThrow", "spellAttack", "entriesHigherLevel", "scalingLevelDice", "damageInflict",
 	].filter(field => raw[field] !== undefined).map(field => [field, raw[field]])));
 }

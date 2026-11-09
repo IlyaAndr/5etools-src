@@ -1,8 +1,8 @@
 # D&D 2024 Character Builder Development Plan
 
-Status: PR #1, covering the draft save format, is merged. PR #2 introduces the species catalog, reviewed rule annotations, and species-only reference results. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
+Status: PRs #1 and #2 are merged, covering the draft save format and reviewed species catalog. PR #3 adds the early online sheet and PDF preview described in [character-builder-preview.md](character-builder-preview.md). The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
 
-The first six reference cases cover species contributions for the two draft characters at levels 1/3/5. Full-build legality, class calculations, and complete character sheets remain later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations.
+The first six reference cases cover two selected Fighter and Warlock builds at levels 1/3/5. The current prototype calculates their sheets from saved decisions; a general character creation interface and broader build coverage remain later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations.
 
 ## Goal and Initial Release
 
@@ -28,6 +28,12 @@ The specific subclasses, localization, and initial release limits are working pr
 ## Data Architecture
 
 The main 5etools JSON files provide the content catalog. An adapter converts the required data into the builder's unified format; small, reviewed additions describe missing relationships, constraints, and effects. Source JSON files retain their upstream format. Foundry data may inform those additions, but the running builder does not depend on it.
+
+Full ability and spell descriptions come from their original 5etools records and
+are not shortened or paraphrased. Render source tags as readable markup while
+preserving the original content. Extract the structured mechanics needed by the
+builder separately, with source references, and add pages when the full text
+does not fit on the main sheet.
 
 Keep four parts separate:
 
@@ -68,7 +74,7 @@ Implement calculations for ability scores, proficiency bonus (PB), proficiencies
 
 The UI obtains valid options and selection counts from the model. It explains unavailable options, duplicate proficiencies, and unfinished decisions. Feat prerequisites and dependent choices are validated rather than inferred only from names.
 
-For Fighter, support Fighting Style, Weapon Mastery, the Champion subclass, and features through level 5. Concise rules and resources appear on the sheet according to the selected level.
+For Fighter, support Fighting Style, Weapon Mastery, the Champion subclass, and features through level 5. Their full original descriptions and applicable resources appear according to the selected level.
 
 **Done when:** the user can independently create a Gnome/Fighter at levels 1, 3, and 5, revise choices, and obtain a consistent sheet. Removing a feature leaves no stale bonuses or annotations.
 
@@ -77,6 +83,8 @@ For Fighter, support Fighting Style, Weapon Mastery, the Champion subclass, and 
 Add the magic model: available spell lists, cantrips, prepared/granted spells, each source's spellcasting ability, save DCs, and attack bonuses. Ordinary spell slots, Pact Magic, and free uses are separate resources.
 
 Support Warlock / Fiend through level 5, the required invocations, and their prerequisites. A Tiefling's legacy selection determines its resistance, spells, and grant levels; the permitted spellcasting ability is selected separately. Species spell grants use total character level.
+
+For new characters, use one shared spellcasting ability whenever all sources permit it. Show separate ability, attack, and DC values when no common ability is permitted. Preserve explicit choices in imported characters and show any actual differences accurately; do not silently rewrite them.
 
 Each spell has one description and may have multiple sources and casting methods. Independent free uses retain separate IDs. Combining descriptions must preserve the minimum level of free casting and the option to spend spell slots.
 
@@ -111,7 +119,7 @@ Addition order after the end-to-end prototype:
 | 1, in the prototype | Gnome | Advantage on three saving throws, Forest/Rock lineage, species magic, and spellcasting ability selection; PB-based Speak with Animals uses for Forest Gnomes and a device reminder for Rock Gnomes |
 | 2, in the prototype | Tiefling | Three legacies; linked resistance and magic choices; independent free spell uses at levels 3/5 |
 | 3 | Human | Size selection, an additional skill and Origin feat; nested feat choices; Heroic Inspiration after a Long Rest |
-| 4 | Halfling | Conditional advantage against fear, rerolling a 1, and concise movement and hiding annotations |
+| 4 | Halfling | Conditional advantage against fear, rerolling a 1, and movement and hiding annotations |
 | 5 | Dwarf | Additional maximum HP at every level, Darkvision, Poison resistance, conditional advantage, and PB-based Stonecunning uses |
 | 6 | Orc | Independent Adrenaline Rush and Relentless Endurance resources; different recovery rules; PB-based temporary HP |
 | 7 | Elf | Three lineages; linked speed/vision/magic; skill selection; advantage against Charmed; Trance; permitted High Elf cantrip replacement after a rest |
@@ -173,6 +181,7 @@ Add checks alongside their mechanics rather than postponing them until the final
 - rests recover Orc resources according to their different recovery rules and permit only the allowed replacements;
 - independent free spells do not share a single mark; Pact Magic and other magic sources remain separate;
 - two sources of one spell produce one description while preserving independent casting methods and resources;
+- ability and spell descriptions retain all original source text, including higher-level effects and conditions, in the online sheet and PDF;
 - ability score limits, skill selection counts, feat prerequisites, and invocation prerequisites are enforced;
 - changing decisions removes obsolete effects and reveals invalid dependencies;
 - rebuilding a sheet preserves notes and compatible session state;

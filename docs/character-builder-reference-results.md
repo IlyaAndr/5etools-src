@@ -15,7 +15,7 @@ Expected values are recorded independently in `test/fixtures/character-builder/s
 
 Both species have Speed 30 feet and Darkvision 60 feet. The Gnome is Small; the reference Tiefling selects Medium. Gnomish Cunning contributes unconditional advantage on Intelligence, Wisdom, and Charisma saves. Infernal legacy contributes Fire resistance.
 
-All six cases select Intelligence for species magic. The Warlock's class spellcasting ability does not replace that choice. No numeric species spell DC or spell attack is calculated from the document's base ability scores: final scores will be supplied by later character calculations.
+All six cases deliberately select Intelligence for species magic. Under the 2024 rules, Gnome and Tiefling species magic allows a separate choice of Intelligence, Wisdom, or Charisma. The Warlock's class magic uses Charisma. The Infernal Tiefling/Warlock reference therefore tests two different magic sources on one character: Intelligence for the species spells, and Charisma for the future class spellcasting implementation. This is an intentional independence test rather than a build recommendation. No numeric species spell DC or spell attack is calculated from the document's base ability scores: final scores will be supplied by later character calculations.
 
 Leveled spells granted by these species are always prepared and also permit casting with suitable spell slots. Free casting uses the spell's normal level: Hellish Rebuke is level 1 in the 2024 species. Cantrips do not receive expendable-use resources. Speak with Animals retains its ritual metadata so that the future sheet can display ritual casting as an additional method.
 
