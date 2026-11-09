@@ -190,10 +190,15 @@ describe("Reviewed character sheet calculations", () => {
 
 	it("models Second Wind's partial Short Rest recovery and the distinct Pact resources", () => {
 		const fighter = project(example());
-		expect(fighter.resources.find(resource => resource.name === "Second Wind")).toMatchObject({maxUses: 3, reset: "partial-short", recovery: "Short Rest: regain 1 spent use. Long Rest: regain all uses."});
+		expect(fighter.resources.find(resource => resource.name === "Second Wind")).toMatchObject({maxUses: 3, recovery: {short: 1, long: "all"}, activation: "bonus", healing: {dice: "1d10", modifier: 5}});
 		const warlock = project(example("Warlock"));
-		expect(warlock.resources.find(resource => resource.name === "Pact Magic")).toMatchObject({id: "class:warlock|xphb:pact-magic", maxUses: 2, slotLevel: 3, reset: "short"});
-		expect(warlock.resources.find(resource => resource.name === "Magical Cunning")).toMatchObject({maxUses: 1, reset: "long"});
+		expect(warlock.resources.find(resource => resource.name === "Pact Magic")).toMatchObject({id: "class:warlock|xphb:pact-magic", maxUses: 2, slotLevel: 3, recovery: {short: "all", long: "all"}});
+		expect(warlock.resources.find(resource => resource.name === "Magical Cunning")).toMatchObject({maxUses: 1, recovery: {long: "all"}});
+		expect(warlock.resources.find(resource => resource.name === "Healing Word")).toMatchObject({freeLevel: 1, spellcastingAbility: "cha", healing: {dice: "2d4", modifier: 4}});
+		for (const resource of [...fighter.resources, ...warlock.resources]) {
+			expect(resource).not.toHaveProperty("detail");
+			expect(typeof resource.recovery).toBe("object");
+		}
 	});
 
 	it("retains session state while deriving maximum resources and hit points", () => {

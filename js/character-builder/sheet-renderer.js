@@ -1,6 +1,7 @@
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 
 const SOURCE_NAMES = {class: "Class", subclass: "Subclass", feat: "Feat", species: "Species", invocation: "Invocation"};
+const SPELL_SCHOOLS = {A: "Abjuration", C: "Conjuration", D: "Divination", E: "Enchantment", V: "Evocation", I: "Illusion", N: "Necromancy", T: "Transmutation"};
 
 function escape (value) {
 	return String(value).replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"})[char]);
@@ -148,24 +149,34 @@ function abilityTable (model) {
 function resourceRow (resource, model) {
 	const spell = model.spells.find(candidate => candidate.id === resource.spellId);
 	const reaction = spell?.metadata.time.some(time => time.unit === "reaction") ? " <span class=\"cb-tag cb-reaction-tag\">Reaction</span>" : "";
-	const details = [resource.detail, resource.reset === "partial-short" ? resource.recovery : null].filter(Boolean).join(" · ");
-	return `<div class="cb-resource" data-resource="${escape(resource.id)}"><div><strong>${text(resource.name)}</strong>${reaction}<p class="cb-resource-detail">${text(details)}</p></div>${checks(resource.maxUses, `${resource.maxUses} blank spent-use boxes`)}</div>`;
+	const details = [];
+	const time = spell?.metadata.time;
+	const activation = resource.activation || (time?.length === 1 && time[0].number === 1 && ["action", "bonus", "reaction"].includes(time[0].unit) ? time[0].unit : null);
+	if (activation && activation !== "reaction") details.push(`Activation: ${activation === "bonus" ? "Bonus Action" : title(activation)}`);
+	if (resource.healing) details.push(`Healing: ${resource.healing.dice} ${signed(resource.healing.modifier)} HP`);
+	if (resource.freeLevel !== undefined) details.push(`Free casting level: ${resource.freeLevel}`);
+	if (resource.spellcastingAbility) details.push(`Ability: ${resource.spellcastingAbility.toUpperCase()}`);
+	if (resource.slotLevel !== undefined) details.push(`Slot level: ${resource.slotLevel}`);
+	const recovery = Object.entries(resource.recovery).map(([rest, amount]) => `${title(rest)} Rest: ${amount === "all" ? "all uses" : `${amount} ${amount === 1 ? "use" : "uses"}`}`);
+	details.push(`Recovery: ${recovery.join(" · ")}`);
+	return `<div class="cb-resource" data-resource="${escape(resource.id)}"><div><strong>${text(resource.name)}</strong>${reaction}<p class="cb-resource-detail">${escape(details.join(" · "))}</p></div>${checks(resource.maxUses, `${resource.maxUses} blank spent-use boxes`)}</div>`;
 }
 
 function resources (model) {
-	const groups = [["short", "Short Rest / Long Rest"], ["long", "Long Rest"]];
-	const content = groups.map(([reset, label]) => {
-		const selected = model.resources.filter(resource => resource.reset === reset || (reset === "short" && resource.reset === "partial-short"));
-		return selected.length ? `<p class="cb-rest-label">${label} · regain all unless noted · mark spent</p>${selected.map(resource => resourceRow(resource, model)).join("")}` : "";
+	const groups = [[true, "Short Rest / Long Rest"], [false, "Long Rest"]];
+	const content = groups.map(([hasShortRecovery, label]) => {
+		const selected = model.resources.filter(resource => (resource.recovery.short !== undefined) === hasShortRecovery);
+		return selected.length ? `<p class="cb-rest-label">${label} · mark spent</p>${selected.map(resource => resourceRow(resource, model)).join("")}` : "";
 	}).join("");
-	const hitDice = `<div class="cb-resource"><div><strong>Hit Dice ${model.hitDice.count}d${escape(model.hitDice.die)}</strong><p class="cb-resource-detail">Mark spent · all recover on a Long Rest</p></div>${checks(model.hitDice.count, `${model.hitDice.count} blank Hit Die boxes`)}</div>`;
+	const hitDiceRecovery = Object.entries(model.hitDice.recovery).map(([rest, amount]) => `${title(rest)} Rest: ${amount === "all" ? "all uses" : `${amount} uses`}`).join(" · ");
+	const hitDice = `<div class="cb-resource"><div><strong>Hit Dice ${model.hitDice.count}d${escape(model.hitDice.die)}</strong><p class="cb-resource-detail">Recovery: ${escape(hitDiceRecovery)}</p></div>${checks(model.hitDice.count, `${model.hitDice.count} blank Hit Die boxes`)}</div>`;
 	const survival = `<div class="cb-survival-trackers"><div class="cb-death-saves"><span class="cb-field-label">Death saves</span><span>Success</span>${checks(3, "3 blank death-save success boxes")}<span>Failure</span>${checks(3, "3 blank death-save failure boxes")}</div><div class="cb-inspiration"><span class="cb-field-label">Heroic Inspiration</span>${checks(1, "Blank Heroic Inspiration box")}</div></div>`;
-	return block("Resources & trackers", content + hitDice + survival, "cb-resource-block");
+	return block("Resources & trackers · calculated", content + hitDice + survival, "cb-resource-block");
 }
 
 function vitals (model) {
 	const current = model.hp.current === null ? "<span class=\"cb-write\" aria-label=\"Current HP: blank\"></span>" : `<strong class="cb-value">${model.hp.current}</strong>`;
-	return `<div class="cb-vitals"><div><p class="cb-field-label">Current HP / maximum</p><div class="cb-hp-value">${current}<strong class="cb-hp-max">/ ${model.hp.maximum}</strong></div></div><div><p class="cb-field-label">Temporary HP</p><div class="cb-hp-value"><strong class="cb-value">${model.hp.temporary}</strong></div></div><p class="cb-hp-note cb-resource-detail">Fixed HP progression. Temporary HP do not stack.</p></div>`;
+	return `<div class="cb-vitals"><div><p class="cb-field-label">Current HP / maximum</p><div class="cb-hp-value">${current}<strong class="cb-hp-max">/ ${model.hp.maximum}</strong></div></div><div><p class="cb-field-label">Temporary HP</p><div class="cb-hp-value"><strong class="cb-value">${model.hp.temporary}</strong></div></div><p class="cb-hp-note cb-resource-detail">HP progression: fixed</p></div>`;
 }
 
 function attacks (model) {
@@ -173,7 +184,8 @@ function attacks (model) {
 	if (!attack) return "";
 	const unit = attack.unit === "beams" ? "beam" : "attack";
 	const label = attack.count ? `${attack.count} ${unit}${attack.count === 1 ? "" : "s"} · ` : "";
-	const main = `<section class="cb-attack-panel"><h2>${text(attack.name)}</h2><div class="cb-attack-stats"><div><span>${text(attack.action)}</span><strong>${escape(label + signed(attack.toHit))}</strong></div><div><span>Each hit</span><strong>${text(attack.damage)}</strong></div></div>${attack.notes ? `<p>${text(Array.isArray(attack.notes) ? attack.notes.join(" ") : attack.notes)}</p>` : ""}<p class="cb-attack-meta">${text(attack.range)}</p></section>`;
+	const extra = [attack.mastery ? `Mastery: ${attack.mastery}` : null, attack.criticalRange ? `Critical: ${attack.criticalRange.min}–${attack.criticalRange.max}` : null].filter(Boolean).join(" · ");
+	const main = `<section class="cb-attack-panel"><h2>${text(attack.name)}</h2><div class="cb-attack-stats"><div><span>${text(attack.action)}</span><strong>${escape(label + signed(attack.toHit))}</strong></div><div><span>Each hit</span><strong>${text(attack.damage)}</strong></div></div>${extra ? `<p>${escape(extra)}</p>` : ""}<p class="cb-attack-meta">${text(attack.range)}</p></section>`;
 	const secondary = others.length ? block("Other attacks", `<table class="cb-other-attacks"><thead><tr><th scope="col">Weapon / range</th><th scope="col">Attack</th><th scope="col">Damage</th></tr></thead><tbody>${others.map(other => `<tr><td>${text(other.name)} <small>${text(other.range)}</small></td><td>${signed(other.toHit)}</td><td>${text(other.damage)}</td></tr>`).join("")}</tbody></table>`) : "";
 	return main + secondary;
 }
@@ -186,7 +198,7 @@ function conditions (model) {
 	const hasConcentration = model.spells.some(spell => spell.metadata.duration.some(value => value.concentration));
 	if (!hasConcentration) return block("Conditions / duration", "<div class=\"cb-note-lines\" aria-label=\"Space for current effects and duration\"></div>", "cb-effects");
 	const concentration = model.concentration || {modifier: model.abilities.find(ability => ability.id === "con").save, advantage: false};
-	return block("Conditions / concentration / duration", `<p><strong>Concentration: CON ${signed(concentration.modifier)}${concentration.advantage ? ", advantage" : ""}.</strong> Damage save DC = max(10, half damage taken, rounded down), up to 30.</p><p>One concentration. Incapacitated ends it.</p><div class="cb-note-lines" aria-label="Space for current effects, concentration, and duration"></div>`, "cb-effects");
+	return block("Conditions / concentration / duration", `<p><strong>Concentration save: CON ${signed(concentration.modifier)}${concentration.advantage ? " · advantage" : ""}</strong></p><div class="cb-note-lines" aria-label="Space for current effects, concentration, and duration"></div>`, "cb-effects");
 }
 
 function gearLabel (value) {
@@ -214,11 +226,12 @@ function sourcePermission (source, spell, model) {
 	const resource = model.resources.find(candidate => candidate.id === source.resourceId);
 	const permission = [];
 	if (source.atWill || spell.level === 0) permission.push("At will");
-	if (source.resourceId && source.freeLevel !== undefined && source.freeLevel !== null) permission.push(`${resource?.maxUses || 1} free ${resource?.maxUses > 1 ? "uses" : "use"} / Long Rest at L${source.freeLevel}`);
-	if (source.canCastWithSlots) permission.push(source.slotLevel ? `Pact slot L${source.slotLevel}` : `Spell slot L${spell.level}+`);
+	if (source.resourceId && source.freeLevel !== undefined && source.freeLevel !== null) permission.push(`${resource?.maxUses || 1} free ${resource?.maxUses > 1 ? "uses" : "use"} / Long Rest · spell level ${source.freeLevel}`);
+	if (source.canCastWithSlots && model.resources.some(candidate => candidate.slotLevel !== undefined)) permission.push(source.slotLevel ? `Pact slot L${source.slotLevel}` : `Spell slot L${spell.level}+`);
 	if (source.alwaysPrepared && spell.level > 0) permission.push("always prepared");
 	else if (source.prepared && spell.level > 0) permission.push("prepared");
-	if (source.restriction) permission.push(source.restriction);
+	if (source.target) permission.push(`Target: ${source.target}`);
+	if (source.componentsRequired) permission.push("Components: required");
 	const ability = source.ability ? `${source.ability.toUpperCase()} · attack ${signed(source.attack)} · DC ${source.dc}` : "";
 	return `<p class="cb-spell-permission cb-source-${sourceKind(source)}"><strong>${text(source.label)}${ability ? ` (${escape(ability)})` : ""}:</strong> ${escape(permission.join(" · "))}</p>`;
 }
@@ -226,7 +239,7 @@ function sourcePermission (source, spell, model) {
 function spellCard (spell, model) {
 	const metadata = spell.metadata;
 	const sources = spell.sources.map(source => `<span class="cb-tag cb-source-${sourceKind(source)}">${escape(SOURCE_NAMES[source.kind] || "Class")}</span>`).join("");
-	return `<article class="cb-spell cb-source-${sourceKind(spell.sources[0])}" data-spell="${escape(spell.id)}"><header class="cb-spell-head"><h3>${escape(spell.ref.name)}</h3>${sources}</header><p class="cb-spell-meta">${spell.level === 0 ? "Cantrip" : `Level ${spell.level}`} · ${escape(castingTime(metadata))} · ${escape(range(metadata))}<br>${escape(duration(metadata))}${metadata.meta?.ritual ? " · Ritual (+10 min, no slot)" : ""}<br>${escape(components(metadata))}</p>${spell.sources.map(source => sourcePermission(source, spell, model)).join("")}<div class="cb-spell-body">${entries(spell.metadata.entries)}${entries(spell.metadata.entriesHigherLevel)}</div></article>`;
+	return `<article class="cb-spell cb-source-${sourceKind(spell.sources[0])}" data-spell="${escape(spell.id)}"><header class="cb-spell-head"><h3>${escape(spell.ref.name)}</h3>${sources}</header><p class="cb-spell-meta">${spell.level === 0 ? "Cantrip" : `Level ${spell.level}`} · ${escape(SPELL_SCHOOLS[metadata.school] || metadata.school)} · ${escape(spell.ref.source)}${metadata.page ? ` p. ${escape(metadata.page)}` : ""} · ${escape(castingTime(metadata))} · ${escape(range(metadata))}<br>${escape(duration(metadata))}${metadata.meta?.ritual ? " · Ritual" : ""}<br>${escape(components(metadata))}</p>${spell.sources.map(source => sourcePermission(source, spell, model)).join("")}<div class="cb-spell-body">${entries(spell.metadata.entries)}${entries(spell.metadata.entriesHigherLevel)}</div></article>`;
 }
 
 /** Render calculated values only; incomplete builds get a compact list of decisions. */
@@ -241,21 +254,33 @@ export function renderCharacterSheet (model, catalog) {
 	const metrics = [["AC", model.armorClass.value, ""], ["Initiative", signed(model.initiative.value), model.initiative.advantage ? "advantage" : ""], ["Speed", model.speed, "ft"], [model.attacks[0]?.name || "Attack", model.attacks.length ? signed(model.attacks[0].toHit) : "—", ""], [caster?.label ? `${caster.label} DC` : "Spell DC", caster?.dc ?? "—", ""], ["Spell attack", caster ? signed(caster.attack) : "—", caster?.ability?.toUpperCase() || ""]];
 	const strip = `<div class="cb-combat-strip">${metrics.map(([label, value, detail]) => `<div class="cb-metric"><span>${escape(label)}</span><strong>${escape(value)}</strong>${detail ? `<small>${text(detail)}</small>` : ""}</div>`).join("")}</div>`;
 	const equipment = block("Equipment & training", `<p>${model.gear.map(gearLabel).map(text).join(" · ")}</p><p><strong>Training:</strong> ${model.training.map(text).join(" · ")}</p><p><strong>Languages:</strong> ${model.languages.map(text).join(", ")}</p>`);
-	const defenses = block("Defenses & senses", `<p><strong>AC ${model.armorClass.value}:</strong> ${text(model.armorClass.condition)}.</p>${model.defenses.length ? `<p>${model.defenses.map(text).join(" · ")}</p>` : ""}${model.armorClass.detail ? `<p>${text(model.armorClass.detail)}</p>` : ""}${model.armorClass.fallback !== undefined && model.armorClass.fallback !== null ? `<p>Without Mage Armor: AC ${model.armorClass.fallback}.</p>` : ""}`);
+	const defenseValues = model.defenses.map(defense => {
+		if (defense.type === "resistance") return `Resistance: ${title(defense.damageType)}`;
+		if (defense.type === "vision") return `${defense.name}: ${defense.range} ft · ${defense.lighting.join(" / ")} · ${defense.magical && defense.nonmagical ? "magical / nonmagical" : ""}`;
+		if (defense.type === "speed-penalty") return `Speed: −${defense.amount} ft · ${defense.armor} Strength requirement: ${defense.minimumStrength}`;
+		throw new Error(`Unsupported defense value: ${defense.type}`);
+	});
+	const defenses = block("Defenses & senses", `<p><strong>AC ${model.armorClass.value}:</strong> ${text(model.armorClass.condition)}.</p>${defenseValues.length ? `<p>${defenseValues.map(escape).join(" · ")}</p>` : ""}${model.armorClass.detail ? `<p>${text(model.armorClass.detail)}</p>` : ""}${model.armorClass.fallback !== undefined && model.armorClass.fallback !== null ? `<p>Without Mage Armor: AC ${model.armorClass.fallback}.</p>` : ""}`);
 	const notes = document.session.notes ? block("Notes", `<div class="cb-notes">${escape(document.session.notes)}</div>`, "cb-notes-block") : "";
 	const main = `<section class="cb-page cb-character-sheet" data-sheet-status="complete">${header(document, subtitle, heading)}${abilityTable(model)}${constants}${strip}<div class="cb-columns"><div class="cb-column">${resources(model)}${features(model)}</div><div class="cb-column">${vitals(model)}${attacks(model)}${defenses}${equipment}${conditions(model)}</div></div>${notes}${footer(document, catalog)}</section>`;
 	const featureCards = model.features.map(feature => {
 		const selection = feature.selection ? `<p class="cb-feature-selection"><strong>${text(feature.selection.label)}: ${text(feature.selection.value)}.</strong> The original description below may include other options.</p>` : "";
 		const prerequisites = (feature.prerequisite || []).map(option => {
 			const details = [];
+			for (const key of Object.keys(option)) {
+				if (!["level", "feature", "spell"].includes(key)) throw new Error(`Unsupported feature prerequisite: ${key}`);
+			}
 			if (typeof option.level === "number") details.push(`Character level ${option.level}`);
 			else if (option.level) details.push(`${option.level.class?.name || "Character"} level ${option.level.level}`);
 			for (const item of option.feature || []) details.push(sourceText(item));
-			for (const spell of option.spell || []) if (spell.entry) details.push(sourceText(spell.entry));
+			for (const spell of option.spell || []) {
+				if (!spell.entry) throw new Error("Unsupported feature spell prerequisite.");
+				details.push(sourceText(spell.entry));
+			}
 			return details.join(", ");
 		}).filter(Boolean).join(" or ");
 		const requirement = prerequisites ? `<p class="cb-feature-source"><strong>Prerequisite:</strong> ${escape(prerequisites)}</p>` : "";
-		return `<article class="cb-feature-reference"><h3>${text(feature.name)}</h3><p class="cb-feature-source">${text(feature.source)} · ${text(feature.sourceRef.source)}${feature.sourceRef.page ? ` · p. ${feature.sourceRef.page}` : ""}</p>${selection}${requirement}<div class="cb-spell-body">${entries(feature.displayEntries ?? feature.entries)}</div></article>`;
+		return `<article class="cb-feature-reference"><h3>${text(feature.name)}</h3><p class="cb-feature-source">${text(feature.source)} · ${text(feature.sourceRef.source)}${feature.sourceRef.page ? ` · p. ${escape(feature.sourceRef.page)}` : ""}</p>${selection}${requirement}<div class="cb-spell-body">${entries(feature.displayEntries ?? feature.entries)}</div></article>`;
 	}).join("");
 	const featureReference = featureCards ? `<section class="cb-page cb-feature-reference-page">${header(document, "Complete source descriptions", "Features reference · D&D 2024")}<div class="cb-reference-flow">${featureCards}</div>${footer(document, catalog)}</section>` : "";
 	if (!model.spells.length) return main + featureReference;

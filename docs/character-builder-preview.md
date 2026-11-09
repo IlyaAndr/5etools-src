@@ -61,8 +61,11 @@ cannot leave the page stuck in a loading state.
 Names, notes, and source descriptions are escaped. Full ability and spell
 descriptions must retain the original 5etools content, with tags rendered as
 readable text and higher-slot descriptions included. Structured mechanics and
-numeric class calculations are displayed separately; text is not rewritten or
-shortened. Inputs are not mutated.
+numeric class calculations are displayed separately as labeled values; text is
+not rewritten or shortened. Resource recovery, healing, and casting data are
+curated structured rules, not automatically parsed from the prose. Spell cards
+identify their original source, page, and school. Source links and formatting
+tags are currently displayed as readable plain text. Inputs are not mutated.
 
 ## Validation and review artifacts
 

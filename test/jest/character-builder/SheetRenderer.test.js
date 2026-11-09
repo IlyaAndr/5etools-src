@@ -82,7 +82,7 @@ describe("Calculated character sheet renderer", () => {
 	it("keeps partial Short Rest resources, separate species uses, and pencil trackers visible", () => {
 		const fighter = render(character());
 		expect(fighter).toContain("data-resource=\"class:fighter|xphb:second-wind\"");
-		expect(fighter).toContain("Short Rest: regain 1 spent use. Long Rest: regain all uses.");
+		expect(fighter).toContain("Activation: Bonus Action · Healing: 1d10 +5 HP · Recovery: Short Rest: 1 use · Long Rest: all uses");
 		expect(fighter).toContain("Second Wind");
 		expect(fighter).toContain("Action Surge");
 		expect(fighter).toContain("Hit Dice 5d10");
@@ -91,8 +91,8 @@ describe("Calculated character sheet renderer", () => {
 		const warlock = render(character("tiefling"));
 		expect(warlock).toContain("data-resource=\"class:warlock|xphb:pact-magic\"");
 		expect(warlock).toContain("Hellish Rebuke</strong> <span class=\"cb-tag cb-reaction-tag\">Reaction</span>");
-		expect(warlock).toContain("Free spell at level 1; species INT.");
-		expect(warlock).toContain("Free spell at level 2; species INT.");
+		expect(warlock).toContain("Free casting level: 1 · Ability: INT");
+		expect(warlock).toContain("Free casting level: 2 · Ability: INT");
 		expect(warlock).not.toContain("checked");
 		expect(warlock).not.toContain("<input");
 	});
@@ -109,7 +109,7 @@ describe("Calculated character sheet renderer", () => {
 		html = render(document);
 		expect(html).toContain("<strong class=\"cb-value\">24</strong><strong class=\"cb-hp-max\">/ 38</strong>");
 		expect(html).toContain("<strong class=\"cb-value\">5</strong>");
-		expect(html).toContain("Concentration: CON +2, advantage.");
+		expect(html).toContain("Concentration save: CON +2 · advantage");
 	});
 
 	it("keeps class Charisma and species Intelligence spell attacks and DCs distinct", () => {
@@ -118,7 +118,7 @@ describe("Calculated character sheet renderer", () => {
 		expect(html).toContain("Spell attack</span><strong>+7</strong><small>CHA</small>");
 		expect(card(html, "eldritch-blast")).toContain("Warlock (CHA · attack +7 · DC 15)");
 		expect(card(html, "fire-bolt")).toContain("Species (INT · attack +4 · DC 12)");
-		expect(card(html, "hellish-rebuke")).toContain("1 free use / Long Rest at L1 · Pact slot L3");
+		expect(card(html, "hellish-rebuke")).toContain("1 free use / Long Rest · spell level 1 · Pact slot L3");
 		expect(card(html, "healing-word")).toContain("Magic Initiate (CHA · attack +7 · DC 15)");
 		expect(card(html, "fireball")).toContain("Fiend (CHA · attack +7 · DC 15)");
 		expect(card(html, "fireball")).toContain("always prepared");
@@ -139,8 +139,9 @@ describe("Calculated character sheet renderer", () => {
 
 	it("prints rituals, reaction triggers, components, and unlimited invocation casting correctly", () => {
 		const forest = render(character());
-		expect(card(forest, "speak-with-animals")).toContain("Ritual (+10 min, no slot)");
-		expect(card(forest, "speak-with-animals")).toContain("3 free uses / Long Rest at L1");
+		expect(card(forest, "speak-with-animals")).toContain("Ritual");
+		expect(card(forest, "speak-with-animals")).toContain("3 free uses / Long Rest · spell level 1");
+		expect(card(forest, "speak-with-animals")).not.toContain("Spell slot L1+");
 		const html = render(character("tiefling"));
 		expect(card(html, "hellish-rebuke")).toContain("Reaction — which you take in response to taking damage");
 		expect(card(html, "darkness")).toContain("Concentration, up to 10 minutes");
@@ -148,8 +149,9 @@ describe("Calculated character sheet renderer", () => {
 		expect(card(html, "counterspell")).toContain("The creature makes a Constitution saving throw.");
 		expect(card(html, "counterspell")).toContain("If that spell was cast with a spell slot, the slot isn&#39;t expended.");
 		expect(card(html, "hellish-rebuke")).toContain("The damage increases by 1d10 for each spell slot level above 1.");
+		expect(card(html, "mage-armor")).toContain("Abjuration · XPHB p. 293");
 		expect(card(html, "mage-armor")).toContain("At will");
-		expect(card(html, "mage-armor")).toContain("Self only; normal spell components required.");
+		expect(card(html, "mage-armor")).toContain("Target: self · Components: required");
 		expect(card(html, "mage-armor")).not.toContain("free use / Long Rest");
 	});
 

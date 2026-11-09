@@ -205,12 +205,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		: {value: armorValue, condition: classRule.name === "Fighter" ? "Chain Mail + Shield + Defense" : "Leather Armor", fallback: null, detail: null};
 	if (armor.strength && scores.str < armor.strength) {
 		model.speed = Math.max(0, model.speed - 10);
-		model.defenses.push(`Speed reduced by 10 feet: ${armor.name} requires Strength ${armor.strength}.`);
+		model.defenses.push({type: "speed-penalty", amount: 10, armor: armor.name, minimumStrength: armor.strength});
 	}
 	model.initiative = {value: mods.dex, advantage: isChampion};
 	model.hp = {maximum: Math.max(1, classRule.hitDie + mods.con) + (build.level - 1) * Math.max(1, classRule.hitDie / 2 + 1 + mods.con), current: session.hp.current, temporary: session.hp.temporary};
 	if (session.hp.current !== null && session.hp.current > model.hp.maximum) issue("current-hit-points", "Current HP exceeds the calculated maximum for this build.");
-	model.hitDice = {count: build.level, die: classRule.hitDie, recovery: "Regain all spent Hit Dice after a Long Rest."};
+	model.hitDice = {count: build.level, die: classRule.hitDie, recovery: {long: "all"}};
 	model.concentration = {modifier: mods.con + (classRule.saveProficiencies.includes("con") ? pb : 0), advantage: hasInvocation("eldritch-mind")};
 	const classData = classRule.name === "Fighter" ? sources?.fighter : sources?.warlock;
 	function expandReferences (value, seen = new Set()) {
@@ -294,8 +294,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	feature(record(sources.feats.feat, background.feat === "Magic Initiate (Cleric)" ? "Magic Initiate" : background.feat, "feat"), "Origin Feat", "feat");
 	if (build.level >= 4) feature(record(sources.feats.feat, "Ability Score Improvement", "feat"), "Feat", "feat");
-	function resource (id, name, maxUses, reset, recovery, detail, extra = {}) {
-		model.resources.push({id, name, maxUses, reset, recovery, detail, spent: session.resources.find(candidate => candidate.id === id)?.spent || 0, ...extra});
+	function resource (definition) {
+		model.resources.push({...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0});
 	}
 	function casting (id, label, ability) {
 		const value = {id, label, ability, modifier: mods[ability], attack: pb + mods[ability], dc: 8 + pb + mods[ability]};
@@ -320,33 +320,33 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	for (const grant of species.resources) {
 		const spell = spellIndex.get(grant.spellId);
-		resource(grant.id, spell.ref?.name || spell.name, grant.maxUses, "long", "Regain all uses after a Long Rest.", `Free spell at level ${spell.level}; species ${species.spellcastingAbility.toUpperCase()}.`, {spellId: grant.spellId, freeLevel: spell.level});
+		resource({id: grant.id, name: spell.ref?.name || spell.name, maxUses: grant.maxUses, recovery: {long: "all"}, spellId: grant.spellId, freeLevel: spell.level, spellcastingAbility: species.spellcastingAbility});
 	}
-	for (const resistance of species.resistances) model.defenses.push(`Resistance to ${resistance} damage.`);
+	for (const resistance of species.resistances) model.defenses.push({type: "resistance", damageType: resistance});
 	if (classRule.name === "Fighter") {
-		resource(`${classOwner}:second-wind`, "Second Wind", levelRule.secondWind, "partial-short", "Short Rest: regain 1 spent use. Long Rest: regain all uses.", `Bonus Action: regain 1d10 + ${build.level} HP.`);
+		resource({id: `${classOwner}:second-wind`, name: "Second Wind", maxUses: levelRule.secondWind, recovery: {short: 1, long: "all"}, activation: "bonus", healing: {dice: "1d10", modifier: build.level}});
 		feature(record(sources.feats.feat, "Defense", "fighting style"), "Fighting Style", "feat");
 		for (const mastery of [...new Set(masteries.map(id => rules.weapons[id].mastery))]) {
 			feature(record(sources.itemMasteries.itemMastery, mastery, "weapon mastery"), "Mastery", "itemMastery");
 		}
 		if (build.level >= 2) {
-			resource(`${classOwner}:action-surge`, "Action Surge", 1, "short", "Regain after a Short or Long Rest.", "");
+			resource({id: `${classOwner}:action-surge`, name: "Action Surge", maxUses: 1, recovery: {short: "all", long: "all"}});
 		}
 	} else {
-		resource(`${classOwner}:pact-magic`, "Pact Magic", levelRule.slots, "short", "Regain all slots after a Short or Long Rest.", `${levelRule.slots} spell ${levelRule.slots === 1 ? "slot" : "slots"} at level ${levelRule.slotLevel}; all Pact slots have this level.`, {slotLevel: levelRule.slotLevel});
-		if (build.level >= 2) resource(`${classOwner}:magical-cunning`, "Magical Cunning", 1, "long", "Regain after a Long Rest.", "");
+		resource({id: `${classOwner}:pact-magic`, name: "Pact Magic", maxUses: levelRule.slots, recovery: {short: "all", long: "all"}, slotLevel: levelRule.slotLevel});
+		if (build.level >= 2) resource({id: `${classOwner}:magical-cunning`, name: "Magical Cunning", maxUses: 1, recovery: {long: "all"}});
 		for (const id of invocations) feature(record(sources.optionalFeatures.optionalfeature, rules.invocations[id].name, "invocation"), "Invocation", "optionalfeature");
-		if (hasInvocation("devils-sight")) model.defenses.push("Devil's Sight: see normally within 120 ft in magical and nonmagical Dim Light and Darkness; separate from Darkvision.");
+		if (hasInvocation("devils-sight")) model.defenses.push({type: "vision", name: "Devil's Sight", range: 120, lighting: ["Dim Light", "Darkness"], magical: true, nonmagical: true});
 		for (const id of [...cantrips, ...prepared]) addSpell(id, {...classCasting, kind: "class", label: "Warlock", prepared: prepared.includes(id), canCastWithSlots: prepared.includes(id), slotLevel: prepared.includes(id) ? levelRule.slotLevel : null});
 		for (const grant of classRule.subclassSpells.filter(value => value.minimumLevel <= build.level)) {
 			for (const id of grant.spells) addSpell(id, {...classCasting, id: `${classOwner}:fiend`, kind: "subclass", label: "Fiend", alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
 		}
-		if (hasInvocation("armor-of-shadows")) addSpell("spell:mage-armor|xphb", {...classCasting, id: `${classOwner}:armor-of-shadows`, kind: "invocation", label: "Armor of Shadows", atWill: true, freeLevel: 1, restriction: "Self only; normal spell components required."});
+		if (hasInvocation("armor-of-shadows")) addSpell("spell:mage-armor|xphb", {...classCasting, id: `${classOwner}:armor-of-shadows`, kind: "invocation", label: "Armor of Shadows", atWill: true, freeLevel: 1, target: "self", componentsRequired: true});
 	}
 	if (initiateCasting) {
 		for (const id of initiateCantrips) addSpell(id, {...initiateCasting, kind: "feat", label: "Magic Initiate"});
 		const resourceId = "feat:magic-initiate-cleric|xphb:healing-word";
-		resource(resourceId, "Healing Word", 1, "long", "Regain the free casting after a Long Rest.", `Magic Initiate: free level 1 casting heals 2d4 ${signed(mods[initiateAbility])} HP.`, {spellId: initiateSpell, freeLevel: 1});
+		resource({id: resourceId, name: "Healing Word", maxUses: 1, recovery: {long: "all"}, spellId: initiateSpell, freeLevel: 1, spellcastingAbility: initiateAbility, healing: {dice: "2d4", modifier: mods[initiateAbility]}});
 		addSpell(initiateSpell, {...initiateCasting, kind: "feat", label: "Magic Initiate", resourceId, alwaysPrepared: true, canCastWithSlots: true, freeLevel: 1, slotLevel: classCasting ? levelRule.slotLevel : null});
 	}
 	model.spells = [...collected.values()].sort((a, b) => a.level - b.level || a.ref.name.localeCompare(b.ref.name));
@@ -354,12 +354,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const id of equipment.weapons) {
 		const weapon = rules.weapons[id];
 		const ability = weaponAbility(weapon);
-		const notes = [masteries.includes(id) ? `${weapon.mastery} mastery` : "", isChampion ? "Critical Hit 19–20" : "", classRule.name === "Fighter" && levelRule.attacks === 2 ? "2 attacks per Attack action" : ""].filter(Boolean).join("; ");
-		model.attacks.push({name: weapon.name, action: "Attack", range: weapon.range, toHit: pb + mods[ability], damage: `${weapon.damage}${mods[ability] ? signed(mods[ability]) : ""} ${weapon.type}`, count: levelRule.attacks || 1, unit: "attacks", notes});
+		model.attacks.push({name: weapon.name, action: "Attack", range: weapon.range, toHit: pb + mods[ability], damage: `${weapon.damage}${mods[ability] ? signed(mods[ability]) : ""} ${weapon.type}`, count: levelRule.attacks || 1, unit: "attacks", mastery: masteries.includes(id) ? weapon.mastery : null, criticalRange: isChampion ? {min: 19, max: 20} : null});
 	}
 	if (cantrips.includes("spell:eldritch-blast|xphb")) {
 		const agonizing = invocationCantrips.get("agonizing-blast|xphb") === "spell:eldritch-blast|xphb";
-		const attack = {name: "Eldritch Blast", action: "Magic", range: "120 ft", toHit: classCasting.attack, count: build.level >= 5 ? 2 : 1, unit: "beams", damage: `1d10${agonizing && mods.cha ? signed(mods.cha) : ""} force`, notes: ""};
+		const attack = {name: "Eldritch Blast", action: "Magic", range: "120 ft", toHit: classCasting.attack, count: build.level >= 5 ? 2 : 1, unit: "beams", damage: `1d10${agonizing && mods.cha ? signed(mods.cha) : ""} force`};
 		model.attacks.unshift(attack);
 	}
 	for (const state of session.resources) {

@@ -54,7 +54,8 @@ describe("Audited complete reference character values", () => {
 		if (model.armorClass.fallback !== null) expect(model.armorClass.condition).toMatch(/Mage Armor.*no armor/);
 		if (model.className === "Fighter") {
 			const wind = model.resources.find(resource => resource.name === "Second Wind");
-			expect(wind.recovery).toMatch(/Short Rest: regain 1/);
+			expect(wind.recovery).toEqual({short: 1, long: "all"});
+			expect(wind.healing).toEqual({dice: "1d10", modifier: example.document.build.level});
 		} else {
 			const feat = model.spellcasting.find(source => source.id.startsWith("feat:"));
 			expect(castingValues(feat)).toEqual(reference.expected.classCasting);
