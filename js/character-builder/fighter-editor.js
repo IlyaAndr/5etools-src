@@ -1,10 +1,21 @@
 import {createFighterDraft, FIGHTER_ABILITY_SCORE_METHODS, getFighterAbilities, getFighterChoiceDescriptors, isSupportedFighterDocument, setFighterChoice} from "./fighter-choices.js";
 
-const canEditFighter = document => isSupportedFighterDocument(document) && document.build.level >= 1 && document.build.level <= 5;
+export const FIGHTER_EDITOR_PROFILE = {
+	id: "fighter",
+	title: "Fighter editor",
+	scope: "2024 rules · Gnome · Soldier · Fighter · levels 1–5",
+	intro: "This editor supports the listed options only: Defense fighting style, Champion, Ability Score Improvement, Dice Set, and the displayed equipment package. Hit points use the fixed value. Other choices and classes are not yet available.",
+	createDraft: createFighterDraft,
+	getChoiceDescriptors: getFighterChoiceDescriptors,
+	isSupportedDocument: isSupportedFighterDocument,
+};
 
 /** A small editor for the subset currently supported by the sheet calculator. */
-export function createFighterEditor ({container, catalog, context, onChange}) {
+export function createFighterEditor ({container, catalog, context, onChange, profiles = [FIGHTER_EDITOR_PROFILE]}) {
 	const abilities = getFighterAbilities(context.sources);
+	const profileFor = document => document?.build?.level >= 1 && document.build.level <= 5
+		? profiles.find(profile => profile.isSupportedDocument(document))
+		: undefined;
 	let character;
 	let scoreInputs;
 
@@ -56,14 +67,16 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 	}
 
 	function render () {
+		const profile = profileFor(character);
+		if (!profile) throw new TypeError("Character is outside the supported editor profiles.");
 		const heading = element("div", null, "cb-editor__heading");
 		const title = element("div");
-		title.append(element("h2", "Fighter editor"), element("p", "2024 rules · Gnome · Soldier · Fighter · levels 1–5"));
+		title.append(element("h2", profile.title), element("p", profile.scope));
 		const close = element("button", "Close editor", "cb-button");
 		close.type = "button";
 		close.addEventListener("click", () => { container.hidden = true; });
 		heading.append(title, close);
-		const intro = element("p", "This first editor supports the listed options only: Defense fighting style, Champion, Ability Score Improvement, Dice Set, and the displayed equipment package. Hit points use the fixed value. Other choices and classes are not yet available.", "cb-editor__intro");
+		const intro = element("p", profile.intro, "cb-editor__intro");
 		const basic = element("div", null, "cb-editor__grid");
 		const name = element("input");
 		name.type = "text";
@@ -118,7 +131,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 		}
 		scores.append(scoreHelp, field("Method", method), scoreGrid);
 		const choices = element("div", null, "cb-editor__choices");
-		const descriptors = getFighterChoiceDescriptors(character, catalog, context);
+		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
 		for (const descriptor of descriptors) {
 			const group = element("fieldset", null, "cb-editor__group");
 			group.append(element("legend", descriptor.label));
@@ -186,17 +199,19 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 	}
 
 	return {
-		canEdit: canEditFighter,
-		create () {
+		canEdit: document => !!profileFor(document),
+		create (profileId = "fighter") {
+			const profile = profiles.find(candidate => candidate.id === profileId);
+			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);
 			const previous = scoreInputs;
 			scoreInputs = {};
-			if (!publish(createFighterDraft(catalog.dataset))) {
+			if (!publish(profile.createDraft(catalog.dataset))) {
 				scoreInputs = previous;
 				if (character) render();
 			}
 		},
 		open (document) {
-			if (!canEditFighter(document)) return;
+			if (!profileFor(document)) return;
 			if (document !== character) scoreInputs = {...document.build.abilities.scores};
 			character = document;
 			render();

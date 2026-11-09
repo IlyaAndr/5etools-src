@@ -3,7 +3,8 @@ import {createSpeciesCatalog} from "./species-catalog.js";
 import {renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createSheetExamples} from "./sheet-examples.js";
-import {createFighterEditor} from "./fighter-editor.js";
+import {createFighterEditor, FIGHTER_EDITOR_PROFILE} from "./fighter-editor.js";
+import {createWarlockDraft, getWarlockChoiceDescriptors, isSupportedWarlockDocument} from "./warlock-choices.js";
 
 const exampleSelect = document.getElementById("example-select");
 const importInput = document.getElementById("character-import");
@@ -13,6 +14,7 @@ const errorMessage = document.getElementById("error-message");
 const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
 const newFighterButton = document.getElementById("new-fighter");
+const newWarlockButton = document.getElementById("new-warlock");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
@@ -65,6 +67,7 @@ async function loadData () {
 	exampleSelect.disabled = true;
 	importInput.disabled = true;
 	newFighterButton.disabled = true;
+	newWarlockButton.disabled = true;
 	editFighterButton.disabled = true;
 	saveButton.disabled = true;
 	printButton.disabled = true;
@@ -93,6 +96,15 @@ async function loadData () {
 			container: editorContainer,
 			catalog,
 			context: sheetContext,
+			profiles: [FIGHTER_EDITOR_PROFILE, {
+				id: "warlock",
+				title: "Warlock editor",
+				scope: "2024 rules · Tiefling · Acolyte · Warlock · levels 1–5",
+				intro: "This editor supports the listed options only, including the Fiend patron, selected invocations and spells, Magic Initiate (Cleric), Ability Score Improvement, and the displayed equipment package. Hit points use the fixed value. Other choices and classes are not yet available.",
+				createDraft: createWarlockDraft,
+				getChoiceDescriptors: getWarlockChoiceDescriptors,
+				isSupportedDocument: isSupportedWarlockDocument,
+			}],
 			onChange: character => {
 				try {
 					const result = showDocument(character);
@@ -114,6 +126,7 @@ async function loadData () {
 		exampleSelect.disabled = false;
 		importInput.disabled = false;
 		newFighterButton.disabled = false;
+		newWarlockButton.disabled = false;
 		status.textContent = "Reference character ready. Choose another example or open a saved character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -174,6 +187,10 @@ retryButton.addEventListener("click", loadData);
 newFighterButton.addEventListener("click", () => {
 	++requestId;
 	editor.create();
+});
+newWarlockButton.addEventListener("click", () => {
+	++requestId;
+	editor.create("warlock");
 });
 editFighterButton.addEventListener("click", () => editor.open(currentCharacter));
 saveButton.addEventListener("click", () => {

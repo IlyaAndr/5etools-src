@@ -1,8 +1,8 @@
 # D&D 2024 Character Builder Development Plan
 
-Status: PRs #1 and #2 are merged, covering the draft save format and reviewed species catalog. PR #3 adds the early online sheet and PDF preview described in [character-builder-preview.md](character-builder-preview.md). The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
+Status: PRs #1–#4 are merged, covering the draft save format, reviewed species catalog, early online sheet and PDF preview, and initial Fighter editor. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
 
-The first six reference cases cover two selected Fighter and Warlock builds at levels 1/3/5. The current prototype calculates their sheets from saved decisions; a general character creation interface and broader build coverage remain later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations.
+The first six reference cases cover two selected Fighter and Warlock builds at levels 1/3/5. The current prototype calculates their sheets from saved decisions and provides editors for limited options; broader build coverage remains later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations and [character-builder-preview.md](character-builder-preview.md) for current editor scope.
 
 ## Goal and Initial Release
 

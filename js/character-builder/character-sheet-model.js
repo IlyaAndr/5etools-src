@@ -4,6 +4,7 @@ import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getFighterChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument} from "./fighter-choices.js";
+import {getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "./warlock-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -70,8 +71,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		return model;
 	}
 	model.className = classRule.name;
-	const levelRule = classRule.levels[build.level - 1];
-	if (build.level > 5 || !levelRule) {
+	const reviewedLevelRule = classRule.levels[build.level - 1];
+	if (build.level > 5 || !reviewedLevelRule) {
 		issue("level", "This class level is outside the reviewed sheet coverage.");
 		return model;
 	}
@@ -86,9 +87,19 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		return model;
 	}
 	const fighterSourceChoices = hasFighterSourceChoices ? getFighterSourceChoices(sources) : null;
-	const sharedChoices = hasFighterSourceChoices
-		? new Map(getFighterChoiceDescriptors(document, catalog, {rules, sources}).map(descriptor => [descriptor.id, descriptor]))
-		: new Map();
+	const isWarlockEditorScope = isSupportedWarlockDocument(document);
+	const hasWarlockSourceChoices = isWarlockEditorScope && sources?.skills && sources?.abilityNames && sources?.warlock?.class && sources?.backgrounds?.background && sources?.feats?.feat;
+	if (isWarlockEditorScope && sources?.skills && sources?.abilityNames && !hasWarlockSourceChoices) {
+		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
+		return model;
+	}
+	const warlockSourceChoices = hasWarlockSourceChoices ? getWarlockSourceChoices(sources) : null;
+	const sourceChoices = fighterSourceChoices || warlockSourceChoices;
+	const levelRule = warlockSourceChoices ? {...reviewedLevelRule, ...warlockSourceChoices.progression(build.level)} : reviewedLevelRule;
+	const descriptors = hasFighterSourceChoices
+		? getFighterChoiceDescriptors(document, catalog, {rules, sources})
+		: hasWarlockSourceChoices ? getWarlockChoiceDescriptors(document, catalog, {rules, sources, spells: spells || []}) : [];
+	const sharedChoices = new Map(descriptors.map(descriptor => [descriptor.id, descriptor]));
 	function select (id, options, count, label) {
 		consumed.add(id);
 		const selected = decisions.get(id) || [];
@@ -128,9 +139,9 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const costs = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9};
 		if (Object.values(scores).some(score => costs[score] === undefined) || Object.values(scores).reduce((sum, score) => sum + (costs[score] ?? 100), 0) !== 27) issue("ability-scores", "Point buy requires scores from 8 to 15 costing 27 points.");
 	}
-	increases(`${backgroundOwner}:ability-increases`, fighterSourceChoices?.backgroundAbilityIds || background.abilities, scores, true);
-	const backgroundSkills = fighterSourceChoices?.backgroundSkills || background.skills;
-	const classSkills = select(`${classOwner}:skills`, fighterSourceChoices?.classSkills || classRule.skillOptions, fighterSourceChoices?.classSkillCount || 2, "Class skills");
+	increases(`${backgroundOwner}:ability-increases`, sourceChoices?.backgroundAbilityIds || background.abilities, scores, true);
+	const backgroundSkills = sourceChoices?.backgroundSkills || background.skills;
+	const classSkills = select(`${classOwner}:skills`, sourceChoices?.classSkills || classRule.skillOptions, sourceChoices?.classSkillCount || 2, "Class skills");
 	if (classSkills.some(skill => backgroundSkills.includes(skill))) issue(`${classOwner}:skills`, "Choose class skills distinct from the background proficiencies; replacement choices are outside this subset.");
 	const skillProficiencies = new Set([...backgroundSkills, ...classSkills]);
 	const languages = select("character:languages", Object.keys(rules.standardLanguages), 3, "Languages");
@@ -190,11 +201,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		if (spellIndex.has(id) && !spellIndex.get(id).ref) throw new TypeError(`spells: duplicate reference ${id}`);
 		spellIndex.set(id, spell);
 	}
-	for (const id of [...cantrips, ...prepared, ...initiateCantrips, ...(initiateSpell ? [initiateSpell] : [])]) {
+	const selectedCantrips = decisions.get(`${classOwner}:cantrips`) || [];
+	const selectedPrepared = decisions.get(`${classOwner}:prepared-spells`) || [];
+	for (const id of new Set([...selectedCantrips, ...selectedPrepared, ...initiateCantrips, ...(initiateSpell ? [initiateSpell] : [])])) {
 		const spell = spellIndex.get(id);
 		if (!spell) issue(id, "Spell metadata is unavailable for this source.");
-		else if (cantrips.includes(id) && spell.level !== 0) issue(id, "A selected cantrip is not level 0.");
-		else if (prepared.includes(id) && (spell.level < 1 || spell.level > levelRule.slotLevel)) issue(id, "A prepared spell exceeds the available Pact Magic slot level.");
+		else if (selectedCantrips.includes(id) && spell.level !== 0) issue(id, "A selected cantrip is not level 0.");
+		else if (selectedPrepared.includes(id) && (spell.level < 1 || spell.level > levelRule.slotLevel)) issue(id, "A prepared spell exceeds the available Pact Magic slot level.");
 	}
 	const classData = classRule.name === "Fighter" ? sources?.fighter : sources?.warlock;
 	const rawClass = classData?.class?.find(candidate => candidate.name === build.class.name && candidate.source === build.class.source);
