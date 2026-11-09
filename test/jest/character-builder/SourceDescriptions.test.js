@@ -10,8 +10,11 @@ import {renderCharacterSheet} from "../../../js/character-builder/sheet-renderer
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
 const sources = {
+	skills: readJson("../../../data/skills.json"),
+	abilityNames: globalThis.Parser.ATB_ABV_TO_FULL,
 	races: readJson("../../../data/races.json"),
 	fighter: readJson("../../../data/class/class-fighter.json"),
+	backgrounds: readJson("../../../data/backgrounds.json"),
 	warlock: readJson("../../../data/class/class-warlock.json"),
 	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 	feats: readJson("../../../data/feats.json"),

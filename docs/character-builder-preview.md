@@ -1,8 +1,8 @@
 # Online draft sheet and PDF preview
 
-`characterbuilder.html` displays six calculated Forest Gnome/Fighter and
-Infernal Tiefling/Warlock reference builds at levels 1, 3, and 5. It also
-accepts existing v1 draft character JSON files.
+`characterbuilder.html` includes a Gnome/Fighter editor and displays six
+calculated Forest Gnome/Fighter and Infernal Tiefling/Warlock reference builds
+at levels 1, 3, and 5. It also imports and exports v1 character JSON files.
 
 ## Run locally
 
@@ -19,6 +19,7 @@ and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
 
+Select **New Fighter** to build a character or edit a supported imported build.
 Choose an example or open a saved character file, then select **Print / Save PDF**.
 Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
 examples produce a main sheet and separate references. Full descriptions and
@@ -34,11 +35,17 @@ build. Gnomish Cunning is annotated alongside the relevant saving throws.
 All 18 skills are shown. Known current and temporary HP are displayed from the
 imported session.
 
-This is a limited prototype for the represented class, subclass, species,
-background, equipment, feat, and invocation choices; it is not a general
-character creation interface. An imported build with missing or unsupported
-choices produces an incomplete draft summary instead of a calculated complete
-sheet. No choice is filled in with an arbitrary default.
+The first editor supports Gnome, Soldier, Fighter, Champion, and the explicitly
+listed level 1–5 options. It does not offer every legal Fighter choice or edit
+other classes and backgrounds. Choices and their validation use the same reviewed
+catalog; skill associations come from 2024 `data/skills.json`, ability names
+come from the site's existing parser, and Fighter skills, hit die, saving throws,
+Weapon Mastery progression, Second Wind uses, and Soldier skill and ability
+choices come from the original class and background records. Equipment and other
+supported options still use reviewed annotations. An imported build with missing or
+unsupported choices produces an incomplete draft summary rather than invented
+statistics. Selections no longer available after a level change remain visible
+until the player explicitly removes them. New documents have unique IDs.
 
 The Tiefling/Warlock examples use **Charisma** for class, species, and feat
 spells because all three sources allow it. Imported characters retain their
@@ -60,9 +67,12 @@ is not a universal D&D rules engine. Class and option validation remain limited
 to the supported reference profiles, and the effect annotations themselves are
 curated data rather than automatically extracted rule text.
 
-The view is read-only. Resource boxes are empty marks for pencil use; saved spent
-counts are preserved in the document but do not fill paper marks. Editing HP,
-using resources, rests, and browser persistence belong to the later tracker PR.
+The editor changes build decisions and can export a JSON document. Ability scores
+are stored only when all six are entered; partial score entries remain in the
+open editor but cannot yet be represented in the saved format. The sheet itself
+is read-only. Resource boxes are empty marks for pencil use; saved spent counts
+are preserved in the document but do not fill paper marks. Editing HP, using
+resources, rests, and browser persistence belong to the later tracker PR.
 
 ## Import behavior and safety
 
@@ -70,7 +80,7 @@ Import uses the existing document validator, reviewed species projector, and
 limited character-sheet model. Invalid documents and unsupported source pins
 produce an actionable error and keep the previous successful preview. Builds
 requiring unsupported or unfinished choices show a draft summary. A new example
-selection cancels an older pending file read. The imported-character placeholder
+selection cancels an older pending file read. The current-character placeholder
 cannot leave the page stuck in a loading state.
 
 Names, notes, and source descriptions are escaped. Full ability and spell
@@ -98,10 +108,10 @@ Chrome/Chromium, plus `pdfinfo` and `pdftotext`. It starts a temporary server on
 `scratch/character-builder-preview/`. It does not install browsers or packages.
 Use `--browser /path/to/chrome` or `--output /path/to/artifacts` when needed.
 
-The check covers desktop and mobile navigation, all six examples, 390-pixel
-mobile layouts, A4 dimensions and
-page counts, invalid imports, delayed file-read races, pending choices, escaped
-HTML input, print-button behavior, and the full text of long notes in the PDF.
+The check covers desktop and mobile navigation, character creation and edits,
+JSON round-tripping, all six examples, 390-pixel mobile layouts, A4 dimensions
+and page counts, invalid imports, delayed file-read races, pending choices,
+escaped HTML input, print-button behavior, and full long notes in the PDF.
 Desktop/mobile screenshots and PDF samples support visual review. Browser QA
 is a local check; GitHub Actions runs module tests, JS/SCSS lint, and verifies
 that the committed generated CSS matches its Sass source.

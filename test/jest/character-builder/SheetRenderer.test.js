@@ -1,4 +1,5 @@
 import {readFileSync} from "node:fs";
+import "../../../js/parser.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
@@ -15,8 +16,11 @@ const context = {
 	rules: readJson("../../../js/character-builder/rules/character-sheet.json"),
 	spells: rawSpells,
 	sources: {
+		skills: readJson("../../../data/skills.json"),
+		abilityNames: globalThis.Parser.ATB_ABV_TO_FULL,
 		races: readJson("../../../data/races.json"),
 		fighter: readJson("../../../data/class/class-fighter.json"),
+		backgrounds: readJson("../../../data/backgrounds.json"),
 		warlock: readJson("../../../data/class/class-warlock.json"),
 		optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 		feats: readJson("../../../data/feats.json"),

@@ -304,6 +304,186 @@ def main():
             page.evaluate('() => { window.previewPrintCalled=false; window.print=()=>{window.previewPrintCalled=true}; }')
             page.click('#print-sheet')
             assert page.evaluate('window.previewPrintCalled') is True
+
+            # Build and revise a character through the editor, then round-trip its save.
+            page.click('#new-fighter')
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            first_id = json.loads(Path(download_info.value.path()).read_text())['id']
+            page.click('#new-fighter')
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            assert json.loads(Path(download_info.value.path()).read_text())['id'] != first_id
+            editor = page.locator('#fighter-editor')
+            assert editor.is_visible()
+            page.screenshot(path=str(output / 'fighter-editor-desktop.png'))
+            page.set_viewport_size({'width': 390, 'height': 844})
+            check_width(page)
+            page.screenshot(path=str(output / 'fighter-editor-mobile.png'))
+            page.set_viewport_size({'width': 1100, 'height': 1300})
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            editor.get_by_label('Character name').fill('Created fighter')
+            editor.get_by_label('Character name').press('Tab')
+            editor.get_by_label('Strength', exact=True).fill('15')
+            editor.get_by_label('Strength', exact=True).press('Tab')
+            editor.get_by_role('button', name='Close editor').click()
+            page.click('#edit-fighter')
+            assert editor.get_by_label('Strength', exact=True).input_value() == '15'
+            for ability, value in {'Strength': 15, 'Dexterity': 13, 'Constitution': 14, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
+                editor.get_by_label(ability, exact=True).fill(str(value))
+                editor.get_by_label(ability, exact=True).press('Tab')
+            for label, value in {
+                'Gnomish Lineage': 'forest',
+                'Species Spellcasting Ability': 'int',
+                'Background Ability Increases': 'str-2.con-1',
+                'Background Tool': 'dice-set|xphb',
+                'Starting Equipment': 'soldier-sword-and-shield',
+                'Fighting Style': 'defense|xphb',
+            }.items():
+                control = editor.get_by_label(label, exact=True)
+                control.focus()
+                control.select_option(value)
+                assert page.evaluate("document.activeElement.getAttribute('aria-label')") == label
+            for label in ['Common', 'Gnomish', 'Dwarvish', 'Perception', 'Survival', 'Longsword (Sap)', 'Javelin (Slow)', 'Handaxe (Vex)']:
+                control = editor.get_by_label(label, exact=True)
+                control.check()
+                assert page.evaluate("document.activeElement.type") == 'checkbox'
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert page.locator('tr[data-ability="str"] .cb-number').first.inner_text() == '17'
+            assert page.locator('.cb-hp-max').inner_text() == '/ 12'
+            assert '+5' in page.locator('.cb-attack-panel').inner_text()
+            for ability in ['int', 'wis', 'cha']:
+                assert 'Adv.' in page.locator(f'tr[data-ability="{ability}"] .cb-save').inner_text()
+            assert page.locator('.cb-resource').filter(has_text='Speak with Animals').count() == 1
+            editor.get_by_label('Gnomish Lineage', exact=True).select_option('rock')
+            assert page.locator('.cb-resource').filter(has_text='Speak with Animals').count() == 0
+            editor.get_by_label('Gnomish Lineage', exact=True).select_option('forest')
+            assert page.locator('.cb-resource').filter(has_text='Speak with Animals').count() == 1
+            editor.get_by_label('Handaxe (Vex)', exact=True).uncheck()
+            editor.get_by_label('Dagger (Nick)', exact=True).check()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert page.locator('.cb-feature-reference h3').filter(has_text='Nick').count() == 1
+            editor.get_by_label('Dagger (Nick)', exact=True).uncheck()
+            editor.get_by_label('Handaxe (Vex)', exact=True).check()
+            editor.get_by_label('Level', exact=True).select_option('3')
+            editor.get_by_label('Subclass', exact=True).select_option('champion|xphb')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            editor.get_by_label('Level', exact=True).select_option('5')
+            editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
+            editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('str-1.con-1')
+            editor.get_by_label('Flail (Sap)', exact=True).check()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert page.locator('tr[data-ability="str"] .cb-number').first.inner_text() == '18'
+            assert page.locator('.cb-hp-max').inner_text() == '/ 49'
+            assert '+7' in page.locator('.cb-attack-panel').inner_text()
+            assert '2 attacks' in page.locator('.cb-attack-panel').inner_text()
+            fighter_pdf = output / 'created-fighter.pdf'
+            export_pdf(page, fighter_pdf)
+            pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(fighter_pdf), '-'], text=True))
+            second_wind = page.locator('.cb-feature-reference').filter(has=page.get_by_role('heading', name='Second Wind', exact=True))
+            second_wind_paragraphs = second_wind.locator('.cb-spell-body p').all_text_contents()
+            assert second_wind_paragraphs
+            for paragraph in second_wind_paragraphs:
+                original = re.sub(r'\s+', ' ', paragraph).strip()
+                if original:
+                    assert original in pdf_text, f'Second Wind description is clipped: {original[:100]}'
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            saved = json.loads(Path(download_info.value.path()).read_text())
+            assert saved['name'] == 'Created fighter' and saved['build']['level'] == 5
+            assert saved['build']['abilities']['scores']['str'] == 15
+            editor.get_by_label('Level', exact=True).select_option('1')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            editor.get_by_label('Level', exact=True).select_option('5')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            upload(page, saved)
+            assert page.locator('.cb-character-sheet h1').inner_text() == 'Created fighter'
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+
+            saved['session']['notes'] = 'Keep this session note.'
+            saved['session']['hp'] = {'current': 9, 'temporary': 2}
+            saved['session']['resources'] = [{'id': 'class:fighter|xphb:second-wind', 'spent': 1}]
+            saved['build']['choices'].append({'id': 'custom:unknown-choice', 'selected': ['custom-value']})
+            upload(page, saved)
+            page.wait_for_function("document.querySelector('#status').textContent.startsWith('Opened character.json')")
+            page.click('#edit-fighter')
+            assert 'custom:unknown-choice: custom-value' in editor.inner_text()
+            editor.get_by_label('Character name').fill('Edited fighter')
+            editor.get_by_label('Character name').press('Tab')
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            retained = json.loads(Path(download_info.value.path()).read_text())
+            assert retained['build']['choices'] == saved['build']['choices']
+            assert retained['session'] == saved['session']
+            editor.get_by_role('button', name='Remove choice custom:unknown-choice').click()
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            retained = json.loads(Path(download_info.value.path()).read_text())
+            assert all(choice['id'] != 'custom:unknown-choice' for choice in retained['build']['choices'])
+            assert retained['session'] == saved['session']
+
+            level_one = json.loads(json.dumps(saved))
+            level_one['build']['level'] = 1
+            level_one['build']['choices'] = [choice for choice in level_one['build']['choices'] if choice['id'] not in {
+                'class:fighter|xphb:subclass', 'class:fighter|xphb:level-4-feat',
+                'class:fighter|xphb:level-4-ability-increases', 'custom:unknown-choice',
+            }]
+            next(choice for choice in level_one['build']['choices'] if choice['id'].endswith(':weapon-masteries'))['selected'].remove('flail|xphb')
+            level_one['build']['choices'].append({'id': 'class:fighter|xphb:subclass', 'selected': []})
+            upload(page, level_one)
+            page.wait_for_function("document.querySelector('#status').textContent.startsWith('Opened character.json')")
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            page.click('#edit-fighter')
+            editor.get_by_role('button', name='Remove saved choice Subclass').click()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+
+            # An error during recalculation must leave both document and form unchanged.
+            page.evaluate('''async () => {
+                const {createSpeciesCatalog} = await import('/js/character-builder/species-catalog.js');
+                const {createFighterEditor} = await import('/js/character-builder/fighter-editor.js');
+                const get = path => fetch(path).then(response => response.json());
+                const [races, spells, speciesRules, rules, skills, fighter, backgrounds] = await Promise.all([
+                    get('/data/races.json'), get('/data/spells/spells-xphb.json'),
+                    get('/js/character-builder/rules/species.json'), get('/js/character-builder/rules/character-sheet.json'), get('/data/skills.json'),
+                    get('/data/class/class-fighter.json'), get('/data/backgrounds.json')
+                ]);
+                const catalog = createSpeciesCatalog({races, spells, rules:speciesRules});
+                const container = document.createElement('section');
+                container.id = 'transaction-test-editor';
+                document.body.append(container);
+                let accepted = null;
+                let allow = true;
+                const editor = createFighterEditor({container, catalog, context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
+                    if (!allow) return false;
+                    accepted = next;
+                    return true;
+                }});
+                editor.create();
+                const unsupportedLevel = JSON.parse(JSON.stringify(accepted));
+                unsupportedLevel.build.level = 6;
+                if (editor.canEdit(unsupportedLevel)) throw new Error('Editor accepted an unsupported Fighter level');
+                allow = false;
+                window.testAcceptedCharacter = () => accepted;
+            }''')
+            transaction = page.locator('#transaction-test-editor')
+            rejected_name = transaction.get_by_label('Character name')
+            rejected_name.focus()
+            rejected_name.fill('Rejected edit')
+            rejected_name.dispatch_event('change')
+            assert transaction.get_by_label('Character name').input_value() == 'New Character'
+            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:name'
+            assert page.evaluate('window.testAcceptedCharacter().name') == 'New Character'
+            rejected_score = transaction.get_by_label('Strength', exact=True)
+            rejected_score.focus()
+            rejected_score.fill('15')
+            rejected_score.dispatch_event('change')
+            assert transaction.get_by_label('Strength', exact=True).input_value() == ''
+            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:score:str'
+            rejected_method = transaction.get_by_label('Method', exact=True)
+            rejected_method.focus()
+            rejected_method.select_option('pointBuy')
+            assert transaction.get_by_label('Method', exact=True).input_value() == 'standard'
+            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:score-method'
             assert not errors, errors
         finally:
             browser.close()

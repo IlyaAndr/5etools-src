@@ -11,8 +11,10 @@
 	<header class="cb-toolbar">
 		<p class="cb-toolbar__eyebrow">D&amp;D 2024 · Character Builder</p>
 		<h1 class="cb-toolbar__title">Your character, on paper.</h1>
-		<p class="cb-toolbar__intro">Review a reference character's statistics, attacks, and resources, then print its sheet and spell reference.</p>
+		<p class="cb-toolbar__intro">Create a character, review a sheet, and print it or save it as a PDF.</p>
 		<div class="cb-controls">
+			<button id="new-fighter" class="cb-button cb-button--primary" type="button" disabled>New Fighter</button>
+			<button id="edit-fighter" class="cb-button" type="button" disabled>Edit character</button>
 			<div class="cb-control">
 				<label for="example-select">Example character</label>
 				<select id="example-select" disabled>
@@ -24,6 +26,7 @@
 				<input id="character-import" type="file" accept=".json,application/json" disabled>
 			</div>
 			<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
+			<button id="save-character" class="cb-button" type="button" disabled>Save JSON</button>
 		</div>
 		<p id="status" class="cb-status" role="status" aria-live="polite">Loading character data…</p>
 		<p id="error-message" class="cb-error" role="alert" hidden></p>
@@ -31,6 +34,7 @@
 		<p class="cb-print-hint">Print on A4 at 100% scale, with browser headers and footers turned off. Resource boxes are left empty for pencil marks.</p>
 		<noscript><p class="cb-error">JavaScript is required to load and preview a character.</p></noscript>
 	</header>
+	<section id="fighter-editor" class="cb-editor" aria-label="Character editor" hidden></section>
 	<main id="sheet-preview" class="cb-preview" aria-label="Character sheet preview" aria-busy="true"></main>
 	</div>
 

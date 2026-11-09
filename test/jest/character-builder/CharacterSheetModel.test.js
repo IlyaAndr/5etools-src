@@ -1,4 +1,5 @@
 import {readFileSync} from "node:fs";
+import "../../../js/parser.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {parseCharacterDocument, serializeCharacterDocument} from "../../../js/character-builder/character-document.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
@@ -8,8 +9,11 @@ const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url),
 const rawSpells = readJson("../../../data/spells/spells-xphb.json");
 const rules = readJson("../../../js/character-builder/rules/character-sheet.json");
 const sources = {
+	skills: readJson("../../../data/skills.json"),
+	abilityNames: globalThis.Parser.ATB_ABV_TO_FULL,
 	races: readJson("../../../data/races.json"),
 	fighter: readJson("../../../data/class/class-fighter.json"),
+	backgrounds: readJson("../../../data/backgrounds.json"),
 	warlock: readJson("../../../data/class/class-warlock.json"),
 	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 	feats: readJson("../../../data/feats.json"),
@@ -26,6 +30,22 @@ const project = document => createCharacterSheetModel(document, catalog, context
 const choice = (document, suffix) => document.build.choices.find(candidate => candidate.id.endsWith(suffix));
 
 describe("Reviewed character sheet calculations", () => {
+	it("requires the canonical skills data and uses its ability associations", () => {
+		const missing = createCharacterSheetModel(example(), catalog, {...context, sources: {...sources, skills: undefined}});
+		expect(missing.issues).toContainEqual(expect.objectContaining({id: "source-skills"}));
+		const skills = JSON.parse(JSON.stringify(sources.skills));
+		skills.skill.find(skill => skill.name === "Survival" && skill.source === "XPHB").ability = "cha";
+		const model = createCharacterSheetModel(example(), catalog, {...context, sources: {...sources, skills}});
+		expect(model.abilities.find(ability => ability.id === "cha").skills).toEqual(expect.arrayContaining([expect.objectContaining({id: "survival"})]));
+	});
+
+	it("requires canonical ability names and uses the injected labels", () => {
+		const missing = createCharacterSheetModel(example(), catalog, {...context, sources: {...sources, abilityNames: undefined}});
+		expect(missing.issues).toContainEqual(expect.objectContaining({id: "source-ability-names"}));
+		const abilityNames = {...sources.abilityNames, str: "Test Strength"};
+		const model = createCharacterSheetModel(example(), catalog, {...context, sources: {...sources, abilityNames}});
+		expect(model.abilities.find(ability => ability.id === "str").name).toBe("Test Strength");
+	});
 	it.each(["Fighter", "Warlock"])("copies full canonical source entries for %s features", characterClass => {
 		const model = project(example(characterClass));
 		const race = sources.races.race.find(record => record.name === model.document.build.species.name && record.source === "XPHB");
@@ -99,6 +119,31 @@ describe("Reviewed character sheet calculations", () => {
 			const expectedRows = reviewed.levels.map(level => id === "fighter" ? [String(level.secondWind), String(level.masteries)] : [level.invocations, level.cantrips, level.prepared, level.slots, level.slotLevel]);
 			expect(expectedRows).toEqual(rows);
 		}
+	});
+
+	it("calculates Fighter hit dice, saving throws, and Second Wind from the original class record", () => {
+		const fighter = structuredClone(sources.fighter);
+		const original = fighter.class.find(record => record.name === "Fighter" && record.source === "XPHB");
+		original.hd.faces = 12;
+		original.proficiency = ["dex", "con"];
+		original.classTableGroups[0].rows[4][0] = "4";
+		const model = createCharacterSheetModel(example(), catalog, {...context, sources: {...sources, fighter}});
+		expect(model.status).toBe("complete");
+		expect(model.hitDice.die).toBe(12);
+		expect(model.abilities.find(ability => ability.id === "str").saveProficient).toBe(false);
+		expect(model.abilities.find(ability => ability.id === "dex").saveProficient).toBe(true);
+		expect(model.resources.find(resource => resource.name === "Second Wind").maxUses).toBe(4);
+	});
+
+	it("calculates Soldier skill proficiencies from the original background record", () => {
+		const backgrounds = structuredClone(sources.backgrounds);
+		const soldier = backgrounds.background.find(record => record.name === "Soldier" && record.source === "XPHB");
+		soldier.skillProficiencies = [{athletics: true, religion: true}];
+		const model = createCharacterSheetModel(example(), catalog, {...context, sources: {...sources, backgrounds}});
+		expect(model.status).toBe("complete");
+		const skills = model.abilities.flatMap(ability => ability.skills);
+		expect(skills.find(skill => skill.id === "religion").proficient).toBe(true);
+		expect(skills.find(skill => skill.id === "intimidation").proficient).toBe(false);
 	});
 
 	it("keeps the reviewed backgrounds aligned with their ability options, skills, and gold", () => {

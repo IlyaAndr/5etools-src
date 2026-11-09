@@ -1,17 +1,10 @@
-import {validateCharacterDocument} from "./character-document.js";
+import {ABILITY_IDS, validateCharacterDocument} from "./character-document.js";
 import {projectSpecies} from "./species-projection.js";
 import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
+import {createSkillCatalog} from "./skill-catalog.js";
+import {getFighterChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument} from "./fighter-choices.js";
 
-const ABILITIES = [
-	["str", "Strength", [["athletics", "Athletics"]]],
-	["dex", "Dexterity", [["acrobatics", "Acrobatics"], ["sleight-of-hand", "Sleight of Hand"], ["stealth", "Stealth"]]],
-	["con", "Constitution", []],
-	["int", "Intelligence", [["arcana", "Arcana"], ["history", "History"], ["investigation", "Investigation"], ["nature", "Nature"], ["religion", "Religion"]]],
-	["wis", "Wisdom", [["animal-handling", "Animal Handling"], ["insight", "Insight"], ["medicine", "Medicine"], ["perception", "Perception"], ["survival", "Survival"]]],
-	["cha", "Charisma", [["deception", "Deception"], ["intimidation", "Intimidation"], ["performance", "Performance"], ["persuasion", "Persuasion"]]],
-];
-const ABILITY_IDS = ABILITIES.map(([id]) => id);
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
 const modifier = score => Math.floor((score - 10) / 2);
@@ -86,15 +79,33 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const backgroundOwner = `background:${backgroundId}`;
 	const decisions = new Map(build.choices.map(choice => [choice.id, choice.selected]));
 	const consumed = new Set(build.choices.filter(choice => choice.id.startsWith(`${species.speciesId}:`)).map(choice => choice.id));
+	const isFighterEditorScope = isSupportedFighterDocument(document);
+	const hasFighterSourceChoices = isFighterEditorScope && sources?.skills && sources?.abilityNames && sources?.fighter?.class && sources?.backgrounds?.background;
+	if (isFighterEditorScope && sources?.skills && sources?.abilityNames && !hasFighterSourceChoices) {
+		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
+		return model;
+	}
+	const fighterSourceChoices = hasFighterSourceChoices ? getFighterSourceChoices(sources) : null;
+	const sharedChoices = hasFighterSourceChoices
+		? new Map(getFighterChoiceDescriptors(document, catalog, {rules, sources}).map(descriptor => [descriptor.id, descriptor]))
+		: new Map();
 	function select (id, options, count, label) {
 		consumed.add(id);
 		const selected = decisions.get(id) || [];
-		if (selected.length !== count || selected.some(value => !options.includes(value))) issue(id, `${label}: choose ${count} supported ${count === 1 ? "option" : "options"}.`);
-		return selected.filter(value => options.includes(value));
+		const descriptor = sharedChoices.get(id);
+		const allowed = descriptor ? descriptor.options.map(option => option.id) : options;
+		const required = descriptor ? descriptor.count : count;
+		if (selected.length !== required || selected.some(value => !allowed.includes(value))) issue(id, `${label}: choose ${required} supported ${required === 1 ? "option" : "options"}.`);
+		return selected.filter(value => allowed.includes(value));
 	}
 	function increases (id, allowed, scores, isBackground) {
 		consumed.add(id);
 		const selected = decisions.get(id) || [];
+		const descriptor = sharedChoices.get(id);
+		if (descriptor && (selected.length !== descriptor.count || selected.some(value => !descriptor.options.some(option => option.id === value)))) {
+			issue(id, "Choose a supported ability increase.");
+			return;
+		}
 		const parts = selected.length === 1 ? selected[0].split(".").map(value => /^([a-z]{3})-([12])$/.exec(value)) : [];
 		const values = parts.filter(Boolean).map(match => ({ability: match[1], amount: Number(match[2])}));
 		const total = values.reduce((sum, value) => sum + value.amount, 0);
@@ -117,10 +128,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const costs = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9};
 		if (Object.values(scores).some(score => costs[score] === undefined) || Object.values(scores).reduce((sum, score) => sum + (costs[score] ?? 100), 0) !== 27) issue("ability-scores", "Point buy requires scores from 8 to 15 costing 27 points.");
 	}
-	increases(`${backgroundOwner}:ability-increases`, background.abilities, scores, true);
-	const classSkills = select(`${classOwner}:skills`, classRule.skillOptions, 2, "Class skills");
-	if (classSkills.some(skill => background.skills.includes(skill))) issue(`${classOwner}:skills`, "Choose class skills distinct from the background proficiencies; replacement choices are outside this subset.");
-	const skillProficiencies = new Set([...background.skills, ...classSkills]);
+	increases(`${backgroundOwner}:ability-increases`, fighterSourceChoices?.backgroundAbilityIds || background.abilities, scores, true);
+	const backgroundSkills = fighterSourceChoices?.backgroundSkills || background.skills;
+	const classSkills = select(`${classOwner}:skills`, fighterSourceChoices?.classSkills || classRule.skillOptions, fighterSourceChoices?.classSkillCount || 2, "Class skills");
+	if (classSkills.some(skill => backgroundSkills.includes(skill))) issue(`${classOwner}:skills`, "Choose class skills distinct from the background proficiencies; replacement choices are outside this subset.");
+	const skillProficiencies = new Set([...backgroundSkills, ...classSkills]);
 	const languages = select("character:languages", Object.keys(rules.standardLanguages), 3, "Languages");
 	if (!languages.includes("common")) issue("character:languages", "Common and two other Standard languages are required.");
 	let backgroundTool = background.tool;
@@ -154,7 +166,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	if (classRule.name === "Fighter") {
 		select(`${classOwner}:fighting-style`, ["defense|xphb"], 1, "Fighting Style");
-		masteries = select(`${classOwner}:weapon-masteries`, Object.keys(rules.weapons).filter(id => id !== "dagger|xphb"), levelRule.masteries, "Weapon Mastery");
+		masteries = select(`${classOwner}:weapon-masteries`, Object.keys(rules.weapons), levelRule.masteries, "Weapon Mastery");
 	} else {
 		cantrips = select(`${classOwner}:cantrips`, classRule.cantripOptions, levelRule.cantrips, "Warlock cantrips");
 		prepared = select(`${classOwner}:prepared-spells`, classRule.preparedOptions, levelRule.prepared, "Prepared Warlock spells");
@@ -207,6 +219,19 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
 		return model;
 	}
+	if (!sources?.skills) {
+		issue("source-skills", "Skill source data are unavailable. Reload the source data.");
+		return model;
+	}
+	if (!sources.abilityNames) {
+		issue("source-ability-names", "Ability names are unavailable. Reload the source data.");
+		return model;
+	}
+	const abilityGroups = createSkillCatalog(sources.skills, sources.abilityNames);
+	const classHitDie = rawClass.hd?.faces;
+	const classSavingThrows = rawClass.proficiency;
+	if (rawClass.hd?.number !== 1 || !Number.isSafeInteger(classHitDie) || classHitDie < 2 || classHitDie > 100 || classHitDie % 2
+		|| !Array.isArray(classSavingThrows) || classSavingThrows.some(ability => !ABILITY_IDS.includes(ability))) throw new TypeError("Unsupported original class hit die or saving throws.");
 	const originalSources = {
 		classFeature: [...sources.fighter.classFeature, ...sources.warlock.classFeature],
 		subclassFeature: [...sources.fighter.subclassFeature, ...sources.warlock.subclassFeature],
@@ -216,6 +241,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		race: sources.races.race,
 	};
 	const effects = resolveMechanicEffects(rules.mechanics, {
+		skillIds: new Set(abilityGroups.flatMap(group => group.skills.map(skill => skill.id))),
 		classId,
 		backgroundId,
 		subclassId: (decisions.get(`${classOwner}:subclass`) || [])[0] || null,
@@ -225,18 +251,18 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		wearingArmor: equipment.armor.worn !== false,
 		choices: decisions,
 		hasSource: source => (originalSources[source.type] || []).filter(candidate => ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"].every(field => source[field] === undefined || source[field] === candidate[field])).length === 1,
-		refs: {level: levelRule, characterLevel: build.level, modifiers: mods, initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
+		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
 	});
 	const effectsOf = type => effects.filter(effect => effect.type === type);
-	model.abilities = ABILITIES.map(([id, name, skills]) => ({
+	model.abilities = abilityGroups.map(({id, name, skills}) => ({
 		id,
 		name,
 		score: scores[id],
 		modifier: mods[id],
-		save: mods[id] + (classRule.saveProficiencies.includes(id) ? pb : 0),
-		saveProficient: classRule.saveProficiencies.includes(id),
+		save: mods[id] + (classSavingThrows.includes(id) ? pb : 0),
+		saveProficient: classSavingThrows.includes(id),
 		savingThrowAdvantages: species.savingThrowAdvantages.filter(advantage => advantage.ability === id).map(advantage => ({...advantage})),
-		skills: skills.map(([skillId, skillName]) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb : 0), proficient: skillProficiencies.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
+		skills: skills.map(({id: skillId, name: skillName}) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb : 0), proficient: skillProficiencies.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
 	}));
 	for (const effect of effectsOf("savingThrowAdvantage")) {
 		const ability = model.abilities.find(candidate => candidate.id === effect.ability);
@@ -269,10 +295,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		model.defenses.push({type: "speed-penalty", amount: 10, armor: armor.name, minimumStrength: armor.strength});
 	}
 	model.initiative = {value: mods.dex, advantage: effectsOf("initiativeAdvantage").length > 0};
-	model.hp = {maximum: Math.max(1, classRule.hitDie + mods.con) + (build.level - 1) * Math.max(1, classRule.hitDie / 2 + 1 + mods.con), current: session.hp.current, temporary: session.hp.temporary};
+	model.hp = {maximum: Math.max(1, classHitDie + mods.con) + (build.level - 1) * Math.max(1, classHitDie / 2 + 1 + mods.con), current: session.hp.current, temporary: session.hp.temporary};
 	if (session.hp.current !== null && session.hp.current > model.hp.maximum) issue("current-hit-points", "Current HP exceeds the calculated maximum for this build.");
-	model.hitDice = {count: build.level, die: classRule.hitDie, recovery: {long: "all"}};
-	model.concentration = {modifier: mods.con + (classRule.saveProficiencies.includes("con") ? pb : 0), advantage: effectsOf("savingThrowAdvantage").some(effect => effect.ability === "con" && effect.concentration)};
+	model.hitDice = {count: build.level, die: classHitDie, recovery: {long: "all"}};
+	model.concentration = {modifier: mods.con + (classSavingThrows.includes("con") ? pb : 0), advantage: effectsOf("savingThrowAdvantage").some(effect => effect.ability === "con" && effect.concentration)};
 	function expandReferences (value, seen = new Set()) {
 		if (Array.isArray(value)) return value.map(item => expandReferences(item, seen));
 		if (!value || typeof value !== "object") return value;
