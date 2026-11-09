@@ -1,5 +1,6 @@
 import {validateCharacterDocument} from "./character-document.js";
 import {createSkillCatalog} from "./skill-catalog.js";
+import {getBackgroundSourceChoices, getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 
 export const FIGHTER_ABILITY_SCORE_METHODS = [
 	{id: "standard", label: "Standard Array"}, {id: "pointBuy", label: "Point Buy"}, {id: "manual", label: "Manual"},
@@ -9,41 +10,10 @@ const copy = value => JSON.parse(JSON.stringify(value));
 export const getFighterAbilities = sources => createSkillCatalog(sources?.skills, sources?.abilityNames).map(({id, name}) => ({id, label: name}));
 const option = (id, label) => ({id, label});
 
-/** Read the reviewed Fighter and Soldier choices from their original records. */
+/** Read Fighter class choices and progression from its original record. */
 export function getFighterSourceChoices (sources) {
-	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
-	const abilityIds = new Set(abilities.map(ability => ability.id));
-	const skillIds = new Set(abilities.flatMap(ability => ability.skills).map(skill => skill.id));
-	const record = (records, name) => {
-		const matches = Array.isArray(records) ? records.filter(entry => entry.name === name && entry.source === "XPHB") : [];
-		if (matches.length !== 1) throw new TypeError(`Missing or ambiguous XPHB ${name} source record.`);
-		return matches[0];
-	};
-	const fighter = record(sources?.fighter?.class, "Fighter");
-	const soldier = record(sources?.backgrounds?.background, "Soldier");
-	const skillId = name => {
-		if (typeof name !== "string") throw new TypeError("Invalid skill in Fighter or Soldier source.");
-		const id = name.toLowerCase().replaceAll(" ", "-");
-		if (!skillIds.has(id)) throw new TypeError(`Missing skill ${id} in the skills catalog.`);
-		return id;
-	};
-	const classSkillEntries = fighter.startingProficiencies?.skills;
-	if (!Array.isArray(classSkillEntries) || classSkillEntries.length !== 1 || Object.keys(classSkillEntries[0]).join() !== "choose") throw new TypeError("Unsupported Fighter skill proficiency source.");
-	const classChoice = classSkillEntries[0].choose;
-	if (!classChoice || Object.keys(classChoice).sort().join() !== "count,from" || !Array.isArray(classChoice.from) || !Number.isInteger(classChoice.count) || classChoice.count < 1) throw new TypeError("Unsupported Fighter skill choice source.");
-	const classSkills = classChoice.from.map(skillId);
-	if (new Set(classSkills).size !== classSkills.length || classChoice.count > classSkills.length) throw new TypeError("Invalid Fighter skill choice source.");
-	const backgroundEntries = soldier.skillProficiencies;
-	if (!Array.isArray(backgroundEntries) || backgroundEntries.length !== 1 || !backgroundEntries[0] || typeof backgroundEntries[0] !== "object" || Array.isArray(backgroundEntries[0]) || !Object.keys(backgroundEntries[0]).length || Object.values(backgroundEntries[0]).some(value => value !== true)) throw new TypeError("Unsupported Soldier skill proficiency source.");
-	const backgroundSkills = Object.keys(backgroundEntries[0]).map(skillId);
-	if (new Set(backgroundSkills).size !== backgroundSkills.length) throw new TypeError("Duplicate Soldier skill proficiency.");
-	if (!Array.isArray(soldier.ability) || !soldier.ability.length) throw new TypeError("Unsupported Soldier ability choice source.");
-	const backgroundWeights = soldier.ability.map(entry => {
-		if (!entry || Object.keys(entry).join() !== "choose" || !entry.choose || Object.keys(entry.choose).join() !== "weighted") throw new TypeError("Unsupported Soldier ability choice source.");
-		const weighted = entry.choose.weighted;
-		if (!weighted || Object.keys(weighted).sort().join() !== "from,weights" || !Array.isArray(weighted.from) || !Array.isArray(weighted.weights) || !weighted.from.length || new Set(weighted.from).size !== weighted.from.length || weighted.from.some(id => !abilityIds.has(id)) || weighted.weights.length > weighted.from.length || ![[2, 1], [1, 1, 1]].some(weights => weights.join() === weighted.weights.join())) throw new TypeError("Unsupported Soldier ability choice source.");
-		return weighted;
-	});
+	const fighter = getSourceRecord(sources?.fighter?.class, {name: "Fighter", source: "XPHB"});
+	const {classSkills, classSkillCount} = getClassSkillChoices(sources, fighter);
 	const progression = fighter.itemMasteriesProgression;
 	if (!progression || typeof progression !== "object" || Array.isArray(progression) || !Object.keys(progression).length || Object.entries(progression).some(([level, count]) => !/^[1-9]\d*$/.test(level) || !Number.isInteger(count) || count < 1)) throw new TypeError("Unsupported Fighter mastery progression source.");
 	const masteries = level => {
@@ -62,7 +32,7 @@ export function getFighterSourceChoices (sources) {
 		if (!Number.isInteger(level) || level < 1 || level > table.rows.length) throw new TypeError("Missing Fighter Second Wind uses for level.");
 		return Number(table.rows[level - 1][column]);
 	};
-	return {classSkills, classSkillCount: classChoice.count, backgroundSkills, backgroundAbilityIds: [...new Set(backgroundWeights.flatMap(weighted => weighted.from))], backgroundWeights, masteries, secondWind};
+	return {classSkills, classSkillCount, masteries, secondWind};
 }
 
 /** Create an empty build within the first reviewed editor's fixed scope. */
@@ -149,6 +119,7 @@ export function getFighterChoiceDescriptors (document, catalog, {rules, sources}
 	if (!species || !fighter || !soldier || !rules?.standardLanguages || !rules?.equipment || !rules?.weapons) throw new TypeError("Missing reviewed Fighter editor data.");
 	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
 	const sourceChoices = getFighterSourceChoices(sources);
+	const backgroundChoices = getBackgroundSourceChoices(sources, document.build.background);
 	const skills = new Map(abilities.flatMap(ability => ability.skills).map(skill => [skill.id, skill.name]));
 	const abilityName = id => abilities.find(ability => ability.id === id)?.name || id;
 	const choices = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));
@@ -164,10 +135,10 @@ export function getFighterChoiceDescriptors (document, catalog, {rules, sources}
 	return [
 		descriptor(species.lineageChoiceId, "Gnomish Lineage", 1, species.lineages.map(lineage => option(lineage.id, lineage.name))),
 		descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))),
-		descriptor("background:soldier|xphb:ability-increases", "Background Ability Increases", 1, increaseOptions(sourceChoices.backgroundAbilityIds, sourceChoices.backgroundWeights, abilityName, choices.get("background:soldier|xphb:ability-increases"))),
+		descriptor("background:soldier|xphb:ability-increases", "Background Ability Increases", 1, increaseOptions(backgroundChoices.backgroundAbilityIds, backgroundChoices.backgroundWeights, abilityName, choices.get("background:soldier|xphb:ability-increases"))),
 		descriptor("background:soldier|xphb:tool", "Background Tool", 1, Object.entries(soldier.toolOptions).map(([id, label]) => option(id, label))),
 		descriptor("character:languages", "Languages (include Common)", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label))),
-		descriptor("class:fighter|xphb:skills", "Fighter Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.filter(id => !sourceChoices.backgroundSkills.includes(id)).map(id => {
+		descriptor("class:fighter|xphb:skills", "Fighter Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.filter(id => !backgroundChoices.backgroundSkills.includes(id)).map(id => {
 			if (!skills.has(id)) throw new TypeError(`Missing skill ${id} in the skills catalog.`);
 			return option(id, skills.get(id));
 		})),

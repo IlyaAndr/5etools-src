@@ -55,6 +55,18 @@ Shared mechanic types include proficiency and expertise, bonuses, conditional ad
 
 Species is an independent source of effects alongside class, subclass, background, and feat. Species information is not embedded in individual class handlers. D&D 2024 ability score increases come from backgrounds; do not automatically apply 2014 racial increases to 2024 species.
 
+Class and background source adapters resolve their own records independently,
+and the sheet model combines their contributions with the species projection.
+Editor presets currently cover only Gnome / Soldier / Fighter and Tiefling /
+Acolyte / Warlock; the presets are coverage boundaries, not a data-model rule.
+Before exposing arbitrary combinations in the editor, split species, background,
+feat, and class choice descriptors into independently composable providers;
+resolve their interactions in shared validation and replace the current
+class/background-specific equipment packages with independently sourced choices.
+Keep unsupported combinations incomplete until every required contribution has
+reviewed coverage. Changing an entity must preserve unrelated decisions and
+session state, and flag stale or incompatible choices for explicit correction.
+
 ## Development Sequence
 
 ### 1. Model and Two Reference Characters

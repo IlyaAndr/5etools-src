@@ -1,46 +1,16 @@
 import {validateCharacterDocument} from "./character-document.js";
 import {createFighterDraft, getFighterAbilities} from "./fighter-choices.js";
 import {createSkillCatalog} from "./skill-catalog.js";
+import {getBackgroundSourceChoices, getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 
 const option = (id, label) => ({id, label});
 const slug = value => value.toLowerCase().replaceAll(" ", "-");
 
-/** Read supported Warlock/Acolyte choices and progression from 5etools. */
+/** Read Warlock class choices and progression from its original record. */
 export function getWarlockSourceChoices (sources) {
-	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
-	const abilityIds = new Set(abilities.map(ability => ability.id));
-	const skillIds = new Set(abilities.flatMap(ability => ability.skills).map(skill => skill.id));
-	const record = (records, name) => {
-		const matches = Array.isArray(records) ? records.filter(entry => entry.name === name && entry.source === "XPHB") : [];
-		if (matches.length !== 1) throw new TypeError(`Missing or ambiguous XPHB ${name} source record.`);
-		return matches[0];
-	};
-	const warlock = record(sources?.warlock?.class, "Warlock");
-	const acolyte = record(sources?.backgrounds?.background, "Acolyte");
+	const warlock = getSourceRecord(sources?.warlock?.class, {name: "Warlock", source: "XPHB"});
 	if (warlock.spellcastingAbility !== "cha") throw new TypeError("Unsupported Warlock spellcasting ability.");
-	const skillId = name => {
-		if (typeof name !== "string") throw new TypeError("Invalid skill in Warlock or Acolyte source.");
-		const id = slug(name);
-		if (!skillIds.has(id)) throw new TypeError(`Missing skill ${id} in the skills catalog.`);
-		return id;
-	};
-	const entries = warlock.startingProficiencies?.skills;
-	if (!Array.isArray(entries) || entries.length !== 1 || Object.keys(entries[0]).join() !== "choose") throw new TypeError("Unsupported Warlock skill proficiency source.");
-	const choice = entries[0].choose;
-	if (!choice || Object.keys(choice).sort().join() !== "count,from" || !Array.isArray(choice.from) || !Number.isInteger(choice.count) || choice.count < 1) throw new TypeError("Unsupported Warlock skill choice source.");
-	const classSkills = choice.from.map(skillId);
-	if (new Set(classSkills).size !== classSkills.length || choice.count > classSkills.length) throw new TypeError("Invalid Warlock skill choice source.");
-	const skillEntries = acolyte.skillProficiencies;
-	if (!Array.isArray(skillEntries) || skillEntries.length !== 1 || !skillEntries[0] || typeof skillEntries[0] !== "object" || Array.isArray(skillEntries[0]) || !Object.keys(skillEntries[0]).length || Object.values(skillEntries[0]).some(value => value !== true)) throw new TypeError("Unsupported Acolyte skill proficiency source.");
-	const backgroundSkills = Object.keys(skillEntries[0]).map(skillId);
-	if (new Set(backgroundSkills).size !== backgroundSkills.length) throw new TypeError("Duplicate Acolyte skill proficiency.");
-	if (!Array.isArray(acolyte.ability) || !acolyte.ability.length) throw new TypeError("Unsupported Acolyte ability choice source.");
-	const backgroundWeights = acolyte.ability.map(entry => {
-		if (!entry || Object.keys(entry).join() !== "choose" || !entry.choose || Object.keys(entry.choose).join() !== "weighted") throw new TypeError("Unsupported Acolyte ability choice source.");
-		const weighted = entry.choose.weighted;
-		if (!weighted || Object.keys(weighted).sort().join() !== "from,weights" || !Array.isArray(weighted.from) || !Array.isArray(weighted.weights) || !weighted.from.length || new Set(weighted.from).size !== weighted.from.length || weighted.from.some(id => !abilityIds.has(id)) || weighted.weights.length > weighted.from.length || ![[2, 1], [1, 1, 1]].some(weights => weights.join() === weighted.weights.join())) throw new TypeError("Unsupported Acolyte ability choice source.");
-		return weighted;
-	});
+	const {classSkills, classSkillCount} = getClassSkillChoices(sources, warlock);
 	const labels = ["{@filter Invocations|optionalfeatures|feature type=ei}", "{@filter Cantrips|spells|level=0|class=Warlock}", "{@filter Prepared Spells|spells|level=!0|class=Warlock}", "Spell Slots", "Slot Level"];
 	const groups = (warlock.classTableGroups || []).filter(group => Array.isArray(group.colLabels) && labels.every(label => group.colLabels.filter(value => value === label).length === 1));
 	if (groups.length !== 1 || !Array.isArray(groups[0].rows) || groups[0].rows.length !== 20) throw new TypeError("Unsupported Warlock progression table.");
@@ -51,7 +21,7 @@ export function getWarlockSourceChoices (sources) {
 		if (!Number.isInteger(level) || level < 1 || level > table.rows.length) throw new TypeError("Missing Warlock progression for level.");
 		return Object.fromEntries(["invocations", "cantrips", "prepared", "slots", "slotLevel"].map((key, index) => [key, table.rows[level - 1][columns[index]]]));
 	};
-	return {classSkills, classSkillCount: choice.count, backgroundSkills, backgroundAbilityIds: [...new Set(backgroundWeights.flatMap(weighted => weighted.from))], backgroundWeights, progression};
+	return {classSkills, classSkillCount, progression};
 }
 
 /** Create an empty Warlock build with the shared spellcasting ability selected. */
@@ -109,6 +79,7 @@ export function getWarlockChoiceDescriptors (document, catalog, {rules, sources,
 	const acolyte = rules?.backgrounds?.["acolyte|xphb"];
 	if (!species || !warlock || !acolyte || !rules?.standardLanguages || !rules?.equipment || !rules?.invocations) throw new TypeError("Missing reviewed Warlock editor data.");
 	const sourceChoices = getWarlockSourceChoices(sources);
+	const backgroundChoices = getBackgroundSourceChoices(sources, document.build.background);
 	const progression = sourceChoices.progression(document.build.level);
 	const abilities = getFighterAbilities(sources);
 	const abilityName = id => abilities.find(ability => ability.id === id)?.label || id;
@@ -148,9 +119,9 @@ export function getWarlockChoiceDescriptors (document, catalog, {rules, sources,
 		descriptor(species.lineageChoiceId, "Fiendish Legacy", 1, species.lineages.map(lineage => option(lineage.id, lineage.name))),
 		descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, castingAbilityOptions(abilityOptions, species.abilityChoiceId)),
 		descriptor(species.sizeChoiceId, "Size", 1, species.sizes.map(id => option(id, id[0].toUpperCase() + id.slice(1)))),
-		descriptor("background:acolyte|xphb:ability-increases", "Background Ability Increases", 1, increaseOptions(sourceChoices.backgroundWeights, abilityName, decisions.get("background:acolyte|xphb:ability-increases"))),
+		descriptor("background:acolyte|xphb:ability-increases", "Background Ability Increases", 1, increaseOptions(backgroundChoices.backgroundWeights, abilityName, decisions.get("background:acolyte|xphb:ability-increases"))),
 		descriptor("character:languages", "Languages (include Common)", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label))),
-		descriptor(`${owner}:skills`, "Warlock Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.filter(id => !sourceChoices.backgroundSkills.includes(id)).map(id => option(id, skillNames.get(id)))),
+		descriptor(`${owner}:skills`, "Warlock Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.filter(id => !backgroundChoices.backgroundSkills.includes(id)).map(id => option(id, skillNames.get(id)))),
 		descriptor(`${owner}:equipment`, "Starting Equipment", 1, equipmentOptions),
 		descriptor(`${featId}:ability`, "Magic Initiate Spellcasting Ability", 1, castingAbilityOptions(featAbilities, `${featId}:ability`)),
 		descriptor(`${featId}:cantrips`, "Magic Initiate Cantrips", 2, spellOptions(["spell:guidance|xphb", "spell:light|xphb"])),

@@ -50,6 +50,13 @@ unsupported choices produces an incomplete draft summary rather than invented
 statistics. Selections no longer available after a level change remain visible
 until the player explicitly removes them. New documents have unique IDs.
 
+Class and background source records are resolved independently of species. The
+sheet calculator also checks Gnome / Warlock / Acolyte and Tiefling / Fighter /
+Soldier combinations, but the editor does not yet offer species or background
+switching. Some other combinations lack a reviewed equipment package and remain
+incomplete. Further editor expansion requires composable species, class,
+background and feat choice providers and independent equipment selection.
+
 The Tiefling/Warlock editor chooses **Charisma** for class, species, and feat
 spells because all three sources allow it. Imported characters retain their
 explicit choices; previously selected different abilities remain visible and each

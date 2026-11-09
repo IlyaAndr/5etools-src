@@ -5,6 +5,7 @@ import {createCharacterSheetModel} from "../../../js/character-builder/character
 import {createFighterDraft, getFighterChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument, setFighterChoice} from "../../../js/character-builder/fighter-choices.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
+import {getBackgroundSourceChoices} from "../../../js/character-builder/source-choices.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
@@ -150,6 +151,17 @@ describe("Fighter editor choices", () => {
 		expect(choices.secondWind(1)).toBe(7);
 		expect(choices.secondWind(5)).toBe(Number(table.rows[4][column]));
 		expect(() => choices.secondWind(0)).toThrow(/Second Wind/);
+	});
+
+	it("loads Fighter choices independently of Soldier or Acolyte", () => {
+		const fighter = getFighterSourceChoices({...context.sources, backgrounds: undefined});
+		const sourceWithoutClass = {...context.sources, fighter: undefined};
+		const soldier = getBackgroundSourceChoices(sourceWithoutClass, {name: "Soldier", source: "XPHB"});
+		const acolyte = getBackgroundSourceChoices(sourceWithoutClass, {name: "Acolyte", source: "XPHB"});
+		expect(fighter.classSkills).toContain("athletics");
+		expect(fighter.secondWind(1)).toBe(2);
+		expect(fighter.classSkills.filter(id => !soldier.backgroundSkills.includes(id))).not.toContain("athletics");
+		expect(fighter.classSkills.filter(id => !acolyte.backgroundSkills.includes(id))).toContain("athletics");
 	});
 
 	it("rejects missing, ambiguous, or malformed Second Wind tables", () => {

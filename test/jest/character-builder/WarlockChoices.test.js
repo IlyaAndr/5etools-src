@@ -6,6 +6,7 @@ import {setFighterChoice} from "../../../js/character-builder/fighter-choices.js
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "../../../js/character-builder/warlock-choices.js";
+import {getBackgroundSourceChoices} from "../../../js/character-builder/source-choices.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
@@ -67,7 +68,7 @@ describe("Warlock editor choices", () => {
 		const sourceChoices = getWarlockSourceChoices(sources);
 		expect(sourceChoices.classSkills).toEqual(["arcana", "insight", "nature"]);
 		expect(sourceChoices.classSkillCount).toBe(1);
-		expect(sourceChoices.backgroundSkills).toEqual(["insight", "history"]);
+		expect(getBackgroundSourceChoices(sources, {name: "Acolyte", source: "XPHB"}).backgroundSkills).toEqual(["insight", "history"]);
 		expect(sourceChoices.progression(1)).toEqual({invocations: 2, cantrips: 2, prepared: 2, slots: 1, slotLevel: 1});
 		const draft = createWarlockDraft(catalog.dataset);
 		const choices = getWarlockChoiceDescriptors(draft, catalog, {...context, sources});
@@ -118,6 +119,26 @@ describe("Warlock editor choices", () => {
 		const sources = structuredClone(context.sources);
 		sources.warlock.class.find(record => record.name === "Warlock" && record.source === "XPHB").classTableGroups[0].rows[0][0] = "unknown";
 		expect(() => getWarlockSourceChoices(sources)).toThrow(/Warlock progression table/);
-		expect(() => getWarlockSourceChoices({...context.sources, backgrounds: undefined})).toThrow(/Acolyte source record/);
+		expect(() => getBackgroundSourceChoices({...context.sources, backgrounds: undefined}, {name: "Acolyte", source: "XPHB"})).toThrow(/Acolyte source record/);
+	});
+
+	it("loads Warlock and both backgrounds as independent source records", () => {
+		const classChoices = getWarlockSourceChoices({...context.sources, backgrounds: undefined});
+		const soldier = getBackgroundSourceChoices({...context.sources, warlock: undefined}, {name: "Soldier", source: "XPHB"});
+		const acolyte = getBackgroundSourceChoices({...context.sources, warlock: undefined}, {name: "Acolyte", source: "XPHB"});
+		expect(classChoices.classSkills).toContain("arcana");
+		expect(classChoices.progression(3).slotLevel).toBe(2);
+		expect(soldier.backgroundSkills).toEqual(["athletics", "intimidation"]);
+		expect(acolyte.backgroundSkills).toEqual(["insight", "religion"]);
+		expect(soldier.backgroundAbilityIds).toEqual(["str", "dex", "con"]);
+		expect(acolyte.backgroundAbilityIds).toEqual(["int", "wis", "cha"]);
+	});
+
+	it("requires an unambiguous, source-qualified background record", () => {
+		const sources = structuredClone(context.sources);
+		const ref = {name: "Acolyte", source: "XPHB"};
+		expect(() => getBackgroundSourceChoices(sources, {...ref, source: "UNKNOWN"})).toThrow(/UNKNOWN Acolyte source record/);
+		sources.backgrounds.background.push(structuredClone(sources.backgrounds.background.find(record => record.name === ref.name && record.source === ref.source)));
+		expect(() => getBackgroundSourceChoices(sources, ref)).toThrow(/ambiguous XPHB Acolyte source record/);
 	});
 });
