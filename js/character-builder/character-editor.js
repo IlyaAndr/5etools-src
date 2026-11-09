@@ -1,10 +1,11 @@
-import {createFighterDraft, FIGHTER_ABILITY_SCORE_METHODS, getFighterAbilities, getFighterChoiceDescriptors, isSupportedFighterDocument, setFighterChoice} from "./fighter-choices.js";
-
-const canEditFighter = document => isSupportedFighterDocument(document) && document.build.level >= 1 && document.build.level <= 5;
+import {ABILITY_SCORE_METHODS, getEditorAbilities, setCharacterChoice} from "./editor-common.js";
 
 /** A small editor for the subset currently supported by the sheet calculator. */
-export function createFighterEditor ({container, catalog, context, onChange}) {
-	const abilities = getFighterAbilities(context.sources);
+export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
+	const abilities = getEditorAbilities(context.sources);
+	const profileFor = document => document?.build?.level >= 1 && document.build.level <= 5
+		? profiles.find(profile => profile.isSupportedDocument(document))
+		: undefined;
 	let character;
 	let scoreInputs;
 
@@ -56,14 +57,16 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 	}
 
 	function render () {
+		const profile = profileFor(character);
+		if (!profile) throw new TypeError("Character is outside the supported editor profiles.");
 		const heading = element("div", null, "cb-editor__heading");
 		const title = element("div");
-		title.append(element("h2", "Fighter editor"), element("p", "2024 rules · Gnome · Soldier · Fighter · levels 1–5"));
+		title.append(element("h2", profile.title), element("p", profile.scope));
 		const close = element("button", "Close editor", "cb-button");
 		close.type = "button";
 		close.addEventListener("click", () => { container.hidden = true; });
 		heading.append(title, close);
-		const intro = element("p", "This first editor supports the listed options only: Defense fighting style, Champion, Ability Score Improvement, Dice Set, and the displayed equipment package. Hit points use the fixed value. Other choices and classes are not yet available.", "cb-editor__intro");
+		const intro = element("p", profile.intro, "cb-editor__intro");
 		const basic = element("div", null, "cb-editor__grid");
 		const name = element("input");
 		name.type = "text";
@@ -88,7 +91,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 		const scores = element("fieldset", null, "cb-editor__group");
 		scores.append(element("legend", "Base ability scores"));
 		const scoreHelp = element("p", "Assign all six scores before background and feat increases. Standard array: 15, 14, 13, 12, 10, 8. Point buy: spend 27 points on scores from 8 to 15. Partial score entries are kept in this editor until all six are filled, but are not included in a saved JSON file.", "cb-editor__help");
-		const method = select(FIGHTER_ABILITY_SCORE_METHODS, character.build.abilities.method);
+		const method = select(ABILITY_SCORE_METHODS, character.build.abilities.method);
 		method.remove(0);
 		method.dataset.cbFocus = "character:score-method";
 		method.value = character.build.abilities.method;
@@ -118,7 +121,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 		}
 		scores.append(scoreHelp, field("Method", method), scoreGrid);
 		const choices = element("div", null, "cb-editor__choices");
-		const descriptors = getFighterChoiceDescriptors(character, catalog, context);
+		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
 		for (const descriptor of descriptors) {
 			const group = element("fieldset", null, "cb-editor__group");
 			group.append(element("legend", descriptor.label));
@@ -131,7 +134,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 				input.setAttribute("aria-label", descriptor.label);
 				input.dataset.cbFocus = descriptor.id;
 				for (const option of input.options) if (option.value && !descriptor.available && option.value !== descriptor.selected[0]) option.disabled = true;
-				input.addEventListener("change", () => publish(setFighterChoice(character, descriptor.id, input.value ? [input.value] : [])));
+				input.addEventListener("change", () => publish(setCharacterChoice(character, descriptor.id, input.value ? [input.value] : [])));
 				options.append(input);
 			} else {
 				for (const option of displayedOptions) {
@@ -143,7 +146,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 					input.disabled = !descriptor.available && !input.checked;
 					input.addEventListener("change", () => {
 						const selected = input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id);
-						publish(setFighterChoice(character, descriptor.id, selected));
+						publish(setCharacterChoice(character, descriptor.id, selected));
 					});
 					label.append(input, element("span", option.label));
 					options.append(label);
@@ -159,7 +162,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 				remove.setAttribute("aria-label", `Remove saved choice ${descriptor.label}`);
 				remove.dataset.cbFocus = `remove:${descriptor.id}`;
 				remove.dataset.cbFocusFallback = descriptor.id;
-				remove.addEventListener("click", () => publish(setFighterChoice(character, descriptor.id, [])));
+				remove.addEventListener("click", () => publish(setCharacterChoice(character, descriptor.id, [])));
 				group.append(remove);
 			}
 			choices.append(group);
@@ -175,7 +178,7 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 				remove.setAttribute("aria-label", `Remove choice ${choice.id}`);
 				remove.dataset.cbFocus = `remove:${choice.id}`;
 				remove.dataset.cbFocusFallback = "character:level";
-				remove.addEventListener("click", () => publish(setFighterChoice(character, choice.id, [])));
+				remove.addEventListener("click", () => publish(setCharacterChoice(character, choice.id, [])));
 				row.append(element("span", `${choice.id}: ${choice.selected.join(", ") || "(empty)"}`), remove);
 				group.append(row);
 			}
@@ -186,17 +189,19 @@ export function createFighterEditor ({container, catalog, context, onChange}) {
 	}
 
 	return {
-		canEdit: canEditFighter,
-		create () {
+		canEdit: document => !!profileFor(document),
+		create (profileId) {
+			const profile = profiles.find(candidate => candidate.id === profileId);
+			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);
 			const previous = scoreInputs;
 			scoreInputs = {};
-			if (!publish(createFighterDraft(catalog.dataset))) {
+			if (!publish(profile.createDraft(catalog.dataset))) {
 				scoreInputs = previous;
 				if (character) render();
 			}
 		},
 		open (document) {
-			if (!canEditFighter(document)) return;
+			if (!profileFor(document)) return;
 			if (document !== character) scoreInputs = {...document.build.abilities.scores};
 			character = document;
 			render();

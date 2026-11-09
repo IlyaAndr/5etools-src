@@ -1,6 +1,6 @@
 # Online draft sheet and PDF preview
 
-`characterbuilder.html` includes a Gnome/Fighter editor and displays six
+`characterbuilder.html` includes Gnome/Fighter and Tiefling/Warlock editors and displays six
 calculated Forest Gnome/Fighter and Infernal Tiefling/Warlock reference builds
 at levels 1, 3, and 5. It also imports and exports v1 character JSON files.
 
@@ -19,7 +19,7 @@ and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
 
-Select **New Fighter** to build a character or edit a supported imported build.
+Select **New Fighter** or **New Warlock** to build a character, or edit a supported imported build.
 Choose an example or open a saved character file, then select **Print / Save PDF**.
 Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
 examples produce a main sheet and separate references. Full descriptions and
@@ -35,23 +35,34 @@ build. Gnomish Cunning is annotated alongside the relevant saving throws.
 All 18 skills are shown. Known current and temporary HP are displayed from the
 imported session.
 
-The first editor supports Gnome, Soldier, Fighter, Champion, and the explicitly
-listed level 1–5 options. It does not offer every legal Fighter choice or edit
-other classes and backgrounds. Choices and their validation use the same reviewed
+The editors support Gnome / Soldier / Fighter and Tiefling / Acolyte / Warlock,
+including Champion and the Fiend patron, with the explicitly listed level 1–5
+options. They do not offer every legal class, spell, feat, equipment, or invocation
+choice. Choices and their validation use the same reviewed
 catalog; skill associations come from 2024 `data/skills.json`, ability names
 come from the site's existing parser, and Fighter skills, hit die, saving throws,
 Weapon Mastery progression, Second Wind uses, and Soldier skill and ability
-choices come from the original class and background records. Equipment and other
-supported options still use reviewed annotations. An imported build with missing or
+choices come from the original class and background records. Warlock skill choices,
+Acolyte skill and ability choices, and the Warlock spell and invocation progression
+also use those records. Equipment and the supported spell and invocation lists still
+use reviewed annotations. An imported build with missing or
 unsupported choices produces an incomplete draft summary rather than invented
 statistics. Selections no longer available after a level change remain visible
 until the player explicitly removes them. New documents have unique IDs.
 
-The Tiefling/Warlock examples use **Charisma** for class, species, and feat
+Class and background source records are resolved independently of species. The
+sheet calculator also checks Gnome / Warlock / Acolyte and Tiefling / Fighter /
+Soldier combinations, but the editor does not yet offer species or background
+switching. Some other combinations lack a reviewed equipment package and remain
+incomplete. Further editor expansion requires composable species, class,
+background and feat choice providers and independent equipment selection. Fighter
+class choices are already supplied separately from species and background choices.
+
+The Tiefling/Warlock editor chooses **Charisma** for class, species, and feat
 spells because all three sources allow it. Imported characters retain their
-explicit choices; if their sources use different abilities, each source's values
-are displayed separately. Species-only reference fixtures also verify that
-rules permit independent choices.
+explicit choices; previously selected different abilities remain visible and each
+source's values are displayed separately. Species-only reference fixtures also
+verify that rules permit independent choices.
 
 When the supported species, class, and feat allow one common spellcasting
 ability, an incomplete draft suggests it for unresolved choices. Each source

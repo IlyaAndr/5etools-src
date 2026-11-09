@@ -440,7 +440,8 @@ def main():
             # An error during recalculation must leave both document and form unchanged.
             page.evaluate('''async () => {
                 const {createSpeciesCatalog} = await import('/js/character-builder/species-catalog.js');
-                const {createFighterEditor} = await import('/js/character-builder/fighter-editor.js');
+                const {createCharacterEditor} = await import('/js/character-builder/character-editor.js');
+                const {FIGHTER_EDITOR_PROFILE} = await import('/js/character-builder/fighter-editor-profile.js');
                 const get = path => fetch(path).then(response => response.json());
                 const [races, spells, speciesRules, rules, skills, fighter, backgrounds] = await Promise.all([
                     get('/data/races.json'), get('/data/spells/spells-xphb.json'),
@@ -453,12 +454,12 @@ def main():
                 document.body.append(container);
                 let accepted = null;
                 let allow = true;
-                const editor = createFighterEditor({container, catalog, context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
+                const editor = createCharacterEditor({container, catalog, profiles:[FIGHTER_EDITOR_PROFILE], context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
                     if (!allow) return false;
                     accepted = next;
                     return true;
                 }});
-                editor.create();
+                editor.create('fighter');
                 const unsupportedLevel = JSON.parse(JSON.stringify(accepted));
                 unsupportedLevel.build.level = 6;
                 if (editor.canEdit(unsupportedLevel)) throw new Error('Editor accepted an unsupported Fighter level');
@@ -484,6 +485,86 @@ def main():
             rejected_method.select_option('pointBuy')
             assert transaction.get_by_label('Method', exact=True).input_value() == 'standard'
             assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:score-method'
+
+            # Create a Warlock from scratch and verify level-based spell grants.
+            page.locator('#transaction-test-editor').evaluate('(element) => element.remove()')
+            page.click('#new-warlock')
+            editor = page.locator('#fighter-editor')
+            assert 'Warlock editor' in editor.inner_text()
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'cha'
+            assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).input_value() == 'cha'
+            editor.get_by_label('Character name').fill('Created warlock')
+            editor.get_by_label('Character name').press('Tab')
+            for ability, value in {'Strength': 8, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 15}.items():
+                editor.get_by_label(ability, exact=True).fill(str(value))
+                editor.get_by_label(ability, exact=True).press('Tab')
+            for label, value in {
+                'Fiendish Legacy': 'infernal',
+                'Size': 'medium',
+                'Background Ability Increases': 'cha-2.wis-1',
+                'Starting Equipment': 'acolyte-pact-mage',
+                'Magic Initiate Level 1 Spell': 'spell:healing-word|xphb',
+                'Eldritch Invocations': 'eldritch-mind|xphb',
+            }.items():
+                editor.get_by_label(label, exact=True).select_option(value)
+            for label in ['Common', 'Draconic', 'Elvish', 'Arcana', 'Intimidation', 'Guidance', 'Light', 'Eldritch Blast', 'Mind Sliver', 'Armor of Agathys', 'Hex']:
+                editor.get_by_label(label, exact=True).check()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 0
+            assert page.locator('.cb-resource').filter(has_text='Pact Magic').count() == 1
+            editor.get_by_label('Level', exact=True).select_option('3')
+            editor.get_by_label('Subclass', exact=True).select_option('fiend|xphb')
+            for label in ['Armor of Shadows', 'Agonizing Blast', 'Mirror Image', 'Misty Step']:
+                editor.get_by_label(label, exact=True).check()
+            editor.get_by_label('Agonizing Blast Cantrip', exact=True).select_option('spell:eldritch-blast|xphb')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 1
+            assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 0
+            editor.get_by_label('Level', exact=True).select_option('5')
+            editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
+            editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
+            for label in ['Mage Hand', 'Counterspell', 'Hunger of Hadar', "Devil's Sight", 'Repelling Blast']:
+                editor.get_by_label(label, exact=True).check()
+            editor.get_by_label('Repelling Blast Cantrip', exact=True).select_option('spell:eldritch-blast|xphb')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 1
+            assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 1
+            warlock_pdf = output / 'created-warlock.pdf'
+            export_pdf(page, warlock_pdf)
+            pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(warlock_pdf), '-'], text=True))
+            assert 'Hellish Rebuke' in pdf_text and 'Darkness' in pdf_text and 'Pact Magic' in pdf_text
+            hellish_rebuke = page.locator('.cb-spell[data-spell="spell:hellish-rebuke|xphb"] .cb-spell-body p').all_text_contents()
+            assert hellish_rebuke
+            for paragraph in hellish_rebuke:
+                original = re.sub(r'\s+', ' ', paragraph).strip()
+                if original:
+                    assert original in pdf_text, f'Hellish Rebuke description is clipped: {original[:100]}'
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            saved_warlock = json.loads(Path(download_info.value.path()).read_text())
+            assert saved_warlock['name'] == 'Created warlock' and saved_warlock['build']['level'] == 5
+            editor.get_by_label('Level', exact=True).select_option('1')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            editor.get_by_label('Level', exact=True).select_option('5')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            upload(page, saved_warlock)
+            assert page.locator('.cb-character-sheet h1').inner_text() == 'Created warlock'
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            mixed_warlock = json.loads(json.dumps(saved_warlock))
+            mixed_warlock['name'] = 'Imported mixed warlock'
+            next(choice for choice in mixed_warlock['build']['choices'] if choice['id'] == 'species:tiefling|xphb:spellcasting-ability')['selected'] = ['int']
+            next(choice for choice in mixed_warlock['build']['choices'] if choice['id'] == 'feat:magic-initiate-cleric|xphb:ability')['selected'] = ['wis']
+            mixed_warlock['session']['notes'] = 'Preserve imported session notes.'
+            upload(page, mixed_warlock)
+            page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Imported mixed warlock'")
+            page.click('#edit-fighter')
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'int'
+            assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).input_value() == 'wis'
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            retained_warlock = json.loads(Path(download_info.value.path()).read_text())
+            assert retained_warlock['build']['choices'] == mixed_warlock['build']['choices']
+            assert retained_warlock['session'] == mixed_warlock['session']
             assert not errors, errors
         finally:
             browser.close()

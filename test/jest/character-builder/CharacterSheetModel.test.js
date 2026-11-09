@@ -146,6 +146,27 @@ describe("Reviewed character sheet calculations", () => {
 		expect(skills.find(skill => skill.id === "intimidation").proficient).toBe(false);
 	});
 
+	it("calculates Warlock Pact Magic slots from the original class progression", () => {
+		const warlock = structuredClone(sources.warlock);
+		const original = warlock.class.find(record => record.name === "Warlock" && record.source === "XPHB");
+		const table = original.classTableGroups.find(group => group.colLabels.includes("Spell Slots"));
+		table.rows[4][table.colLabels.indexOf("Spell Slots")] = 3;
+		const model = createCharacterSheetModel(example("Warlock"), catalog, {...context, sources: {...sources, warlock}});
+		expect(model.status).toBe("complete");
+		expect(model.resources.find(resource => resource.name === "Pact Magic").maxUses).toBe(3);
+	});
+
+	it("calculates Acolyte skill proficiencies from the original background record", () => {
+		const backgrounds = structuredClone(sources.backgrounds);
+		const acolyte = backgrounds.background.find(record => record.name === "Acolyte" && record.source === "XPHB");
+		acolyte.skillProficiencies = [{insight: true, nature: true}];
+		const model = createCharacterSheetModel(example("Warlock"), catalog, {...context, sources: {...sources, backgrounds}});
+		expect(model.status).toBe("complete");
+		const skills = model.abilities.flatMap(ability => ability.skills);
+		expect(skills.find(skill => skill.id === "nature").proficient).toBe(true);
+		expect(skills.find(skill => skill.id === "religion").proficient).toBe(false);
+	});
+
 	it("keeps the reviewed backgrounds aligned with their ability options, skills, and gold", () => {
 		const backgrounds = readJson("../../../data/backgrounds.json").background;
 		for (const reviewed of Object.values(rules.backgrounds)) {
@@ -350,6 +371,12 @@ describe("Reviewed character sheet calculations", () => {
 		const model = createCharacterSheetModel(example("Warlock"), catalog, {rules, spells: [], sources});
 		expect(model.status).toBe("incomplete");
 		expect(model.issues.some(issue => issue.id === "spell:eldritch-blast|xphb")).toBe(true);
+		const missingSpells = createCharacterSheetModel(example("Warlock"), catalog, {rules, sources});
+		expect(missingSpells.status).toBe("incomplete");
+		expect(missingSpells.issues.some(issue => issue.id === "spell:eldritch-blast|xphb")).toBe(true);
+		const missingFeats = createCharacterSheetModel(example("Warlock"), catalog, {...context, sources: {...sources, feats: undefined}});
+		expect(missingFeats.status).toBe("incomplete");
+		expect(missingFeats.issues.some(issue => issue.id === "source-descriptions")).toBe(true);
 	});
 
 	it("keeps unsupported classes and incomplete imports compact, without invented statistics", () => {
