@@ -323,7 +323,8 @@
 				"dexterity": false,
 				"shield": 2,
 				"strength": 13,
-				"stealthDisadvantage": true
+				"stealthDisadvantage": true,
+				"worn": true
 			},
 			"weapons": [
 				"longsword|xphb",
@@ -365,7 +366,8 @@
 				"name": "Leather Armor",
 				"base": 11,
 				"dexterity": true,
-				"shield": 0
+				"shield": 0,
+				"worn": true
 			},
 			"weapons": [
 				"dagger|xphb"
@@ -395,5 +397,409 @@
 				]
 			}
 		}
-	}
+	},
+	"mechanics": [
+		{
+			"id": "fighter-second-wind",
+			"source": {
+				"type": "classFeature",
+				"name": "Second Wind",
+				"source": "XPHB",
+				"page": 91,
+				"className": "Fighter",
+				"classSource": "XPHB",
+				"level": 1
+			},
+			"when": {
+				"classId": "fighter|xphb",
+				"minimumLevel": 1
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:fighter|xphb:second-wind",
+						"name": "Second Wind",
+						"maxUses": {
+							"$ref": "level.secondWind"
+						},
+						"recovery": {
+							"short": 1,
+							"long": "all"
+						},
+						"activation": "bonus",
+						"healing": {
+							"dice": "1d10",
+							"modifier": {
+								"$ref": "characterLevel"
+							}
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "fighter-action-surge",
+			"source": {
+				"type": "classFeature",
+				"name": "Action Surge",
+				"source": "XPHB",
+				"page": 91,
+				"className": "Fighter",
+				"classSource": "XPHB",
+				"level": 2
+			},
+			"when": {
+				"classId": "fighter|xphb",
+				"minimumLevel": 2
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:fighter|xphb:action-surge",
+						"name": "Action Surge",
+						"maxUses": 1,
+						"recovery": {
+							"short": "all",
+							"long": "all"
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "fighter-defense",
+			"source": {
+				"type": "feat",
+				"name": "Defense",
+				"source": "XPHB",
+				"page": 209
+			},
+			"when": {
+				"classId": "fighter|xphb",
+				"choice": {
+					"id": "class:fighter|xphb:fighting-style",
+					"value": "defense|xphb"
+				},
+				"wearingArmor": true
+			},
+			"effects": [
+				{
+					"type": "armorBonus",
+					"amount": 1
+				}
+			]
+		},
+		{
+			"id": "champion-athlete",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Remarkable Athlete",
+				"source": "XPHB",
+				"className": "Fighter",
+				"classSource": "XPHB",
+				"subclassShortName": "Champion",
+				"subclassSource": "XPHB",
+				"level": 3,
+				"page": 96
+			},
+			"when": {
+				"classId": "fighter|xphb",
+				"subclassId": "champion|xphb",
+				"minimumLevel": 3
+			},
+			"effects": [
+				{
+					"type": "initiativeAdvantage"
+				},
+				{
+					"type": "skillAdvantage",
+					"skill": "athletics"
+				}
+			]
+		},
+		{
+			"id": "champion-critical",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Improved Critical",
+				"source": "XPHB",
+				"className": "Fighter",
+				"classSource": "XPHB",
+				"subclassShortName": "Champion",
+				"subclassSource": "XPHB",
+				"level": 3,
+				"page": 96
+			},
+			"when": {
+				"classId": "fighter|xphb",
+				"subclassId": "champion|xphb",
+				"minimumLevel": 3
+			},
+			"effects": [
+				{
+					"type": "criticalRange",
+					"min": 19,
+					"max": 20
+				}
+			]
+		},
+		{
+			"id": "warlock-pact-magic",
+			"source": {
+				"type": "classFeature",
+				"name": "Pact Magic",
+				"source": "XPHB",
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"level": 1,
+				"page": 153
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"minimumLevel": 1
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:pact-magic",
+						"name": "Pact Magic",
+						"maxUses": {
+							"$ref": "level.slots"
+						},
+						"recovery": {
+							"short": "all",
+							"long": "all"
+						},
+						"slotLevel": {
+							"$ref": "level.slotLevel"
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "warlock-magical-cunning",
+			"source": {
+				"type": "classFeature",
+				"name": "Magical Cunning",
+				"source": "XPHB",
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"level": 2,
+				"page": 154
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"minimumLevel": 2
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:magical-cunning",
+						"name": "Magical Cunning",
+						"maxUses": 1,
+						"recovery": {
+							"long": "all"
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-eldritch-mind",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Eldritch Mind",
+				"source": "XPHB",
+				"page": 155
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "eldritch-mind|xphb"
+			},
+			"effects": [
+				{
+					"type": "savingThrowAdvantage",
+					"ability": "con",
+					"condition": "to maintain Concentration",
+					"feature": "Eldritch Mind",
+					"concentration": true
+				}
+			]
+		},
+		{
+			"id": "invocation-devils-sight",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Devil's Sight",
+				"source": "XPHB",
+				"page": 155
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "devils-sight|xphb"
+			},
+			"effects": [
+				{
+					"type": "vision",
+					"value": {
+						"type": "vision",
+						"name": "Devil's Sight",
+						"range": 120,
+						"lighting": [
+							"Dim Light",
+							"Darkness"
+						],
+						"magical": true,
+						"nonmagical": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-armor-of-shadows",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Armor of Shadows",
+				"source": "XPHB",
+				"page": 155
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "armor-of-shadows|xphb"
+			},
+			"effects": [
+				{
+					"type": "armorOverride",
+					"name": "Mage Armor",
+					"base": 13,
+					"ability": "dex",
+					"fallbackBase": 10
+				},
+				{
+					"type": "spellGrant",
+					"spellId": "spell:mage-armor|xphb",
+					"value": {
+						"id": "class:warlock|xphb:armor-of-shadows",
+						"kind": "invocation",
+						"label": "Armor of Shadows",
+						"atWill": true,
+						"freeLevel": 1,
+						"target": "self",
+						"componentsRequired": true
+					},
+					"casterId": "class:warlock|xphb"
+				}
+			]
+		},
+		{
+			"id": "feat-magic-initiate-healing",
+			"source": {
+				"type": "feat",
+				"name": "Magic Initiate",
+				"source": "XPHB",
+				"page": 201
+			},
+			"when": {
+				"backgroundId": "acolyte|xphb"
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "feat:magic-initiate-cleric|xphb:healing-word",
+						"name": "Healing Word",
+						"maxUses": 1,
+						"recovery": {
+							"long": "all"
+						},
+						"spellId": {
+							"$ref": "initiateSpell"
+						},
+						"freeLevel": 1,
+						"spellcastingAbility": {
+							"$ref": "initiateAbility"
+						},
+						"healing": {
+							"dice": "2d4",
+							"modifier": {
+								"$ref": "initiateModifier"
+							}
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "warlock-eldritch-blast",
+			"source": {
+				"type": "spell",
+				"name": "Eldritch Blast",
+				"source": "XPHB",
+				"level": 0,
+				"page": 267
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"knownSpell": "spell:eldritch-blast|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellAttack",
+					"spellId": "spell:eldritch-blast|xphb",
+					"value": {
+						"name": "Eldritch Blast",
+						"action": "Magic",
+						"range": "120 ft",
+						"dice": "1d10",
+						"damageType": "force",
+						"unit": "beams",
+						"counts": [
+							{
+								"minimumLevel": 1,
+								"value": 1
+							},
+							{
+								"minimumLevel": 5,
+								"value": 2
+							}
+						]
+					},
+					"casterId": "class:warlock|xphb"
+				}
+			]
+		},
+		{
+			"id": "invocation-agonizing-blast",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Agonizing Blast",
+				"source": "XPHB",
+				"page": 155
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "agonizing-blast|xphb",
+				"knownSpell": "spell:eldritch-blast|xphb",
+				"choice": {
+					"id": "class:warlock|xphb:agonizing-blast-cantrip",
+					"value": "spell:eldritch-blast|xphb"
+				}
+			},
+			"effects": [
+				{
+					"type": "spellDamageBonus",
+					"spellId": "spell:eldritch-blast|xphb",
+					"amount": {
+						"$ref": "modifiers.cha"
+					},
+					"casterId": "class:warlock|xphb"
+				}
+			]
+		}
+	]
 }

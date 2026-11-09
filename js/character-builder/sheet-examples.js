@@ -61,7 +61,7 @@ export function createSheetExamples (dataset) {
 				abilities: {method: "standard", scores: fighter ? {str: 15, dex: 13, con: 14, int: 12, wis: 10, cha: 8} : {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15}},
 				choices: [
 					{id: `${owner}:${example.species === "Gnome" ? "lineage" : "legacy"}`, selected: [example.lineage]},
-					{id: `${owner}:spellcasting-ability`, selected: ["int"]},
+					{id: `${owner}:spellcasting-ability`, selected: [fighter ? "int" : "cha"]},
 					...(example.species === "Tiefling" ? [{id: `${owner}:size`, selected: ["medium"]}] : []),
 					{id: `background:${background.toLowerCase()}|xphb:ability-increases`, selected: [fighter ? "str-2.con-1" : "cha-2.wis-1"]},
 					...(fighter ? [{id: "background:soldier|xphb:tool", selected: ["dice-set|xphb"]}] : []),

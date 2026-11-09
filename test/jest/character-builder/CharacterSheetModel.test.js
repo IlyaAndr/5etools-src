@@ -159,6 +159,30 @@ describe("Reviewed character sheet calculations", () => {
 		expect(model.spells.find(spell => spell.ref.name === "Healing Word").metadata.entries).toEqual(rawSpells.spell.find(spell => spell.name === "Healing Word").entries);
 	});
 
+	it("suggests the shared fixed class ability before species and feat choices are made", () => {
+		const document = example("Warlock");
+		choice(document, "species:tiefling|xphb:spellcasting-ability").selected = [];
+		choice(document, "feat:magic-initiate-cleric|xphb:ability").selected = [];
+		const before = JSON.stringify(document);
+		const model = project(document);
+		expect(model.status).toBe("incomplete");
+		expect(model.spellcastingChoicePlan.commonAbilities).toEqual(["cha"]);
+		expect(model.spellcastingChoicePlan.requiresDifferentAbilities).toBe(false);
+		expect(model.spellcastingChoicePlan.sources.map(source => source.suggested)).toEqual(["cha", "cha", "cha"]);
+		expect(JSON.stringify(document)).toBe(before);
+	});
+
+	it("reports but never rewrites imported different spellcasting choices", () => {
+		const document = example("Warlock");
+		choice(document, "species:tiefling|xphb:spellcasting-ability").selected = ["int"];
+		const before = JSON.stringify(document);
+		const model = project(document);
+		expect(model.status).toBe("complete");
+		expect(model.spellcastingChoicePlan).toMatchObject({commonAbilities: ["cha"], requiresDifferentAbilities: false, hasSavedDifferences: true});
+		expect(model.spellcastingChoicePlan.sources.find(source => source.id.startsWith("species:")).suggested).toBe("int");
+		expect(JSON.stringify(document)).toBe(before);
+	});
+
 	it("keeps conditional Concentration advantage separate from the ordinary Constitution save", () => {
 		const model = project(example("Warlock"));
 		expect(model.concentration).toEqual({modifier: 2, advantage: true});
@@ -239,6 +263,14 @@ describe("Reviewed character sheet calculations", () => {
 		const model = project(document);
 		expect(model.status).toBe("incomplete");
 		expect(model.issues.some(issue => issue.id.endsWith(expectedId))).toBe(true);
+	});
+
+	it("reports a missing class progression level instead of guessing or crashing", () => {
+		const shorterRules = JSON.parse(JSON.stringify(rules));
+		shorterRules.classes["fighter|xphb"].levels.pop();
+		const model = createCharacterSheetModel(example(), catalog, {...context, rules: shorterRules});
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual({id: "level", message: "This class level is outside the reviewed sheet coverage."});
 	});
 
 	it("rejects an otherwise valid higher-level spell at a lower Pact slot level", () => {

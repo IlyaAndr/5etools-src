@@ -91,8 +91,10 @@ describe("Calculated character sheet renderer", () => {
 		const warlock = render(character("tiefling"));
 		expect(warlock).toContain("data-resource=\"class:warlock|xphb:pact-magic\"");
 		expect(warlock).toContain("Hellish Rebuke</strong> <span class=\"cb-tag cb-reaction-tag\">Reaction</span>");
-		expect(warlock).toContain("Free casting level: 1 · Ability: INT");
-		expect(warlock).toContain("Free casting level: 2 · Ability: INT");
+		expect(warlock).toContain("Free casting level: 1");
+		expect(warlock).toContain("Free casting level: 2");
+		expect(warlock).not.toContain("Ability: CHA");
+		expect(warlock).not.toContain("Ability: INT");
 		expect(warlock).not.toContain("checked");
 		expect(warlock).not.toContain("<input");
 	});
@@ -112,10 +114,30 @@ describe("Calculated character sheet renderer", () => {
 		expect(html).toContain("Concentration save: CON +2 · advantage");
 	});
 
-	it("keeps class Charisma and species Intelligence spell attacks and DCs distinct", () => {
+	it("shows a single shared spellcasting profile when all sources have the same values", () => {
 		const html = render(character("tiefling"));
-		expect(html).toContain("Warlock DC</span><strong>15</strong>");
+		expect(html).toContain("Spell DC</span><strong>15</strong>");
 		expect(html).toContain("Spell attack</span><strong>+7</strong><small>CHA</small>");
+		expect(html).not.toContain("aria-label=\"Spellcasting by source\"");
+		expect(card(html, "eldritch-blast")).toContain("<strong>Warlock:</strong>");
+		expect(card(html, "fire-bolt")).toContain("<strong>Species:</strong>");
+		expect(card(html, "healing-word")).toContain("<strong>Magic Initiate:</strong>");
+		expect(card(html, "fire-bolt")).not.toContain("CHA · attack");
+		expect(html).toContain("One entry per spell · uses shown by source");
+		expect(html).not.toContain("casting ability and uses shown by source");
+	});
+
+	it("keeps imported class Charisma and species Intelligence values separate", () => {
+		const document = character("tiefling");
+		document.build.choices.find(choice => choice.id === "species:tiefling|xphb:spellcasting-ability").selected = ["int"];
+		const before = JSON.stringify(document);
+		const html = render(document);
+		expect(JSON.stringify(document)).toBe(before);
+		expect(html).toContain("Warlock DC</span><strong>15</strong>");
+		expect(html).toContain("Warlock attack</span><strong>+7</strong><small>CHA</small>");
+		expect(html).toContain("aria-label=\"Spellcasting by source\"");
+		expect(html).toContain("Species:</strong> INT · attack +4 · DC 12");
+		expect(html).toContain("Ability: INT");
 		expect(card(html, "eldritch-blast")).toContain("Warlock (CHA · attack +7 · DC 15)");
 		expect(card(html, "fire-bolt")).toContain("Species (INT · attack +4 · DC 12)");
 		expect(card(html, "hellish-rebuke")).toContain("1 free use / Long Rest · spell level 1 · Pact slot L3");
@@ -125,6 +147,25 @@ describe("Calculated character sheet renderer", () => {
 		expect(card(html, "fireball")).not.toContain("free use");
 		expect(card(html, "hex")).toContain("Pact slot L3 · prepared");
 		expect(card(html, "hex")).not.toContain("always prepared");
+	});
+
+	it("uses the active spell source rather than an unused class casting profile", () => {
+		const model = project(character("tiefling"));
+		model.spells = model.spells.filter(spell => spell.ref.name === "Fire Bolt");
+		Object.assign(model.spells[0].sources[0], {ability: "int", attack: 4, dc: 12});
+		const html = renderCharacterSheet(model, catalog);
+		expect(html).toContain("Spell DC</span><strong>12</strong>");
+		expect(html).toContain("Spell attack</span><strong>+4</strong><small>INT</small>");
+		expect(html).not.toContain("aria-label=\"Spellcasting by source\"");
+	});
+
+	it("shows separate source values when the ability matches but a spell attack differs", () => {
+		const model = project(character("tiefling"));
+		model.spells.find(spell => spell.ref.name === "Fire Bolt").sources[0].attack++;
+		const html = renderCharacterSheet(model, catalog);
+		expect(html).toContain("aria-label=\"Spellcasting by source\"");
+		expect(card(html, "fire-bolt")).toContain("Species (CHA · attack +8 · DC 15)");
+		expect(card(html, "eldritch-blast")).toContain("Warlock (CHA · attack +7 · DC 15)");
 	});
 
 	it.each([[1, 9], [3, 17], [5, 23]])("unifies all spell sources into %s-level reference with %s unique cards", (level, count) => {
@@ -153,6 +194,15 @@ describe("Calculated character sheet renderer", () => {
 		expect(card(html, "mage-armor")).toContain("At will");
 		expect(card(html, "mage-armor")).toContain("Target: self · Components: required");
 		expect(card(html, "mage-armor")).not.toContain("free use / Long Rest");
+	});
+
+	it("suggests a shared spellcasting ability for unresolved source choices", () => {
+		const document = character("tiefling");
+		document.build.choices.find(choice => choice.id === "species:tiefling|xphb:spellcasting-ability").selected = [];
+		document.build.choices.find(choice => choice.id === "feat:magic-initiate-cleric|xphb:ability").selected = [];
+		const html = render(document);
+		expect(html).toContain("data-sheet-status=\"incomplete\"");
+		expect(html.match(/Suggested: CHA/g)).toHaveLength(2);
 	});
 
 	it("renders an incomplete import as a compact honest draft instead of a blank character sheet", () => {

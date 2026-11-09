@@ -195,6 +195,38 @@ def main():
                 return createSheetExamples(rules.dataset).find(example => example.id === 'infernal-tiefling-warlock-level-5').document;
             }''')
 
+            # A saved character with different spellcasting abilities keeps both
+            # profiles visible and printable without changing its decisions.
+            mixed = json.loads(json.dumps(document))
+            mixed['name'] = 'Imported mixed spellcasting'
+            next(choice for choice in mixed['build']['choices'] if choice['id'] == 'species:tiefling|xphb:spellcasting-ability')['selected'] = ['int']
+            upload(page, mixed)
+            page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Imported mixed spellcasting'")
+            breakdown = page.locator('[aria-label="Spellcasting by source"]')
+            assert breakdown.count() == 1
+            assert 'INT' in breakdown.inner_text() and 'CHA' in breakdown.inner_text()
+            page.emulate_media(media='print')
+            mixed_height = page.locator('.cb-character-sheet').bounding_box()['height']
+            assert mixed_height <= 1055, f'Mixed spellcasting sheet exceeds A4: {mixed_height}'
+            page.emulate_media(media='screen')
+            mixed_pdf = output / 'mixed-spellcasting.pdf'
+            export_pdf(page, mixed_pdf)
+            mixed_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(mixed_pdf), '-'], text=True))
+            assert 'Species: INT · attack +4 · DC 12' in mixed_text
+            assert 'Warlock' in mixed_text and 'CHA · attack +7 · DC 15' in mixed_text
+
+            # Unresolved species and feat choices receive the same valid
+            # suggestion from the fixed Warlock spellcasting ability.
+            choices_pending = json.loads(json.dumps(document))
+            choices_pending['name'] = 'Shared spellcasting suggestion'
+            for choice in choices_pending['build']['choices']:
+                if choice['id'] in ['species:tiefling|xphb:spellcasting-ability', 'feat:magic-initiate-cleric|xphb:ability']:
+                    choice['selected'] = []
+            upload(page, choices_pending)
+            page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Shared spellcasting suggestion'")
+            assert page.locator('.cb-unresolved').inner_text().count('Suggested: CHA') == 2
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+
             # A disabled placeholder must not invalidate an in-flight file read.
             page.evaluate('''() => {
                 window.previewOriginalFileText = File.prototype.text;

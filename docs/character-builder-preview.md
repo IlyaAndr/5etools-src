@@ -40,10 +40,25 @@ character creation interface. An imported build with missing or unsupported
 choices produces an incomplete draft summary instead of a calculated complete
 sheet. No choice is filled in with an arbitrary default.
 
-These examples intentionally choose **Intelligence for species magic**. The
-Warlock class uses **Charisma** for its own magic. The 2024 species choice is
-independent and may use Intelligence, Wisdom, or Charisma. This example tests
-source independence and is not a build recommendation.
+The Tiefling/Warlock examples use **Charisma** for class, species, and feat
+spells because all three sources allow it. Imported characters retain their
+explicit choices; if their sources use different abilities, each source's values
+are displayed separately. Species-only reference fixtures also verify that
+rules permit independent choices.
+
+When the supported species, class, and feat allow one common spellcasting
+ability, an incomplete draft suggests it for unresolved choices. Each source
+retains its own selection and resources; a choice already in a saved character
+is never changed. When actual spellcasting profiles differ, the sheet shows the
+relevant source-specific values. A shared profile is displayed only once on the
+main sheet.
+
+Reviewed feature-specific effects are stored in `rules/character-sheet.json`
+and resolved by `rules/effects.js` using typed, validated operations and
+source-qualified conditions. This covers the currently annotated features; it
+is not a universal D&D rules engine. Class and option validation remain limited
+to the supported reference profiles, and the effect annotations themselves are
+curated data rather than automatically extracted rule text.
 
 The view is read-only. Resource boxes are empty marks for pencil use; saved spent
 counts are preserved in the document but do not fill paper marks. Editing HP,

@@ -28,6 +28,15 @@ describe("Browser preview examples", () => {
 		}
 	});
 
+	it("uses the same Charisma choice for the Warlock's class, species, and feat spells", () => {
+		const examples = createSheetExamples(catalog.dataset).filter(example => example.document.build.class.name === "Warlock");
+		for (const example of examples) {
+			const choices = example.document.build.choices;
+			expect(choices.find(choice => choice.id === "species:tiefling|xphb:spellcasting-ability").selected).toEqual(["cha"]);
+			expect(choices.find(choice => choice.id === "feat:magic-initiate-cleric|xphb:ability").selected).toEqual(["cha"]);
+		}
+	});
+
 	it("keeps documents independent of each other and the source dataset", () => {
 		const originalDataset = JSON.stringify(catalog.dataset);
 		const examples = createSheetExamples(catalog.dataset);

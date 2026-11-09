@@ -84,6 +84,8 @@ Add the magic model: available spell lists, cantrips, prepared/granted spells, e
 
 Support Warlock / Fiend through level 5, the required invocations, and their prerequisites. A Tiefling's legacy selection determines its resistance, spells, and grant levels; the permitted spellcasting ability is selected separately. Species spell grants use total character level.
 
+For new characters, use one shared spellcasting ability whenever all sources permit it. Show separate ability, attack, and DC values when no common ability is permitted. Preserve explicit choices in imported characters and show any actual differences accurately; do not silently rewrite them.
+
 Each spell has one description and may have multiple sources and casting methods. Independent free uses retain separate IDs. Combining descriptions must preserve the minimum level of free casting and the option to spend spell slots.
 
 **Done when:** a level-5 Tiefling/Warlock has the correct magic list, separate Hellish Rebuke and Darkness counters, and a separate Pact Magic resource; cantrips do not receive expendable-use marks.

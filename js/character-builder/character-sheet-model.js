@@ -1,5 +1,7 @@
 import {validateCharacterDocument} from "./character-document.js";
 import {projectSpecies} from "./species-projection.js";
+import {resolveMechanicEffects} from "./rules/effects.js";
+import {planSpellcastingChoices} from "./spellcasting-choice.js";
 
 const ABILITIES = [
 	["str", "Strength", [["athletics", "Athletics"]]],
@@ -22,7 +24,7 @@ function checkRules (rules, document) {
 		if (!rules[field] || typeof rules[field] !== "object" || Array.isArray(rules[field])) throw new TypeError(`sheetRules.${field}: missing reviewed records`);
 	}
 	for (const record of Object.values(rules.classes)) {
-		if (!Array.isArray(record.levels) || record.levels.length !== 5 || ![8, 10].includes(record.hitDie)) throw new TypeError("sheetRules.classes: unsupported class progression");
+		if (!Array.isArray(record.levels) || !record.levels.length || record.levels.length > 20 || !Number.isSafeInteger(record.hitDie) || record.hitDie < 2 || record.hitDie > 100 || record.hitDie % 2) throw new TypeError("sheetRules.classes: unsupported class progression");
 	}
 }
 
@@ -70,8 +72,16 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	if (!classRule) issue("class", "This class and source are outside the reviewed sheet subset.");
 	if (!background) issue("background", "Choose a supported background: Soldier or Acolyte (2024).");
 	if (!classRule || !background) return model;
+	if (!["Fighter", "Warlock"].includes(classRule.name)) {
+		issue("class", "This class choice profile is outside the reviewed sheet subset.");
+		return model;
+	}
 	model.className = classRule.name;
 	const levelRule = classRule.levels[build.level - 1];
+	if (build.level > 5 || !levelRule) {
+		issue("level", "This class level is outside the reviewed sheet coverage.");
+		return model;
+	}
 	const classOwner = `class:${classId}`;
 	const backgroundOwner = `background:${backgroundId}`;
 	const decisions = new Map(build.choices.map(choice => [choice.id, choice.selected]));
@@ -174,12 +184,50 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		else if (cantrips.includes(id) && spell.level !== 0) issue(id, "A selected cantrip is not level 0.");
 		else if (prepared.includes(id) && (spell.level < 1 || spell.level > levelRule.slotLevel)) issue(id, "A prepared spell exceeds the available Pact Magic slot level.");
 	}
+	const classData = classRule.name === "Fighter" ? sources?.fighter : sources?.warlock;
+	const rawClass = classData?.class?.find(candidate => candidate.name === build.class.name && candidate.source === build.class.source);
+	const catalogSpecies = catalog.species.find(candidate => candidate.id === species.speciesId);
+	const lineageId = catalogSpecies && (decisions.get(catalogSpecies.lineageChoiceId) || [])[0];
+	const selectedLineage = catalogSpecies?.lineages.find(candidate => candidate.id === lineageId);
+	const rawFeat = background.feat === "Magic Initiate (Cleric)" ? sources?.feats?.feat?.find(candidate => candidate.name === "Magic Initiate" && candidate.source === "XPHB") : null;
+	const featOptions = rawFeat?.additionalSpells?.find(group => group.name === "Cleric Spells")?.ability?.choose;
+	if (selectedLineage && rawClass && (!background.feat?.startsWith("Magic Initiate") || Array.isArray(featOptions))) {
+		const castingChoices = [{id: species.speciesId, allowed: [...selectedLineage.abilityOptions], selected: species.spellcastingAbility}];
+		if (rawClass.spellcastingAbility) castingChoices.push({id: classOwner, allowed: [rawClass.spellcastingAbility], selected: rawClass.spellcastingAbility});
+		if (featOptions) castingChoices.push({id: "feat:magic-initiate-cleric|xphb", allowed: [...featOptions], selected: initiateAbility || null});
+		model.spellcastingChoicePlan = planSpellcastingChoices({sources: castingChoices, abilityScores: scores});
+	}
 	if (model.issues.length) return model;
 
 	const mods = Object.fromEntries(ABILITY_IDS.map(id => [id, modifier(scores[id])]));
 	const pb = species.proficiencyBonus;
-	const isChampion = model.subclassName === "Champion";
-	const hasInvocation = id => invocations.includes(`${id}|xphb`);
+	if (!sources?.races?.race || !sources?.fighter?.class || !sources?.fighter?.classFeature || !sources?.fighter?.subclassFeature
+		|| !sources?.warlock?.class || !sources?.warlock?.classFeature || !sources?.warlock?.subclassFeature || !rawClass
+		|| !sources?.optionalFeatures?.optionalfeature || !sources?.feats?.feat || !sources?.itemMasteries?.itemMastery) {
+		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
+		return model;
+	}
+	const originalSources = {
+		classFeature: [...sources.fighter.classFeature, ...sources.warlock.classFeature],
+		subclassFeature: [...sources.fighter.subclassFeature, ...sources.warlock.subclassFeature],
+		feat: sources.feats.feat,
+		optionalfeature: sources.optionalFeatures.optionalfeature,
+		spell: rawSpells,
+		race: sources.races.race,
+	};
+	const effects = resolveMechanicEffects(rules.mechanics, {
+		classId,
+		backgroundId,
+		subclassId: (decisions.get(`${classOwner}:subclass`) || [])[0] || null,
+		level: build.level,
+		invocations,
+		knownSpells: [...cantrips, ...prepared, ...initiateCantrips, ...(initiateSpell ? [initiateSpell] : []), ...species.spells.map(spell => spell.id)],
+		wearingArmor: equipment.armor.worn !== false,
+		choices: decisions,
+		hasSource: source => (originalSources[source.type] || []).filter(candidate => ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"].every(field => source[field] === undefined || source[field] === candidate[field])).length === 1,
+		refs: {level: levelRule, characterLevel: build.level, modifiers: mods, initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
+	});
+	const effectsOf = type => effects.filter(effect => effect.type === type);
 	model.abilities = ABILITIES.map(([id, name, skills]) => ({
 		id,
 		name,
@@ -188,9 +236,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		save: mods[id] + (classRule.saveProficiencies.includes(id) ? pb : 0),
 		saveProficient: classRule.saveProficiencies.includes(id),
 		savingThrowAdvantages: species.savingThrowAdvantages.filter(advantage => advantage.ability === id).map(advantage => ({...advantage})),
-		skills: skills.map(([skillId, skillName]) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb : 0), proficient: skillProficiencies.has(skillId), advantage: isChampion && skillId === "athletics", disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
+		skills: skills.map(([skillId, skillName]) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb : 0), proficient: skillProficiencies.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
 	}));
-	if (hasInvocation("eldritch-mind")) model.abilities.find(ability => ability.id === "con").savingThrowAdvantages.push({condition: "to maintain Concentration", feature: "Eldritch Mind"});
+	for (const effect of effectsOf("savingThrowAdvantage")) {
+		const ability = model.abilities.find(candidate => candidate.id === effect.ability);
+		if (!ability) throw new TypeError(`Unknown saving throw ability: ${effect.ability}.`);
+		ability.savingThrowAdvantages.push({condition: effect.condition || null, feature: effect.feature});
+	}
 	const skillIndex = new Map(model.abilities.flatMap(ability => ability.skills).map(skill => [skill.id, skill]));
 	model.passives = Object.fromEntries(["perception", "insight", "investigation"].map(id => [id, 10 + skillIndex.get(id).modifier]));
 	model.languages = languages.map(id => rules.standardLanguages[id]);
@@ -199,20 +251,28 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	model.gold = Math.round((classRule.gold + background.gold - equipment.cost) * 100) / 100;
 	model.gear.push(`Unspent starting gold: ${model.gold} GP`);
 	const armor = equipment.armor;
-	const armorValue = armor.base + (armor.dexterity ? mods.dex : 0) + armor.shield + (classRule.name === "Fighter" ? 1 : 0);
-	model.armorClass = hasInvocation("armor-of-shadows")
-		? {value: 13 + mods.dex, condition: "Mage Armor active; no armor worn", fallback: 10 + mods.dex, detail: `Unarmored ${10 + mods.dex}; Leather Armor ${armorValue} when worn instead.`}
-		: {value: armorValue, condition: classRule.name === "Fighter" ? "Chain Mail + Shield + Defense" : "Leather Armor", fallback: null, detail: null};
+	const armorValue = armor.base + (armor.dexterity ? mods.dex : 0) + armor.shield + effectsOf("armorBonus").reduce((sum, effect) => sum + effect.amount, 0);
+	const overrides = effectsOf("armorOverride");
+	if (overrides.length > 1) throw new TypeError("Multiple armor overrides are not supported.");
+	const override = overrides[0];
+	if (override) {
+		const abilityModifier = mods[override.ability];
+		if (abilityModifier === undefined) throw new TypeError(`Unknown armor ability: ${override.ability}.`);
+		const fallback = override.fallbackBase + abilityModifier;
+		model.armorClass = {value: override.base + abilityModifier, condition: `${override.name} active; no armor worn`, fallback, detail: `Unarmored ${fallback}; ${armor.name} ${armorValue} when worn instead.`};
+	} else {
+		const sources = [armor.name, ...(armor.shield ? ["Shield"] : []), ...effectsOf("armorBonus").map(effect => effect.source.name)];
+		model.armorClass = {value: armorValue, condition: sources.join(" + "), fallback: null, detail: null};
+	}
 	if (armor.strength && scores.str < armor.strength) {
 		model.speed = Math.max(0, model.speed - 10);
 		model.defenses.push({type: "speed-penalty", amount: 10, armor: armor.name, minimumStrength: armor.strength});
 	}
-	model.initiative = {value: mods.dex, advantage: isChampion};
+	model.initiative = {value: mods.dex, advantage: effectsOf("initiativeAdvantage").length > 0};
 	model.hp = {maximum: Math.max(1, classRule.hitDie + mods.con) + (build.level - 1) * Math.max(1, classRule.hitDie / 2 + 1 + mods.con), current: session.hp.current, temporary: session.hp.temporary};
 	if (session.hp.current !== null && session.hp.current > model.hp.maximum) issue("current-hit-points", "Current HP exceeds the calculated maximum for this build.");
 	model.hitDice = {count: build.level, die: classRule.hitDie, recovery: {long: "all"}};
-	model.concentration = {modifier: mods.con + (classRule.saveProficiencies.includes("con") ? pb : 0), advantage: hasInvocation("eldritch-mind")};
-	const classData = classRule.name === "Fighter" ? sources?.fighter : sources?.warlock;
+	model.concentration = {modifier: mods.con + (classRule.saveProficiencies.includes("con") ? pb : 0), advantage: effectsOf("savingThrowAdvantage").some(effect => effect.ability === "con" && effect.concentration)};
 	function expandReferences (value, seen = new Set()) {
 		if (Array.isArray(value)) return value.map(item => expandReferences(item, seen));
 		if (!value || typeof value !== "object") return value;
@@ -255,18 +315,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		if (matches.length !== 1) throw new TypeError(`Missing or ambiguous original ${label} description: ${name}.`);
 		return matches[0];
 	}
-	if (!sources?.races?.race || !sources?.fighter?.classFeature || !sources?.fighter?.subclassFeature
-		|| !sources?.warlock?.classFeature || !sources?.warlock?.subclassFeature
-		|| !sources?.optionalFeatures?.optionalfeature || !sources?.feats?.feat || !sources?.itemMasteries?.itemMastery) {
-		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
-		return model;
-	}
 	const rawSpecies = record(sources.races.race, build.species.name, "species");
-	const catalogSpecies = catalog.species.find(candidate => candidate.id === species.speciesId);
-	const lineageId = decisions.get(catalogSpecies.lineageChoiceId)?.[0];
-	const selectedLineage = catalogSpecies.lineages.find(candidate => candidate.id === lineageId);
 	if (!selectedLineage) throw new TypeError("Missing selected species lineage.");
 	model.speciesLineage = {id: selectedLineage.id, name: selectedLineage.name};
+	if (!rawClass) throw new TypeError("Missing original class spellcasting metadata.");
+	if (background.feat === "Magic Initiate (Cleric)" && !Array.isArray(featOptions)) throw new TypeError("Missing original Magic Initiate ability options.");
 	for (const entry of rawSpecies.entries || []) {
 		const result = feature({...entry, source: rawSpecies.source, page: rawSpecies.page}, "Species", "race");
 		if (["Gnomish Lineage", "Fiendish Legacy"].includes(entry.name)) {
@@ -303,7 +356,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		return value;
 	}
 	const speciesCasting = casting(species.speciesId, "Species", species.spellcastingAbility);
-	const classCasting = classRule.name === "Warlock" ? casting(classOwner, "Warlock", "cha") : null;
+	const classCasting = rawClass.spellcastingAbility ? casting(classOwner, classRule.name, rawClass.spellcastingAbility) : null;
 	const initiateCasting = initiateAbility ? casting("feat:magic-initiate-cleric|xphb", "Magic Initiate", initiateAbility) : null;
 	const collected = new Map();
 	function addSpell (id, spellSource) {
@@ -323,30 +376,28 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		resource({id: grant.id, name: spell.ref?.name || spell.name, maxUses: grant.maxUses, recovery: {long: "all"}, spellId: grant.spellId, freeLevel: spell.level, spellcastingAbility: species.spellcastingAbility});
 	}
 	for (const resistance of species.resistances) model.defenses.push({type: "resistance", damageType: resistance});
+	for (const effect of effectsOf("resource")) resource({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("vision")) model.defenses.push({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	if (classRule.name === "Fighter") {
-		resource({id: `${classOwner}:second-wind`, name: "Second Wind", maxUses: levelRule.secondWind, recovery: {short: 1, long: "all"}, activation: "bonus", healing: {dice: "1d10", modifier: build.level}});
 		feature(record(sources.feats.feat, "Defense", "fighting style"), "Fighting Style", "feat");
 		for (const mastery of [...new Set(masteries.map(id => rules.weapons[id].mastery))]) {
 			feature(record(sources.itemMasteries.itemMastery, mastery, "weapon mastery"), "Mastery", "itemMastery");
 		}
-		if (build.level >= 2) {
-			resource({id: `${classOwner}:action-surge`, name: "Action Surge", maxUses: 1, recovery: {short: "all", long: "all"}});
-		}
-	} else {
-		resource({id: `${classOwner}:pact-magic`, name: "Pact Magic", maxUses: levelRule.slots, recovery: {short: "all", long: "all"}, slotLevel: levelRule.slotLevel});
-		if (build.level >= 2) resource({id: `${classOwner}:magical-cunning`, name: "Magical Cunning", maxUses: 1, recovery: {long: "all"}});
+	} else if (classRule.name === "Warlock") {
 		for (const id of invocations) feature(record(sources.optionalFeatures.optionalfeature, rules.invocations[id].name, "invocation"), "Invocation", "optionalfeature");
-		if (hasInvocation("devils-sight")) model.defenses.push({type: "vision", name: "Devil's Sight", range: 120, lighting: ["Dim Light", "Darkness"], magical: true, nonmagical: true});
-		for (const id of [...cantrips, ...prepared]) addSpell(id, {...classCasting, kind: "class", label: "Warlock", prepared: prepared.includes(id), canCastWithSlots: prepared.includes(id), slotLevel: prepared.includes(id) ? levelRule.slotLevel : null});
+		for (const id of [...cantrips, ...prepared]) addSpell(id, {...classCasting, kind: "class", label: classRule.name, prepared: prepared.includes(id), canCastWithSlots: prepared.includes(id), slotLevel: prepared.includes(id) ? levelRule.slotLevel : null});
 		for (const grant of classRule.subclassSpells.filter(value => value.minimumLevel <= build.level)) {
-			for (const id of grant.spells) addSpell(id, {...classCasting, id: `${classOwner}:fiend`, kind: "subclass", label: "Fiend", alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
+			for (const id of grant.spells) addSpell(id, {...classCasting, id: `${classOwner}:${classRule.subclass.id.split("|")[0]}`, kind: "subclass", label: classRule.subclass.name, alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
 		}
-		if (hasInvocation("armor-of-shadows")) addSpell("spell:mage-armor|xphb", {...classCasting, id: `${classOwner}:armor-of-shadows`, kind: "invocation", label: "Armor of Shadows", atWill: true, freeLevel: 1, target: "self", componentsRequired: true});
+	}
+	for (const effect of effectsOf("spellGrant")) {
+		const caster = model.spellcasting.find(candidate => candidate.id === effect.casterId);
+		if (!caster) throw new TypeError(`Spell-grant mechanic requires a known casting source: ${effect.casterId}.`);
+		addSpell(effect.spellId, {...caster, ...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	}
 	if (initiateCasting) {
 		for (const id of initiateCantrips) addSpell(id, {...initiateCasting, kind: "feat", label: "Magic Initiate"});
 		const resourceId = "feat:magic-initiate-cleric|xphb:healing-word";
-		resource({id: resourceId, name: "Healing Word", maxUses: 1, recovery: {long: "all"}, spellId: initiateSpell, freeLevel: 1, spellcastingAbility: initiateAbility, healing: {dice: "2d4", modifier: mods[initiateAbility]}});
 		addSpell(initiateSpell, {...initiateCasting, kind: "feat", label: "Magic Initiate", resourceId, alwaysPrepared: true, canCastWithSlots: true, freeLevel: 1, slotLevel: classCasting ? levelRule.slotLevel : null});
 	}
 	model.spells = [...collected.values()].sort((a, b) => a.level - b.level || a.ref.name.localeCompare(b.ref.name));
@@ -354,12 +405,19 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const id of equipment.weapons) {
 		const weapon = rules.weapons[id];
 		const ability = weaponAbility(weapon);
-		model.attacks.push({name: weapon.name, action: "Attack", range: weapon.range, toHit: pb + mods[ability], damage: `${weapon.damage}${mods[ability] ? signed(mods[ability]) : ""} ${weapon.type}`, count: levelRule.attacks || 1, unit: "attacks", mastery: masteries.includes(id) ? weapon.mastery : null, criticalRange: isChampion ? {min: 19, max: 20} : null});
+		model.attacks.push({name: weapon.name, action: "Attack", range: weapon.range, toHit: pb + mods[ability], damage: `${weapon.damage}${mods[ability] ? signed(mods[ability]) : ""} ${weapon.type}`, count: levelRule.attacks || 1, unit: "attacks", mastery: masteries.includes(id) ? weapon.mastery : null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null});
 	}
-	if (cantrips.includes("spell:eldritch-blast|xphb")) {
-		const agonizing = invocationCantrips.get("agonizing-blast|xphb") === "spell:eldritch-blast|xphb";
-		const attack = {name: "Eldritch Blast", action: "Magic", range: "120 ft", toHit: classCasting.attack, count: build.level >= 5 ? 2 : 1, unit: "beams", damage: `1d10${agonizing && mods.cha ? signed(mods.cha) : ""} force`};
-		model.attacks.unshift(attack);
+	for (const bonus of effectsOf("spellDamageBonus")) {
+		if (!effectsOf("spellAttack").some(attack => attack.spellId === bonus.spellId && attack.casterId === bonus.casterId)) throw new TypeError(`Spell-damage mechanic has no matching attack: ${bonus.spellId} / ${bonus.casterId}.`);
+	}
+	for (const effect of effectsOf("spellAttack")) {
+		const caster = model.spellcasting.find(candidate => candidate.id === effect.casterId);
+		if (!caster) throw new TypeError(`Spell-attack mechanic requires a known casting source: ${effect.casterId}.`);
+		const progression = effect.value.counts.filter(step => step.minimumLevel <= build.level).sort((a, b) => b.minimumLevel - a.minimumLevel)[0];
+		if (!progression) throw new TypeError(`Spell attack has no applicable progression: ${effect.spellId}.`);
+		const bonus = effectsOf("spellDamageBonus").filter(candidate => candidate.spellId === effect.spellId && candidate.casterId === effect.casterId).reduce((total, candidate) => total + candidate.amount, 0);
+		const {name, action, range, dice, damageType, unit} = effect.value;
+		model.attacks.unshift({name, action, range, toHit: caster.attack, count: progression.value, unit, damage: `${dice}${bonus ? signed(bonus) : ""} ${damageType}`, provenance: effect.source, annotationId: effect.annotationId});
 	}
 	for (const state of session.resources) {
 		const definition = model.resources.find(value => value.id === state.id);

@@ -146,7 +146,19 @@ function abilityTable (model) {
 	return `<table class="cb-abilities"><caption class="cb-screen-reader">Ability scores, saving throws, and skills</caption><thead><tr><th scope="col">Ability</th><th scope="col">Score</th><th scope="col">Mod</th><th scope="col">Save</th><th scope="col">Skills / checks · bold = proficient</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-function resourceRow (resource, model) {
+/** Group active spell sources only when their ability and calculated values match. */
+function castingProfiles (model) {
+	const profiles = new Map();
+	for (const source of model.spells.flatMap(spell => spell.sources)) {
+		if (!source.ability || !Number.isFinite(source.attack) || !Number.isFinite(source.dc)) continue;
+		const key = `${source.ability}|${source.attack}|${source.dc}`;
+		if (!profiles.has(key)) profiles.set(key, {ability: source.ability, attack: source.attack, dc: source.dc, labels: new Set()});
+		profiles.get(key).labels.add(source.label);
+	}
+	return [...profiles.values()];
+}
+
+function resourceRow (resource, model, hasDifferentCasting) {
 	const spell = model.spells.find(candidate => candidate.id === resource.spellId);
 	const reaction = spell?.metadata.time.some(time => time.unit === "reaction") ? " <span class=\"cb-tag cb-reaction-tag\">Reaction</span>" : "";
 	const details = [];
@@ -155,18 +167,18 @@ function resourceRow (resource, model) {
 	if (activation && activation !== "reaction") details.push(`Activation: ${activation === "bonus" ? "Bonus Action" : title(activation)}`);
 	if (resource.healing) details.push(`Healing: ${resource.healing.dice} ${signed(resource.healing.modifier)} HP`);
 	if (resource.freeLevel !== undefined) details.push(`Free casting level: ${resource.freeLevel}`);
-	if (resource.spellcastingAbility) details.push(`Ability: ${resource.spellcastingAbility.toUpperCase()}`);
+	if (hasDifferentCasting && resource.spellcastingAbility) details.push(`Ability: ${resource.spellcastingAbility.toUpperCase()}`);
 	if (resource.slotLevel !== undefined) details.push(`Slot level: ${resource.slotLevel}`);
 	const recovery = Object.entries(resource.recovery).map(([rest, amount]) => `${title(rest)} Rest: ${amount === "all" ? "all uses" : `${amount} ${amount === 1 ? "use" : "uses"}`}`);
 	details.push(`Recovery: ${recovery.join(" · ")}`);
 	return `<div class="cb-resource" data-resource="${escape(resource.id)}"><div><strong>${text(resource.name)}</strong>${reaction}<p class="cb-resource-detail">${escape(details.join(" · "))}</p></div>${checks(resource.maxUses, `${resource.maxUses} blank spent-use boxes`)}</div>`;
 }
 
-function resources (model) {
+function resources (model, hasDifferentCasting) {
 	const groups = [[true, "Short Rest / Long Rest"], [false, "Long Rest"]];
 	const content = groups.map(([hasShortRecovery, label]) => {
 		const selected = model.resources.filter(resource => (resource.recovery.short !== undefined) === hasShortRecovery);
-		return selected.length ? `<p class="cb-rest-label">${label} · mark spent</p>${selected.map(resource => resourceRow(resource, model)).join("")}` : "";
+		return selected.length ? `<p class="cb-rest-label">${label} · mark spent</p>${selected.map(resource => resourceRow(resource, model, hasDifferentCasting)).join("")}` : "";
 	}).join("");
 	const hitDiceRecovery = Object.entries(model.hitDice.recovery).map(([rest, amount]) => `${title(rest)} Rest: ${amount === "all" ? "all uses" : `${amount} uses`}`).join(" · ");
 	const hitDice = `<div class="cb-resource"><div><strong>Hit Dice ${model.hitDice.count}d${escape(model.hitDice.die)}</strong><p class="cb-resource-detail">Recovery: ${escape(hitDiceRecovery)}</p></div>${checks(model.hitDice.count, `${model.hitDice.count} blank Hit Die boxes`)}</div>`;
@@ -211,7 +223,8 @@ function draftSummary (model, catalog) {
 	const choices = model.issues.map(issue => {
 		const selection = species?.unresolvedChoices.find(choice => choice.id === issue.id);
 		const label = selection ? `${labels[selection.id.split(":").at(-1)] || "Species choice"}: ${selection.options.map(title).join(" / ")}` : issue.message;
-		return `<li>${text(label)}</li>`;
+		const suggestion = model.spellcastingChoicePlan?.sources.find(source => !source.selected && [`${source.id}:spellcasting-ability`, `${source.id}:ability`].includes(issue.id));
+		return `<li>${text(label)}${suggestion ? ` <strong>Suggested: ${escape(suggestion.suggested.toUpperCase())}</strong>` : ""}</li>`;
 	}).join("");
 	const known = species ? `<p class="cb-draft-known">Species: <strong>${escape(document.build.species.name)}</strong> · Proficiency bonus <strong>${signed(species.proficiencyBonus)}</strong> · Speed <strong>${species.speed} ft</strong> · Darkvision <strong>${species.darkvision} ft</strong></p>` : "";
 	const notes = document.session.notes ? block("Notes", `<div class="cb-notes">${escape(document.session.notes)}</div>`, "cb-notes-block") : "";
@@ -222,7 +235,7 @@ function sourceKind (source) {
 	return ["class", "subclass", "feat", "species", "invocation"].includes(source.kind) ? source.kind : "class";
 }
 
-function sourcePermission (source, spell, model) {
+function sourcePermission (source, spell, model, hasDifferentCasting) {
 	const resource = model.resources.find(candidate => candidate.id === source.resourceId);
 	const permission = [];
 	if (source.atWill || spell.level === 0) permission.push("At will");
@@ -232,27 +245,31 @@ function sourcePermission (source, spell, model) {
 	else if (source.prepared && spell.level > 0) permission.push("prepared");
 	if (source.target) permission.push(`Target: ${source.target}`);
 	if (source.componentsRequired) permission.push("Components: required");
-	const ability = source.ability ? `${source.ability.toUpperCase()} · attack ${signed(source.attack)} · DC ${source.dc}` : "";
+	const ability = hasDifferentCasting && source.ability ? `${source.ability.toUpperCase()} · attack ${signed(source.attack)} · DC ${source.dc}` : "";
 	return `<p class="cb-spell-permission cb-source-${sourceKind(source)}"><strong>${text(source.label)}${ability ? ` (${escape(ability)})` : ""}:</strong> ${escape(permission.join(" · "))}</p>`;
 }
 
-function spellCard (spell, model) {
+function spellCard (spell, model, hasDifferentCasting) {
 	const metadata = spell.metadata;
 	const sources = spell.sources.map(source => `<span class="cb-tag cb-source-${sourceKind(source)}">${escape(SOURCE_NAMES[source.kind] || "Class")}</span>`).join("");
-	return `<article class="cb-spell cb-source-${sourceKind(spell.sources[0])}" data-spell="${escape(spell.id)}"><header class="cb-spell-head"><h3>${escape(spell.ref.name)}</h3>${sources}</header><p class="cb-spell-meta">${spell.level === 0 ? "Cantrip" : `Level ${spell.level}`} · ${escape(SPELL_SCHOOLS[metadata.school] || metadata.school)} · ${escape(spell.ref.source)}${metadata.page ? ` p. ${escape(metadata.page)}` : ""} · ${escape(castingTime(metadata))} · ${escape(range(metadata))}<br>${escape(duration(metadata))}${metadata.meta?.ritual ? " · Ritual" : ""}<br>${escape(components(metadata))}</p>${spell.sources.map(source => sourcePermission(source, spell, model)).join("")}<div class="cb-spell-body">${entries(spell.metadata.entries)}${entries(spell.metadata.entriesHigherLevel)}</div></article>`;
+	return `<article class="cb-spell cb-source-${sourceKind(spell.sources[0])}" data-spell="${escape(spell.id)}"><header class="cb-spell-head"><h3>${escape(spell.ref.name)}</h3>${sources}</header><p class="cb-spell-meta">${spell.level === 0 ? "Cantrip" : `Level ${spell.level}`} · ${escape(SPELL_SCHOOLS[metadata.school] || metadata.school)} · ${escape(spell.ref.source)}${metadata.page ? ` p. ${escape(metadata.page)}` : ""} · ${escape(castingTime(metadata))} · ${escape(range(metadata))}<br>${escape(duration(metadata))}${metadata.meta?.ritual ? " · Ritual" : ""}<br>${escape(components(metadata))}</p>${spell.sources.map(source => sourcePermission(source, spell, model, hasDifferentCasting)).join("")}<div class="cb-spell-body">${entries(spell.metadata.entries)}${entries(spell.metadata.entriesHigherLevel)}</div></article>`;
 }
 
 /** Render calculated values only; incomplete builds get a compact list of decisions. */
 export function renderCharacterSheet (model, catalog) {
 	if (model.status !== "complete") return draftSummary(model, catalog);
 	const {document} = model;
+	const profiles = castingProfiles(model);
+	const hasDifferentCasting = profiles.length > 1;
 	const className = model.className || document.build.class.name;
 	const heading = `${className}${model.subclassName ? ` / ${model.subclassName}` : ""} · Level ${document.build.level}`;
 	const subtitle = `${document.build.species.name} · ${title(model.size)}${document.build.background ? ` · ${document.build.background.name}` : ""} · D&D 2024`;
 	const constants = `<div class="cb-constants"><span>PB <strong>${signed(model.proficiencyBonus)}</strong></span><span>Passive Perception <strong>${model.passives.perception}</strong></span><span>Insight <strong>${model.passives.insight}</strong></span><span>Investigation <strong>${model.passives.investigation}</strong></span><span>Darkvision <strong>${model.darkvision} ft</strong></span></div>`;
-	const caster = model.spellcasting.find(candidate => candidate.id.startsWith("class:")) || model.spellcasting.find(candidate => candidate.kind === "class") || model.spellcasting[0];
-	const metrics = [["AC", model.armorClass.value, ""], ["Initiative", signed(model.initiative.value), model.initiative.advantage ? "advantage" : ""], ["Speed", model.speed, "ft"], [model.attacks[0]?.name || "Attack", model.attacks.length ? signed(model.attacks[0].toHit) : "—", ""], [caster?.label ? `${caster.label} DC` : "Spell DC", caster?.dc ?? "—", ""], ["Spell attack", caster ? signed(caster.attack) : "—", caster?.ability?.toUpperCase() || ""]];
+	const activeSources = model.spells.flatMap(spell => spell.sources).filter(source => source.ability && Number.isFinite(source.attack) && Number.isFinite(source.dc));
+	const caster = activeSources.find(source => source.id?.startsWith("class:") && source.kind === "class") || activeSources.find(source => source.kind === "class") || activeSources[0];
+	const metrics = [["AC", model.armorClass.value, ""], ["Initiative", signed(model.initiative.value), model.initiative.advantage ? "advantage" : ""], ["Speed", model.speed, "ft"], [model.attacks[0]?.name || "Attack", model.attacks.length ? signed(model.attacks[0].toHit) : "—", ""], [hasDifferentCasting && caster?.label ? `${caster.label} DC` : "Spell DC", caster?.dc ?? "—", ""], [hasDifferentCasting && caster?.label ? `${caster.label} attack` : "Spell attack", caster ? signed(caster.attack) : "—", caster?.ability?.toUpperCase() || ""]];
 	const strip = `<div class="cb-combat-strip">${metrics.map(([label, value, detail]) => `<div class="cb-metric"><span>${escape(label)}</span><strong>${escape(value)}</strong>${detail ? `<small>${text(detail)}</small>` : ""}</div>`).join("")}</div>`;
+	const spellcastingDifferences = hasDifferentCasting ? `<div class="cb-constants" aria-label="Spellcasting by source">${profiles.map(profile => `<span><strong>${escape([...profile.labels].join(" / "))}:</strong> ${escape(profile.ability.toUpperCase())} · attack ${signed(profile.attack)} · DC ${profile.dc}</span>`).join("")}</div>` : "";
 	const equipment = block("Equipment & training", `<p>${model.gear.map(gearLabel).map(text).join(" · ")}</p><p><strong>Training:</strong> ${model.training.map(text).join(" · ")}</p><p><strong>Languages:</strong> ${model.languages.map(text).join(", ")}</p>`);
 	const defenseValues = model.defenses.map(defense => {
 		if (defense.type === "resistance") return `Resistance: ${title(defense.damageType)}`;
@@ -262,7 +279,7 @@ export function renderCharacterSheet (model, catalog) {
 	});
 	const defenses = block("Defenses & senses", `<p><strong>AC ${model.armorClass.value}:</strong> ${text(model.armorClass.condition)}.</p>${defenseValues.length ? `<p>${defenseValues.map(escape).join(" · ")}</p>` : ""}${model.armorClass.detail ? `<p>${text(model.armorClass.detail)}</p>` : ""}${model.armorClass.fallback !== undefined && model.armorClass.fallback !== null ? `<p>Without Mage Armor: AC ${model.armorClass.fallback}.</p>` : ""}`);
 	const notes = document.session.notes ? block("Notes", `<div class="cb-notes">${escape(document.session.notes)}</div>`, "cb-notes-block") : "";
-	const main = `<section class="cb-page cb-character-sheet" data-sheet-status="complete">${header(document, subtitle, heading)}${abilityTable(model)}${constants}${strip}<div class="cb-columns"><div class="cb-column">${resources(model)}${features(model)}</div><div class="cb-column">${vitals(model)}${attacks(model)}${defenses}${equipment}${conditions(model)}</div></div>${notes}${footer(document, catalog)}</section>`;
+	const main = `<section class="cb-page cb-character-sheet" data-sheet-status="complete">${header(document, subtitle, heading)}${abilityTable(model)}${constants}${strip}${spellcastingDifferences}<div class="cb-columns"><div class="cb-column">${resources(model, hasDifferentCasting)}${features(model)}</div><div class="cb-column">${vitals(model)}${attacks(model)}${defenses}${equipment}${conditions(model)}</div></div>${notes}${footer(document, catalog)}</section>`;
 	const featureCards = model.features.map(feature => {
 		const selection = feature.selection ? `<p class="cb-feature-selection"><strong>${text(feature.selection.label)}: ${text(feature.selection.value)}.</strong> The original description below may include other options.</p>` : "";
 		const prerequisites = (feature.prerequisite || []).map(option => {
@@ -284,10 +301,10 @@ export function renderCharacterSheet (model, catalog) {
 	}).join("");
 	const featureReference = featureCards ? `<section class="cb-page cb-feature-reference-page">${header(document, "Complete source descriptions", "Features reference · D&D 2024")}<div class="cb-reference-flow">${featureCards}</div>${footer(document, catalog)}</section>` : "";
 	if (!model.spells.length) return main + featureReference;
-	const cards = [...model.spells].sort((a, b) => a.level - b.level || a.ref.name.localeCompare(b.ref.name)).map(spell => spellCard(spell, model)).join("");
+	const cards = [...model.spells].sort((a, b) => a.level - b.level || a.ref.name.localeCompare(b.ref.name)).map(spell => spellCard(spell, model, hasDifferentCasting)).join("");
 	const kinds = [...new Set(model.spells.flatMap(spell => spell.sources.map(sourceKind)))];
 	const legend = `<div class="cb-source-legend">${kinds.map(kind => `<span class="cb-source-${kind}">${SOURCE_NAMES[kind]}</span>`).join("")}</div>`;
-	return `${main}${featureReference}<section class="cb-page cb-spell-reference">${header(document, "One entry per spell · casting ability and uses shown by source", "Spell reference · D&D 2024")}${legend}<div class="cb-spell-grid">${cards}</div>${footer(document, catalog)}</section>`;
+	return `${main}${featureReference}<section class="cb-page cb-spell-reference">${header(document, "One entry per spell · uses shown by source", "Spell reference · D&D 2024")}${legend}<div class="cb-spell-grid">${cards}</div>${footer(document, catalog)}</section>`;
 }
 
 /** Compatibility entry point for callers holding a saved document and source context. */

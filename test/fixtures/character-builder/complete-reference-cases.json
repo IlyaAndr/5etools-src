@@ -195,9 +195,9 @@
 					"count": 1
 				},
 				"speciesCasting": {
-					"ability": "int",
-					"attack": 3,
-					"dc": 11
+					"ability": "cha",
+					"attack": 5,
+					"dc": 13
 				},
 				"classCasting": {
 					"ability": "cha",
@@ -251,9 +251,9 @@
 					"count": 1
 				},
 				"speciesCasting": {
-					"ability": "int",
-					"attack": 3,
-					"dc": 11
+					"ability": "cha",
+					"attack": 5,
+					"dc": 13
 				},
 				"classCasting": {
 					"ability": "cha",
@@ -309,9 +309,9 @@
 					"count": 2
 				},
 				"speciesCasting": {
-					"ability": "int",
-					"attack": 4,
-					"dc": 12
+					"ability": "cha",
+					"attack": 7,
+					"dc": 15
 				},
 				"classCasting": {
 					"ability": "cha",
