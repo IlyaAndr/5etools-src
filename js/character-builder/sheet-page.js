@@ -3,7 +3,8 @@ import {createSpeciesCatalog} from "./species-catalog.js";
 import {renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createSheetExamples} from "./sheet-examples.js";
-import {createFighterEditor, FIGHTER_EDITOR_PROFILE} from "./fighter-editor.js";
+import {createCharacterEditor} from "./character-editor.js";
+import {FIGHTER_EDITOR_PROFILE} from "./fighter-editor-profile.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, isSupportedWarlockDocument} from "./warlock-choices.js";
 
 const exampleSelect = document.getElementById("example-select");
@@ -92,7 +93,7 @@ async function loadData () {
 		if (currentRequest !== requestId) return;
 		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
 		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
-		editor = createFighterEditor({
+		editor = createCharacterEditor({
 			container: editorContainer,
 			catalog,
 			context: sheetContext,
@@ -186,7 +187,7 @@ printButton.addEventListener("click", () => {
 retryButton.addEventListener("click", loadData);
 newFighterButton.addEventListener("click", () => {
 	++requestId;
-	editor.create();
+	editor.create("fighter");
 });
 newWarlockButton.addEventListener("click", () => {
 	++requestId;

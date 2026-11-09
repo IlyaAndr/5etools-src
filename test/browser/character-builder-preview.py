@@ -440,7 +440,8 @@ def main():
             # An error during recalculation must leave both document and form unchanged.
             page.evaluate('''async () => {
                 const {createSpeciesCatalog} = await import('/js/character-builder/species-catalog.js');
-                const {createFighterEditor} = await import('/js/character-builder/fighter-editor.js');
+                const {createCharacterEditor} = await import('/js/character-builder/character-editor.js');
+                const {FIGHTER_EDITOR_PROFILE} = await import('/js/character-builder/fighter-editor-profile.js');
                 const get = path => fetch(path).then(response => response.json());
                 const [races, spells, speciesRules, rules, skills, fighter, backgrounds] = await Promise.all([
                     get('/data/races.json'), get('/data/spells/spells-xphb.json'),
@@ -453,12 +454,12 @@ def main():
                 document.body.append(container);
                 let accepted = null;
                 let allow = true;
-                const editor = createFighterEditor({container, catalog, context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
+                const editor = createCharacterEditor({container, catalog, profiles:[FIGHTER_EDITOR_PROFILE], context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
                     if (!allow) return false;
                     accepted = next;
                     return true;
                 }});
-                editor.create();
+                editor.create('fighter');
                 const unsupportedLevel = JSON.parse(JSON.stringify(accepted));
                 unsupportedLevel.build.level = 6;
                 if (editor.canEdit(unsupportedLevel)) throw new Error('Editor accepted an unsupported Fighter level');

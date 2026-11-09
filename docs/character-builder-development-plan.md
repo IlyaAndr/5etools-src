@@ -59,13 +59,19 @@ Class and background source adapters resolve their own records independently,
 and the sheet model combines their contributions with the species projection.
 Editor presets currently cover only Gnome / Soldier / Fighter and Tiefling /
 Acolyte / Warlock; the presets are coverage boundaries, not a data-model rule.
-Before exposing arbitrary combinations in the editor, split species, background,
-feat, and class choice descriptors into independently composable providers;
-resolve their interactions in shared validation and replace the current
-class/background-specific equipment packages with independently sourced choices.
+Fighter-owned choice descriptors are independent of species and background,
+and the shared editor and draft operations are class-independent. Before
+exposing arbitrary combinations in the editor, provide the same separation for
+species, backgrounds, feats, and the remaining class choices; resolve their
+interactions in shared validation and replace class/background-specific equipment
+packages with independently sourced choices.
 Keep unsupported combinations incomplete until every required contribution has
 reviewed coverage. Changing an entity must preserve unrelated decisions and
 session state, and flag stale or incompatible choices for explicit correction.
+The current reviewed weapon and armor calculations do not cover all item types:
+before adding ranged weapons or Medium armor, implement their appropriate attack
+ability and Dexterity-cap rules from the item data. The current sheet also does
+not yet list Unarmed Strike among attacks.
 
 ## Development Sequence
 

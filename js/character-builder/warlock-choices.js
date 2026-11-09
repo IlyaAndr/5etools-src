@@ -1,5 +1,5 @@
 import {validateCharacterDocument} from "./character-document.js";
-import {createFighterDraft, getFighterAbilities} from "./fighter-choices.js";
+import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getBackgroundSourceChoices, getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 
@@ -26,10 +26,11 @@ export function getWarlockSourceChoices (sources) {
 
 /** Create an empty Warlock build with the shared spellcasting ability selected. */
 export function createWarlockDraft (dataset, options) {
-	const document = createFighterDraft(dataset, options);
-	document.build.class = {name: "Warlock", source: "XPHB"};
-	document.build.species = {name: "Tiefling", source: "XPHB"};
-	document.build.background = {name: "Acolyte", source: "XPHB"};
+	const document = createCharacterDraft(dataset, {
+		characterClass: {name: "Warlock", source: "XPHB"},
+		species: {name: "Tiefling", source: "XPHB"},
+		background: {name: "Acolyte", source: "XPHB"},
+	}, options);
 	document.build.choices = [
 		{id: "species:tiefling|xphb:spellcasting-ability", selected: ["cha"]},
 		{id: "feat:magic-initiate-cleric|xphb:ability", selected: ["cha"]},
@@ -81,7 +82,7 @@ export function getWarlockChoiceDescriptors (document, catalog, {rules, sources,
 	const sourceChoices = getWarlockSourceChoices(sources);
 	const backgroundChoices = getBackgroundSourceChoices(sources, document.build.background);
 	const progression = sourceChoices.progression(document.build.level);
-	const abilities = getFighterAbilities(sources);
+	const abilities = getEditorAbilities(sources);
 	const abilityName = id => abilities.find(ability => ability.id === id)?.label || id;
 	const skillNames = new Map(createSkillCatalog(sources?.skills, sources?.abilityNames).flatMap(ability => ability.skills).map(skill => [skill.id, skill.name]));
 	const decisions = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));

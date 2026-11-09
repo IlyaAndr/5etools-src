@@ -2,7 +2,8 @@ import {readFileSync} from "node:fs";
 import "../../../js/parser.js";
 import {validateCharacterDocument} from "../../../js/character-builder/character-document.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
-import {createFighterDraft, getFighterChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument, setFighterChoice} from "../../../js/character-builder/fighter-choices.js";
+import {createFighterDraft, getFighterChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument} from "../../../js/character-builder/fighter-choices.js";
+import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {getBackgroundSourceChoices} from "../../../js/character-builder/source-choices.js";
@@ -43,7 +44,7 @@ describe("Fighter editor choices", () => {
 		const second = createFighterDraft(catalog.dataset, {getRandomValues: bytes => bytes.fill(2)});
 		expect(first.id).not.toBe(second.id);
 		expect(first.id).toBe(`character-${"01".repeat(16)}`);
-		const edited = setFighterChoice(first, "species:gnome|xphb:lineage", ["forest"]);
+		const edited = setCharacterChoice(first, "species:gnome|xphb:lineage", ["forest"]);
 		expect(edited.id).toBe(first.id);
 		expect(validateCharacterDocument(edited)).toBe(true);
 	});
@@ -76,7 +77,7 @@ describe("Fighter editor choices", () => {
 		for (const [id, selected] of Object.entries(answers)) {
 			const choice = descriptors(draft).find(value => value.id === id);
 			expect(selected.every(value => choice.options.some(option => option.id === value))).toBe(true);
-			draft = setFighterChoice(draft, id, selected);
+			draft = setCharacterChoice(draft, id, selected);
 		}
 		expect(createCharacterSheetModel(draft, catalog, context).issues).toEqual([]);
 		expect(createCharacterSheetModel(draft, catalog, context).status).toBe("complete");
@@ -87,7 +88,7 @@ describe("Fighter editor choices", () => {
 		const choice = descriptors(draft).find(value => value.id === "class:fighter|xphb:weapon-masteries");
 		expect(choice.options).toContainEqual({id: "dagger|xphb", label: "Dagger (Nick)"});
 		const existing = createSheetExamples(catalog.dataset).find(value => value.id === "forest-gnome-fighter-level-1").document;
-		const selected = setFighterChoice(existing, choice.id, ["longsword|xphb", "javelin|xphb", "dagger|xphb"]);
+		const selected = setCharacterChoice(existing, choice.id, ["longsword|xphb", "javelin|xphb", "dagger|xphb"]);
 		const model = createCharacterSheetModel(selected, catalog, context);
 		expect(model.status).toBe("complete");
 		expect(model.features.some(feature => feature.name === "Nick" && feature.sourceRef.source === "XPHB")).toBe(true);
@@ -106,7 +107,7 @@ describe("Fighter editor choices", () => {
 		expect(choice.count).toBe(1);
 		expect(choice.options.map(value => value.id)).toEqual(["survival", "history", "insight"]);
 		expect(getFighterChoiceDescriptors(document, catalog, changedContext).find(value => value.id.endsWith(":weapon-masteries")).count).toBe(2);
-		const selected = setFighterChoice(document, choice.id, ["perception"]);
+		const selected = setCharacterChoice(document, choice.id, ["perception"]);
 		const model = createCharacterSheetModel(selected, catalog, changedContext);
 		expect(model.issues.some(issue => issue.id === choice.id)).toBe(true);
 	});
@@ -128,7 +129,7 @@ describe("Fighter editor choices", () => {
 		const skills = choices.find(choice => choice.id.endsWith(":skills"));
 		expect(skills.options.map(value => value.id)).not.toContain("history");
 		expect(skills.options.map(value => value.id)).toContain("intimidation");
-		const selected = setFighterChoice(document, increases.id, ["str-2.con-1"]);
+		const selected = setCharacterChoice(document, increases.id, ["str-2.con-1"]);
 		const model = createCharacterSheetModel(selected, catalog, changedContext);
 		expect(model.issues.some(issue => issue.id === increases.id)).toBe(true);
 	});
@@ -181,7 +182,7 @@ describe("Fighter editor choices", () => {
 	it("exposes equivalent saved increases without changing their identifier", () => {
 		const original = createFighterDraft(catalog.dataset);
 		const id = "background:soldier|xphb:ability-increases";
-		const saved = setFighterChoice(original, id, ["con-1.str-2"]);
+		const saved = setCharacterChoice(original, id, ["con-1.str-2"]);
 		const choice = descriptors(saved).find(value => value.id === id);
 		expect(choice.selected).toEqual(["con-1.str-2"]);
 		expect(choice.options).toContainEqual({id: "con-1.str-2", label: "Strength +2, Constitution +1"});
@@ -194,12 +195,12 @@ describe("Fighter editor choices", () => {
 		original.session.resources = [{id: "test:resource", spent: 1}];
 		original.build.level = 4;
 		const id = "class:fighter|xphb:level-4-feat";
-		const higher = setFighterChoice(original, id, ["ability-score-improvement|xphb"]);
+		const higher = setCharacterChoice(original, id, ["ability-score-improvement|xphb"]);
 		const lower = {...higher, build: {...higher.build, level: 1}};
 		const choice = descriptors(lower).find(value => value.id === id);
 		expect(choice.available).toBe(false);
 		expect(choice.selected).toEqual(["ability-score-improvement|xphb"]);
-		const cleared = setFighterChoice(lower, id, []);
+		const cleared = setCharacterChoice(lower, id, []);
 		expect(cleared.session).toEqual(original.session);
 		expect(higher.build.choices).toContainEqual({id, selected: ["ability-score-improvement|xphb"]});
 		expect(original.build.choices).toEqual([]);

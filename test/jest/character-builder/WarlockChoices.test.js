@@ -2,7 +2,7 @@ import {readFileSync} from "node:fs";
 import "../../../js/parser.js";
 import {validateCharacterDocument} from "../../../js/character-builder/character-document.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
-import {setFighterChoice} from "../../../js/character-builder/fighter-choices.js";
+import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "../../../js/character-builder/warlock-choices.js";
@@ -84,7 +84,7 @@ describe("Warlock editor choices", () => {
 		expect(one.options.map(value => value.id)).not.toContain("spell:misty-step|xphb");
 		const three = {...draft, build: {...draft.build, level: 3}};
 		expect(choice(three, ":prepared-spells").options.map(value => value.id)).toContain("spell:misty-step|xphb");
-		const saved = setFighterChoice(three, id, ["spell:misty-step|xphb"]);
+		const saved = setCharacterChoice(three, id, ["spell:misty-step|xphb"]);
 		const lowered = {...saved, build: {...saved.build, level: 1}};
 		expect(choice(lowered, ":prepared-spells").selected).toEqual(["spell:misty-step|xphb"]);
 		expect(lowered.build.choices.find(value => value.id === id).selected).toEqual(["spell:misty-step|xphb"]);
@@ -95,19 +95,19 @@ describe("Warlock editor choices", () => {
 		draft.build.level = 2;
 		const id = "class:warlock|xphb:agonizing-blast-cantrip";
 		expect(descriptors(draft).find(value => value.id === id).available).toBe(false);
-		draft = setFighterChoice(draft, "class:warlock|xphb:invocations", ["agonizing-blast|xphb"]);
-		draft = setFighterChoice(draft, "class:warlock|xphb:cantrips", ["spell:eldritch-blast|xphb", "spell:mind-sliver|xphb"]);
+		draft = setCharacterChoice(draft, "class:warlock|xphb:invocations", ["agonizing-blast|xphb"]);
+		draft = setCharacterChoice(draft, "class:warlock|xphb:cantrips", ["spell:eldritch-blast|xphb", "spell:mind-sliver|xphb"]);
 		expect(descriptors(draft).find(value => value.id === id)).toMatchObject({available: true, options: [{id: "spell:eldritch-blast|xphb", label: "Eldritch Blast"}]});
-		draft = setFighterChoice(draft, id, ["spell:eldritch-blast|xphb"]);
-		draft = setFighterChoice(draft, "class:warlock|xphb:invocations", []);
+		draft = setCharacterChoice(draft, id, ["spell:eldritch-blast|xphb"]);
+		draft = setCharacterChoice(draft, "class:warlock|xphb:invocations", []);
 		expect(descriptors(draft).find(value => value.id === id)).toMatchObject({available: false, selected: ["spell:eldritch-blast|xphb"]});
 	});
 
 	it("preserves imported different spellcasting abilities and equivalent increase ordering", () => {
 		let draft = createWarlockDraft(catalog.dataset);
-		draft = setFighterChoice(draft, "species:tiefling|xphb:spellcasting-ability", ["int"]);
-		draft = setFighterChoice(draft, "feat:magic-initiate-cleric|xphb:ability", ["wis"]);
-		draft = setFighterChoice(draft, "background:acolyte|xphb:ability-increases", ["wis-1.cha-2"]);
+		draft = setCharacterChoice(draft, "species:tiefling|xphb:spellcasting-ability", ["int"]);
+		draft = setCharacterChoice(draft, "feat:magic-initiate-cleric|xphb:ability", ["wis"]);
+		draft = setCharacterChoice(draft, "background:acolyte|xphb:ability-increases", ["wis-1.cha-2"]);
 		expect(choice(draft, ":spellcasting-ability").selected).toEqual(["int"]);
 		expect(choice(draft, ":ability").selected).toEqual(["wis"]);
 		expect(choice(draft, ":spellcasting-ability").options.map(value => value.id)).toEqual(expect.arrayContaining(["cha", "int"]));

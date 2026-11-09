@@ -3,7 +3,7 @@ import {projectSpecies} from "./species-projection.js";
 import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
 import {createSkillCatalog} from "./skill-catalog.js";
-import {getFighterChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument} from "./fighter-choices.js";
+import {getFighterChoiceDescriptors, getFighterClassChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument} from "./fighter-choices.js";
 import {getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "./warlock-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 
@@ -99,8 +99,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		return model;
 	}
 	const levelRule = warlockSourceChoices ? {...reviewedLevelRule, ...warlockSourceChoices.progression(build.level)} : reviewedLevelRule;
-	const descriptors = fighterSourceChoices && isSupportedFighterDocument(document)
-		? getFighterChoiceDescriptors(document, catalog, {rules, sources})
+	const descriptors = fighterSourceChoices
+		? isSupportedFighterDocument(document) ? getFighterChoiceDescriptors(document, catalog, {rules, sources}) : getFighterClassChoiceDescriptors(document, {rules, sources})
 		: warlockSourceChoices && isSupportedWarlockDocument(document) ? getWarlockChoiceDescriptors(document, catalog, {rules, sources, spells: spells || []}) : [];
 	const sharedChoices = new Map(descriptors.map(descriptor => [descriptor.id, descriptor]));
 	function select (id, options, count, label) {

@@ -55,7 +55,8 @@ sheet calculator also checks Gnome / Warlock / Acolyte and Tiefling / Fighter /
 Soldier combinations, but the editor does not yet offer species or background
 switching. Some other combinations lack a reviewed equipment package and remain
 incomplete. Further editor expansion requires composable species, class,
-background and feat choice providers and independent equipment selection.
+background and feat choice providers and independent equipment selection. Fighter
+class choices are already supplied separately from species and background choices.
 
 The Tiefling/Warlock editor chooses **Charisma** for class, species, and feat
 spells because all three sources allow it. Imported characters retain their
