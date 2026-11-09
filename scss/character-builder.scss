@@ -51,7 +51,8 @@
 	}
 }
 
-.cb-toolbar {
+.cb-toolbar,
+.cb-editor {
 	max-width: 210mm;
 	margin: 20px auto;
 	padding: 20px 24px;
@@ -59,6 +60,93 @@
 	border: 1px solid var(--cb-line);
 	font-size: 13px;
 	line-height: 1.45;
+}
+.cb-editor__heading {
+	display: flex;
+	justify-content: space-between;
+	align-items: start;
+	gap: 12px;
+}
+.cb-editor__heading h2 {
+	font: 700 22px/1.2 Georgia, serif;
+}
+.cb-editor__heading p,
+.cb-editor__intro,
+.cb-editor__help {
+	color: var(--cb-muted);
+}
+.cb-editor__intro {
+	margin: 12px 0 !important;
+}
+.cb-editor__grid,
+.cb-editor__scores,
+.cb-editor__choices {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+	gap: 12px;
+}
+.cb-editor__choices {
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+}
+.cb-editor__group {
+	min-width: 0;
+	margin: 14px 0 0;
+	padding: 10px 12px 12px;
+	border: 1px solid var(--cb-line);
+}
+.cb-editor__group legend {
+	padding: 0 4px;
+	font-weight: 700;
+}
+.cb-editor__help {
+	margin: 0 0 8px !important;
+	font-size: 12px;
+}
+.cb-editor__package {
+	margin: 8px 0 0 !important;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+.cb-editor__field {
+	display: block;
+	min-width: 0;
+	font-weight: 700;
+}
+.cb-editor__field span {
+	display: block;
+	margin-bottom: 4px;
+}
+.cb-editor__field input,
+.cb-editor__field select,
+.cb-editor__options select {
+	width: 100%;
+	min-height: 36px;
+	padding: 6px 8px;
+	border: 1px solid var(--cb-line);
+	border-radius: 4px;
+	color: var(--cb-ink);
+	background: var(--cb-paper);
+}
+.cb-editor__scores {
+	margin-top: 10px;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 85px), 1fr));
+}
+.cb-editor__option {
+	display: flex;
+	gap: 7px;
+	align-items: baseline;
+	margin-top: 5px;
+}
+.cb-editor__option input {
+	flex: none;
+}
+.cb-editor__unknown {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 8px;
+	overflow-wrap: anywhere;
 }
 
 .cb-toolbar__eyebrow {
@@ -656,7 +744,8 @@
 }
 
 @media screen and (width <= 850px) {
-	.cb-toolbar {
+	.cb-toolbar,
+	.cb-editor {
 		margin: 12px;
 	}
 	.cb-page {
@@ -738,6 +827,7 @@
 		print-color-adjust: exact;
 	}
 	.cb-toolbar,
+	.cb-editor,
 	.cb-site-header,
 	.cb-spell-reference .cb-page-footer {
 		display: none;

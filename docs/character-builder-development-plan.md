@@ -25,6 +25,13 @@ Gnome and Tiefling provide the first end-to-end prototype. Supporting the remain
 
 The specific subclasses, localization, and initial release limits are working proposals, not previously confirmed user preferences. Supported options are listed explicitly in the UI. Other species, classes, and levels follow in subsequent stages. Proposed Russian UI localization is separate from the project's English source code, comments, and documentation.
 
+Develop the editor, calculations, and sheet together as an end-to-end slice. A
+player should be able to create and revise a supported character before the
+catalog expands to every class and species. Add new options incrementally using
+the same choice, calculation, and rendering interfaces. Source standard skills
+and their associated abilities from the 2024 records in `data/skills.json`;
+do not duplicate the mapping in editor or sheet code.
+
 ## Data Architecture
 
 The main 5etools JSON files provide the content catalog. An adapter converts the required data into the builder's unified format; small, reviewed additions describe missing relationships, constraints, and effects. Source JSON files retain their upstream format. Foundry data may inform those additions, but the running builder does not depend on it.

@@ -1,6 +1,6 @@
 export const CHARACTER_DOCUMENT_VERSION = 1;
 
-const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
+export const ABILITY_IDS = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
 const ID_PATTERN = /^[a-z0-9][a-z0-9:_./|%-]*$/;
 
 function fail (path, message) {
@@ -89,8 +89,8 @@ export function validateCharacterDocument (document) {
 	object(build.abilities, "character.build.abilities", ["method", "scores"]);
 	if (!["standard", "pointBuy", "manual"].includes(build.abilities.method)) fail("character.build.abilities.method", "unsupported ability score method");
 	if (build.abilities.scores !== null) {
-		object(build.abilities.scores, "character.build.abilities.scores", ABILITIES);
-		for (const ability of ABILITIES) integer(build.abilities.scores[ability], `character.build.abilities.scores.${ability}`, 1, 30);
+		object(build.abilities.scores, "character.build.abilities.scores", ABILITY_IDS);
+		for (const ability of ABILITY_IDS) integer(build.abilities.scores[ability], `character.build.abilities.scores.${ability}`, 1, 30);
 	}
 	uniqueRecords(build.choices, "character.build.choices", (choice, path) => {
 		object(choice, path, ["id", "selected"]);

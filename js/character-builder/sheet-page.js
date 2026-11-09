@@ -1,8 +1,9 @@
-import {parseCharacterDocument} from "./character-document.js";
+import {parseCharacterDocument, serializeCharacterDocument} from "./character-document.js";
 import {createSpeciesCatalog} from "./species-catalog.js";
 import {renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createSheetExamples} from "./sheet-examples.js";
+import {createFighterEditor} from "./fighter-editor.js";
 
 const exampleSelect = document.getElementById("example-select");
 const importInput = document.getElementById("character-import");
@@ -11,6 +12,10 @@ const status = document.getElementById("status");
 const errorMessage = document.getElementById("error-message");
 const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
+const newFighterButton = document.getElementById("new-fighter");
+const editFighterButton = document.getElementById("edit-fighter");
+const saveButton = document.getElementById("save-character");
+const editorContainer = document.getElementById("fighter-editor");
 
 let catalog;
 let sheetContext;
@@ -18,6 +23,8 @@ let examples = [];
 let selectedExample = "";
 let hasPreview = false;
 let requestId = 0;
+let currentCharacter;
+let editor;
 
 function clearError () {
 	errorMessage.hidden = true;
@@ -35,9 +42,12 @@ function showDocument (character, exampleId = "") {
 	preview.innerHTML = html;
 	document.title = `${character.name} — Character Builder`;
 	selectedExample = exampleId;
+	currentCharacter = character;
 	exampleSelect.value = exampleId;
 	hasPreview = true;
 	printButton.disabled = false;
+	saveButton.disabled = false;
+	editFighterButton.disabled = !editor?.canEdit(character);
 	printButton.textContent = model.status === "complete" ? "Print / Save PDF" : "Print draft summary";
 	preview.setAttribute("aria-busy", "false");
 	clearError();
@@ -54,13 +64,16 @@ async function loadData () {
 	const currentRequest = ++requestId;
 	exampleSelect.disabled = true;
 	importInput.disabled = true;
+	newFighterButton.disabled = true;
+	editFighterButton.disabled = true;
+	saveButton.disabled = true;
 	printButton.disabled = true;
 	retryButton.hidden = true;
 	preview.setAttribute("aria-busy", "true");
 	status.textContent = "Loading character data…";
 	clearError();
 	try {
-		const [races, spells, speciesRules, characterSheetRules, fighter, warlock, optionalFeatures, feats, itemMasteries] = await Promise.all([
+		const [races, spells, speciesRules, characterSheetRules, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds] = await Promise.all([
 			fetchJson("../../data/races.json"),
 			fetchJson("../../data/spells/spells-xphb.json"),
 			fetchJson("./rules/species.json"),
@@ -70,18 +83,37 @@ async function loadData () {
 			fetchJson("../../data/optionalfeatures.json"),
 			fetchJson("../../data/feats.json"),
 			fetchJson("../../data/items-base.json"),
+			fetchJson("../../data/skills.json"),
+			fetchJson("../../data/backgrounds.json"),
 		]);
 		if (currentRequest !== requestId) return;
 		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
-		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries}};
+		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
+		editor = createFighterEditor({
+			container: editorContainer,
+			catalog,
+			context: sheetContext,
+			onChange: character => {
+				try {
+					const result = showDocument(character);
+					++requestId;
+					status.textContent = result === "complete" ? "Character sheet updated." : "Complete the choices in the editor to calculate the full sheet.";
+					return true;
+				} catch (error) {
+					showError(`Could not update the sheet. ${error.message}`);
+					return false;
+				}
+			},
+		});
 		examples = createSheetExamples(catalog.dataset);
-		const importedOption = new Option("Imported character", "");
+		const importedOption = new Option("Current character", "");
 		importedOption.disabled = true;
 		exampleSelect.replaceChildren(importedOption);
 		for (const example of examples) exampleSelect.add(new Option(example.label, example.id));
 		showDocument(examples[0].document, examples[0].id);
 		exampleSelect.disabled = false;
 		importInput.disabled = false;
+		newFighterButton.disabled = false;
 		status.textContent = "Reference character ready. Choose another example or open a saved character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -101,6 +133,7 @@ exampleSelect.addEventListener("change", () => {
 	++requestId;
 	try {
 		const result = showDocument(example.document, example.id);
+		editor.close();
 		status.textContent = result === "complete" ? `${example.label} is ready to preview and print.` : "This draft needs the choices listed below before a full sheet can be calculated.";
 	} catch (error) {
 		exampleSelect.value = selectedExample;
@@ -123,6 +156,7 @@ importInput.addEventListener("change", async () => {
 		if (currentRequest !== requestId) return;
 		const character = parseCharacterDocument(text);
 		const result = showDocument(character);
+		editor.close();
 		status.textContent = result === "complete" ? `Opened ${file.name}. The character sheet is ready to print.` : `Opened ${file.name}. Complete the listed choices to calculate a full character sheet.`;
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -137,4 +171,19 @@ printButton.addEventListener("click", () => {
 	if (hasPreview) window.print();
 });
 retryButton.addEventListener("click", loadData);
+newFighterButton.addEventListener("click", () => {
+	++requestId;
+	editor.create();
+});
+editFighterButton.addEventListener("click", () => editor.open(currentCharacter));
+saveButton.addEventListener("click", () => {
+	if (!currentCharacter) return;
+	const file = new Blob([serializeCharacterDocument(currentCharacter)], {type: "application/json"});
+	const url = URL.createObjectURL(file);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = `${currentCharacter.id}.json`;
+	link.click();
+	setTimeout(() => URL.revokeObjectURL(url), 0);
+});
 loadData();

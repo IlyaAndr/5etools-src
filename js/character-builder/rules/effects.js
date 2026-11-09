@@ -1,3 +1,5 @@
+import {ABILITY_IDS} from "../character-document.js";
+
 /** Evaluate reviewed, declarative mechanics without inspecting rule descriptions. */
 const EFFECT_TYPES = new Set([
 	"resource", "savingThrowAdvantage", "skillAdvantage", "initiativeAdvantage",
@@ -20,8 +22,7 @@ function resolve (value, refs) {
 	return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, resolve(item, refs)]));
 }
 
-const ABILITIES = new Set(["str", "dex", "con", "int", "wis", "cha"]);
-const SKILLS = new Set(["athletics", "acrobatics", "sleight-of-hand", "stealth", "arcana", "history", "investigation", "nature", "religion", "animal-handling", "insight", "medicine", "perception", "survival", "deception", "intimidation", "performance", "persuasion"]);
+const ABILITIES = new Set(ABILITY_IDS);
 const SOURCE_TYPES = new Set(["classFeature", "subclassFeature", "optionalfeature", "feat", "spell", "race"]);
 const EFFECT_FIELDS = {
 	resource: ["type", "value"],
@@ -44,7 +45,7 @@ function keys (value, allowed, label) {
 	if (!plainObject(value) || Object.keys(value).some(key => !allowed.includes(key))) throw new TypeError(`Invalid ${label}.`);
 }
 
-function validateEffect (effect, {allowReferences = false} = {}) {
+function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 	const isReference = value => allowReferences && plainObject(value) && Object.keys(value).length === 1 && typeof value["$ref"] === "string" && /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)*$/.test(value["$ref"]);
 	const validInt = (value, min = 0, max = Number.MAX_SAFE_INTEGER) => isReference(value) || integer(value, min, max);
 	const validText = value => isReference(value) || nonempty(value);
@@ -70,7 +71,7 @@ function validateEffect (effect, {allowReferences = false} = {}) {
 		case "savingThrowAdvantage":
 			if (!ABILITIES.has(effect.ability) || !nonempty(effect.feature) || (effect.condition != null && !nonempty(effect.condition)) || (effect.concentration !== undefined && typeof effect.concentration !== "boolean")) throw new TypeError("Invalid saving throw advantage mechanic.");
 			break;
-		case "skillAdvantage": if (!SKILLS.has(effect.skill)) throw new TypeError("Invalid skill advantage mechanic."); break;
+		case "skillAdvantage": if (!(skillIds instanceof Set) || !skillIds.has(effect.skill)) throw new TypeError("Invalid skill advantage mechanic."); break;
 		case "initiativeAdvantage": break;
 		case "armorBonus": if (!validInt(effect.amount, 0, 100)) throw new TypeError("Invalid armor bonus mechanic."); break;
 		case "armorOverride":
@@ -121,7 +122,7 @@ export function resolveMechanicEffects (annotations, context) {
 		if (!Array.isArray(annotation.effects) || !annotation.effects.length) throw new TypeError(`Missing mechanics effects: ${annotation.id}.`);
 		for (const effect of annotation.effects) {
 			if (!effect || !EFFECT_TYPES.has(effect.type)) throw new TypeError(`Unsupported mechanics effect: ${effect?.type}.`);
-			validateEffect(effect, {allowReferences: true});
+			validateEffect(effect, {allowReferences: true, skillIds: context.skillIds});
 		}
 		const {when} = annotation;
 		for (const key of ["classId", "backgroundId", "subclassId", "invocation", "knownSpell"]) if (when[key] !== undefined && !nonempty(when[key])) throw new TypeError(`Invalid mechanics condition: ${key}.`);
@@ -147,7 +148,7 @@ export function resolveMechanicEffects (annotations, context) {
 		if (!context.hasSource(annotation.source)) throw new TypeError(`Missing or ambiguous mechanics source: ${annotation.id}.`);
 		for (const effect of annotation.effects) {
 			const resolved = resolve(effect, context.refs);
-			validateEffect(resolved);
+			validateEffect(resolved, {skillIds: context.skillIds});
 			result.push({...resolved, source: {...annotation.source}, annotationId: annotation.id});
 		}
 	}

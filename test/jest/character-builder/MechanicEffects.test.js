@@ -1,4 +1,5 @@
 import {readFileSync} from "node:fs";
+import "../../../js/parser.js";
 import {resolveMechanicEffects} from "../../../js/character-builder/rules/effects.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
@@ -15,6 +16,7 @@ const annotation = () => ({
 	],
 });
 const context = () => ({
+	skillIds: new Set(["athletics", "stealth"]),
 	classId: "example|test",
 	backgroundId: "background|test",
 	subclassId: null,
@@ -78,6 +80,16 @@ describe("Declarative character mechanics", () => {
 		expect(() => resolveMechanicEffects([input], context())).toThrow(/skill/i);
 	});
 
+	it("validates skill advantages using the supplied catalog, even before a level gate", () => {
+		const input = annotation();
+		input.effects = [{type: "skillAdvantage", skill: "stealth"}];
+		expect(resolveMechanicEffects([input], context())[0].skill).toBe("stealth");
+		input.when.minimumLevel = 4;
+		const state = context();
+		state.skillIds.delete("stealth");
+		expect(() => resolveMechanicEffects([input], state)).toThrow(/skill/i);
+	});
+
 	it("rejects an invalid literal effect even when its level gate is not met", () => {
 		const input = annotation();
 		input.when.minimumLevel = 4;
@@ -122,8 +134,11 @@ describe("Declarative character mechanics", () => {
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
 const sources = {
+	skills: readJson("../../../data/skills.json"),
+	abilityNames: globalThis.Parser.ATB_ABV_TO_FULL,
 	races: readJson("../../../data/races.json"),
 	fighter: readJson("../../../data/class/class-fighter.json"),
+	backgrounds: readJson("../../../data/backgrounds.json"),
 	warlock: readJson("../../../data/class/class-warlock.json"),
 	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 	feats: readJson("../../../data/feats.json"),
