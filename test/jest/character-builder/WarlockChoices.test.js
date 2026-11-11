@@ -103,6 +103,73 @@ describe("Warlock editor choices", () => {
 		expect(descriptors(draft).find(value => value.id === id)).toMatchObject({available: false, selected: ["spell:eldritch-blast|xphb"]});
 	});
 
+	it("offers every reviewed invocation and gates it by level and prerequisites", () => {
+		expect(Object.keys(context.rules.invocations)).toHaveLength(28);
+		const draft = createWarlockDraft(catalog.dataset);
+		const options = (level, selected = []) => {
+			const document = {
+				...draft,
+				build: {...draft.build, level, choices: [...draft.build.choices, ...(selected.length ? [{id: "class:warlock|xphb:invocations", selected}] : [])]},
+			};
+			return descriptors(document).find(value => value.id === "class:warlock|xphb:invocations").options.map(option => option.id);
+		};
+		expect(options(1)).toEqual(["armor-of-shadows|xphb", "eldritch-mind|xphb", "pact-of-the-blade|xphb", "pact-of-the-chain|xphb"]);
+		expect(options(2)).toEqual(expect.arrayContaining([
+			"agonizing-blast|xphb", "devils-sight|xphb", "eldritch-spear|xphb", "fiendish-vigor|xphb",
+			"mask-of-many-faces|xphb", "misty-visions|xphb", "otherworldly-leap|xphb", "repelling-blast|xphb",
+		]));
+		expect(options(4)).not.toContain("ascendant-step|xphb");
+		expect(options(5)).toEqual(expect.arrayContaining(["ascendant-step|xphb", "gaze-of-two-minds|xphb", "gift-of-the-depths|xphb", "master-of-myriad-forms|xphb", "one-with-shadows|xphb"]));
+		expect(options(7)).toContain("whispers-of-the-grave|xphb");
+		expect(options(9)).toContain("visions-of-distant-realms|xphb");
+		expect(options(14)).not.toContain("witch-sight|xphb");
+		expect(options(15)).toContain("witch-sight|xphb");
+	});
+
+	it("requires the annotated prerequisite invocation before offering a dependent one", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		const options = (level, selected) => {
+			const document = {...draft, build: {...draft.build, level, choices: [{id: "class:warlock|xphb:invocations", selected}]}};
+			return descriptors(document).find(value => value.id === "class:warlock|xphb:invocations").options.map(option => option.id);
+		};
+		expect(options(5, [])).not.toContain("thirsting-blade|xphb");
+		expect(options(5, ["pact-of-the-blade|xphb"])).toEqual(expect.arrayContaining(["thirsting-blade|xphb", "eldritch-smite|xphb"]));
+		expect(options(5, ["pact-of-the-chain|xphb"])).toContain("investment-of-the-chain-master|xphb");
+		expect(options(5, ["pact-of-the-chain|xphb"])).not.toContain("thirsting-blade|xphb");
+		expect(options(11, ["pact-of-the-blade|xphb"])).not.toContain("devouring-blade|xphb");
+		expect(options(12, ["pact-of-the-blade|xphb", "thirsting-blade|xphb"])).toContain("devouring-blade|xphb");
+		expect(options(12, ["pact-of-the-blade|xphb"])).not.toContain("devouring-blade|xphb");
+	});
+
+	it("withholds invocations whose choices are not reviewed yet and says why", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		const invocationChoice = choice(draft, "class:warlock|xphb:invocations");
+		expect(invocationChoice.options.map(option => option.id)).not.toContain("pact-of-the-tome|xphb");
+		expect(invocationChoice.options.map(option => option.id)).not.toContain("lessons-of-the-first-ones|xphb");
+		expect(invocationChoice.help).toContain("Pact of the Tome: The three cantrips and two rituals it grants have no reviewed choice yet.");
+		expect(invocationChoice.help).toContain("Lessons of the First Ones: The Origin feat it grants has no reviewed choice or effect yet.");
+		const saved = setCharacterChoice(draft, "class:warlock|xphb:invocations", ["pact-of-the-tome|xphb"]);
+		expect(createCharacterSheetModel(saved, catalog, context).issues).toContainEqual(expect.objectContaining({
+			id: "class:warlock|xphb:invocations",
+			message: "Pact of the Tome: The three cantrips and two rituals it grants have no reviewed choice yet.",
+		}));
+	});
+
+	it("matches the reviewed invocations to the original Eldritch Invocation records", () => {
+		const records = context.sources.optionalFeatures.optionalfeature.filter(record => record.source === "XPHB" && (record.featureType || []).includes("EI"));
+		const annotations = Object.entries(context.rules.invocations);
+		expect(annotations).toHaveLength(records.length);
+		for (const [id, annotation] of annotations) {
+			const record = records.find(candidate => `${candidate.name.toLowerCase().replaceAll("'", "").replaceAll(" ", "-")}|xphb` === id);
+			expect(record).toBeDefined();
+			expect(annotation.name).toBe(record.name);
+			const [prerequisite = {}] = record.prerequisite || [];
+			expect(annotation.minimumLevel).toBe(prerequisite.level?.level || 1);
+			expect(annotation.requires || []).toEqual((prerequisite.optionalfeature || []).map(value => value.replaceAll(" ", "-")));
+			expect(annotation.repeatable === true).toBe(JSON.stringify(record.entries).includes("\"name\":\"Repeatable\""));
+		}
+	});
+
 	it.each([6, 11, 17, 20])("offers the full reviewed spell list at level %i", level => {
 		const draft = createWarlockDraft(catalog.dataset);
 		draft.build.level = level;
@@ -118,6 +185,28 @@ describe("Warlock editor choices", () => {
 		expect(prepared.options).toHaveLength(leveled);
 		expect(prepared.options.every(option => !option.label.startsWith("Spell data unavailable"))).toBe(true);
 		expect(invocations).toMatchObject({count: progression.invocations});
+	});
+
+	it("accepts ten reviewed invocations and their prerequisites at level 20", () => {
+		const source = createSheetExamples(catalog.dataset).find(entry => entry.id === "infernal-tiefling-warlock-level-5").document;
+		const document = JSON.parse(JSON.stringify(source));
+		const owner = "class:warlock|xphb";
+		document.build.level = 20;
+		const saved = id => document.build.choices.find(value => value.id === `${owner}:${id}`).selected;
+		saved("invocations").splice(
+			0,
+			saved("invocations").length,
+			"eldritch-mind|xphb", "armor-of-shadows|xphb", "agonizing-blast|xphb", "devils-sight|xphb", "repelling-blast|xphb",
+			"pact-of-the-blade|xphb", "thirsting-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb", "devouring-blade|xphb",
+		);
+		saved("cantrips").push("spell:chill-touch|xphb");
+		saved("prepared-spells").push(
+			"spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:expeditious-retreat|xphb",
+			"spell:hellish-rebuke|xphb", "spell:illusory-script|xphb", "spell:speak-with-animals|xphb", "spell:witch-bolt|xphb",
+		);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues.filter(issue => issue.id === `${owner}:invocations`)).toEqual([]);
+		expect(model.features.map(feature => feature.name)).toEqual(expect.arrayContaining(["Thirsting Blade", "Eldritch Smite", "Lifedrinker", "Devouring Blade"]));
 	});
 
 	it("keeps a prepared spell list limited to the current Pact Magic slot level", () => {

@@ -5,6 +5,19 @@ import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 
+/**
+ * Reviewed invocations the character may take: the level must reach the
+ * annotated minimum, and every prerequisite invocation must already be
+ * selected. Annotations whose choice this subset cannot express stay out of the
+ * list so the sheet reports them instead of silently ignoring them.
+ */
+export function getAvailableInvocations (rules, level, selected = []) {
+	const chosen = new Set(selected);
+	return Object.entries(rules?.invocations || {}).filter(([, value]) => !value.unsupported
+		&& value.minimumLevel <= level
+		&& (value.requires || []).every(id => chosen.has(id)));
+}
+
 /** Read Warlock class choices and progression from its original record. */
 export function getWarlockSourceChoices (sources) {
 	const warlock = getSourceRecord(sources?.warlock?.class, {name: "Warlock", source: "XPHB"});
@@ -68,14 +81,19 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	const preparedOptions = warlock.preparedOptions.map(readSpell).filter(spell => spell.level === null || spell.level <= progression.slotLevel).map(spell => spellOption(spell));
 	const owner = "class:warlock|xphb";
 	const invocationChoices = decisions.get(`${owner}:invocations`) || [];
-	const invocations = Object.entries(rules.invocations).filter(([, value]) => value.minimumLevel <= document.build.level).map(([id, value]) => option(id, value.name));
+	const invocations = getAvailableInvocations(rules, document.build.level, invocationChoices).map(([id, value]) => option(id, value.name));
 	const levelFourAbilities = abilities.map(ability => ability.id);
 	const levelFourWeights = [{from: levelFourAbilities, weights: [2]}, {from: levelFourAbilities, weights: [1, 1]}];
+	const invocationDescriptor = descriptor(`${owner}:invocations`, "Eldritch Invocations", progression.invocations, invocations);
+	const unsupportedInvocations = Object.values(rules.invocations).filter(value => value.unsupported);
+	if (unsupportedInvocations.length) {
+		invocationDescriptor.help = `Not offered yet because their choices are not reviewed: ${unsupportedInvocations.map(value => `${value.name}: ${value.unsupported}`).join(" ")}`;
+	}
 	const result = [
 		descriptor(`${owner}:skills`, "Warlock Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => option(id, skillNames.get(id)))),
 		descriptor(`${owner}:cantrips`, "Warlock Cantrips", progression.cantrips, getSpellOptions(rawSpells, warlock.cantripOptions)),
 		descriptor(`${owner}:prepared-spells`, "Prepared Warlock Spells", progression.prepared, preparedOptions),
-		descriptor(`${owner}:invocations`, "Eldritch Invocations", progression.invocations, invocations),
+		invocationDescriptor,
 	];
 	for (const [id, value] of Object.entries(rules.invocations).filter(([, value]) => value.cantripChoice)) {
 		const options = value.cantripOptions.filter(spell => (decisions.get(`${owner}:cantrips`) || []).includes(spell));

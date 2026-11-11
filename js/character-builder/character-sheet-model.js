@@ -5,7 +5,7 @@ import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getFighterSourceChoices} from "./fighter-choices.js";
-import {getWarlockSourceChoices} from "./warlock-choices.js";
+import {getWarlockSourceChoices, getAvailableInvocations} from "./warlock-choices.js";
 import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
@@ -29,6 +29,17 @@ function checkRules (rules, document) {
 			|| !feat.record || typeof feat.record.name !== "string" || typeof feat.record.source !== "string") throw new TypeError(`sheetRules.feats.${id}: unsupported feat annotation`);
 		if (feat.spellGroup !== undefined && (typeof feat.spellGroup !== "string"
 			|| !Array.isArray(feat.abilities) || !Array.isArray(feat.cantrips) || !Array.isArray(feat.spells))) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choices`);
+	}
+	for (const [id, invocation] of Object.entries(rules.invocations)) {
+		if (!invocation || typeof invocation !== "object" || Array.isArray(invocation) || typeof invocation.name !== "string" || !invocation.name.trim()
+			|| !Number.isSafeInteger(invocation.minimumLevel) || invocation.minimumLevel < 1 || invocation.minimumLevel > 20) throw new TypeError(`sheetRules.invocations.${id}: unsupported invocation annotation`);
+		if (invocation.requires !== undefined && (!Array.isArray(invocation.requires) || !invocation.requires.length
+			|| invocation.requires.some(value => typeof value !== "string" || value === id || !rules.invocations[value]))) throw new TypeError(`sheetRules.invocations.${id}: unsupported prerequisite`);
+		if (invocation.unsupported !== undefined && (typeof invocation.unsupported !== "string" || !invocation.unsupported.trim())) throw new TypeError(`sheetRules.invocations.${id}: unsupported invocation reason`);
+		if (invocation.repeatable !== undefined && typeof invocation.repeatable !== "boolean") throw new TypeError(`sheetRules.invocations.${id}: unsupported repeatable flag`);
+		if (invocation.cantripChoice !== undefined && (typeof invocation.cantripChoice !== "string" || !invocation.cantripChoice.trim()
+			|| !Array.isArray(invocation.cantripOptions) || !invocation.cantripOptions.length || invocation.cantripOptions.some(value => typeof value !== "string"))) throw new TypeError(`sheetRules.invocations.${id}: unsupported cantrip choice`);
+		if (invocation.cantripChoice === undefined && invocation.cantripOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: cantrip options without a choice`);
 	}
 	for (const [id, background] of Object.entries(rules.backgrounds)) {
 		if (!background || typeof background !== "object" || Array.isArray(background)
@@ -206,7 +217,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	} else {
 		cantrips = select(`${classOwner}:cantrips`, classRule.cantripOptions, levelRule.cantrips, "Warlock cantrips");
 		prepared = select(`${classOwner}:prepared-spells`, classRule.preparedOptions, levelRule.prepared, "Prepared Warlock spells");
-		invocations = select(`${classOwner}:invocations`, Object.entries(rules.invocations).filter(([, value]) => value.minimumLevel <= build.level).map(([id]) => id), levelRule.invocations, "Eldritch Invocations");
+		const selectedInvocations = decisions.get(`${classOwner}:invocations`) || [];
+		invocations = select(`${classOwner}:invocations`, getAvailableInvocations(rules, build.level, selectedInvocations).map(([id]) => id), levelRule.invocations, "Eldritch Invocations");
+		for (const id of selectedInvocations) {
+			const annotation = rules.invocations[id];
+			if (annotation?.unsupported) issue(`${classOwner}:invocations`, `${annotation.name}: ${annotation.unsupported}`);
+		}
 		for (const id of invocations) {
 			const invocation = rules.invocations[id];
 			if (!invocation.cantripChoice) continue;
