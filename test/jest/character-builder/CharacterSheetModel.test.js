@@ -171,6 +171,36 @@ describe("Reviewed character sheet calculations", () => {
 		expect(model.features.map(feature => feature.name)).toEqual(expect.arrayContaining(["Magical Cunning", "Dark One's Own Luck"]));
 	});
 
+	it("grants the at-will spells of the reviewed invocations", () => {
+		const document = example("Warlock");
+		document.build.choices = document.build.choices.filter(saved => !saved.id.endsWith("-cantrip"));
+		choice(document, ":invocations").selected = ["ascendant-step|xphb", "mask-of-many-faces|xphb", "misty-visions|xphb", "otherworldly-leap|xphb", "pact-of-the-chain|xphb"];
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		const granted = name => model.spells.find(spell => spell.ref.name === name).sources[0];
+		expect(granted("Levitate")).toMatchObject({kind: "invocation", label: "Ascendant Step", atWill: true, canCastWithSlots: false, target: "self", componentsRequired: true});
+		expect(granted("Disguise Self")).toMatchObject({label: "Mask of Many Faces", atWill: true, canCastWithSlots: false});
+		expect(granted("Silent Image")).toMatchObject({label: "Misty Visions", atWill: true});
+		expect(granted("Jump")).toMatchObject({label: "Otherworldly Leap", atWill: true, target: "self"});
+		expect(granted("Find Familiar")).toMatchObject({label: "Pact of the Chain", atWill: true, canCastWithSlots: false});
+	});
+
+	it("grants higher-level invocation spells without spending Pact Magic slots", () => {
+		const document = example("Warlock");
+		document.build.level = 9;
+		document.build.choices = document.build.choices.filter(saved => !saved.id.endsWith("-cantrip"));
+		choice(document, ":invocations").selected = [
+			"whispers-of-the-grave|xphb", "visions-of-distant-realms|xphb", "devils-sight|xphb", "armor-of-shadows|xphb",
+			"mask-of-many-faces|xphb", "misty-visions|xphb", "otherworldly-leap|xphb",
+		];
+		choice(document, ":prepared-spells").selected.push("spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb");
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		expect(model.spells.find(spell => spell.ref.name === "Speak with Dead").sources[0]).toMatchObject({label: "Whispers of the Grave", atWill: true, canCastWithSlots: false, slotLevel: null});
+		expect(model.spells.find(spell => spell.ref.name === "Arcane Eye").sources[0]).toMatchObject({label: "Visions of Distant Realms", atWill: true});
+		expect(model.spells.find(spell => spell.ref.name === "Hex").sources[0].slotLevel).toBe(5);
+	});
+
 	it("calculates Acolyte skill proficiencies from the original background record", () => {
 		const backgrounds = structuredClone(sources.backgrounds);
 		const acolyte = backgrounds.background.find(record => record.name === "Acolyte" && record.source === "XPHB");
