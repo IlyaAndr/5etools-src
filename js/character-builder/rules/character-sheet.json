@@ -489,6 +489,13 @@
 		"eldritch-smite|xphb": {
 			"name": "Eldritch Smite",
 			"minimumLevel": 5,
+			"pactWeaponSmite": {
+				"die": 8,
+				"baseDice": 1,
+				"dicePerSlotLevel": 1,
+				"damageType": "Force",
+				"condition": "the target can be Prone if it is Huge or smaller"
+			},
 			"requires": [
 				"pact-of-the-blade|xphb"
 			]

@@ -45,6 +45,16 @@ function checkRules (rules, document) {
 		if (invocation.weaponChoice === undefined && invocation.weaponOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: weapon options without a choice`);
 		if (invocation.pactWeaponExtraAttacks !== undefined && (!Number.isSafeInteger(invocation.pactWeaponExtraAttacks)
 			|| invocation.pactWeaponExtraAttacks < 1 || invocation.pactWeaponExtraAttacks > 2)) throw new TypeError(`sheetRules.invocations.${id}: unsupported pact weapon extra attacks`);
+		if (invocation.pactWeaponSmite !== undefined) {
+			const smite = invocation.pactWeaponSmite;
+			const dice = smite && typeof smite === "object" && !Array.isArray(smite) ? smite : {};
+			if (!Number.isSafeInteger(dice.die) || dice.die < 2 || dice.die > 12
+				|| !Number.isSafeInteger(dice.baseDice) || dice.baseDice < 0 || dice.baseDice > 10
+				|| !Number.isSafeInteger(dice.dicePerSlotLevel) || dice.dicePerSlotLevel < 0 || dice.dicePerSlotLevel > 10
+				|| dice.baseDice + dice.dicePerSlotLevel < 1
+				|| typeof dice.damageType !== "string" || !dice.damageType.trim()
+				|| (dice.condition !== undefined && (typeof dice.condition !== "string" || !dice.condition.trim()))) throw new TypeError(`sheetRules.invocations.${id}: unsupported pact weapon smite`);
+		}
 	}
 	for (const [id, weapon] of Object.entries(rules.pactWeapons)) {
 		if (!weapon || typeof weapon !== "object" || Array.isArray(weapon)
@@ -252,6 +262,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	// instead of one, so the known invocations contribute their best bonus
 	// rather than a sum.
 	const pactExtraAttacks = invocations.reduce((best, id) => Math.max(best, rules.invocations[id].pactWeaponExtraAttacks || 0), 0);
+	// Eldritch Smite spends a Pact Magic slot for 1d8 Force damage plus another
+	// d8 per slot level, so the attack shows the dice for the character's
+	// current slot level. One reviewed invocation can add Pact Weapon smite
+	// damage in this subset.
+	const pactSmiteInvocation = invocations.find(id => rules.invocations[id].pactWeaponSmite);
+	const pactSmiteRule = pactSmiteInvocation ? rules.invocations[pactSmiteInvocation] : null;
 	for (const id of decisions.keys()) {
 		if (!consumed.has(id)) issue(id, "This build decision is outside the reviewed sheet subset or unavailable at this level.");
 	}
@@ -521,7 +537,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		model.attacks.unshift({name, action, range, toHit: caster.attack, count: progression.value, unit, damage: `${dice}${bonus ? signed(bonus) : ""} ${damageType}`, provenance: effect.source, annotationId: effect.annotationId});
 	}
 	if (pactWeapon) {
-		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1 + pactExtraAttacks, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null});
+		const smiteRule = pactSmiteRule?.pactWeaponSmite;
+		const smite = smiteRule ? {
+			name: pactSmiteRule.name,
+			damage: `${smiteRule.baseDice + smiteRule.dicePerSlotLevel * (levelRule.slotLevel || 0)}d${smiteRule.die} ${smiteRule.damageType}`,
+			note: `once per turn by expending a Pact Magic slot (level ${levelRule.slotLevel || 0})${smiteRule.condition ? `; ${smiteRule.condition}` : ""}`,
+		} : null;
+		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1 + pactExtraAttacks, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null, smite});
 	}
 	for (const state of session.resources) {
 		const definition = model.resources.find(value => value.id === state.id);

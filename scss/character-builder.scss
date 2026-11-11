@@ -671,6 +671,13 @@
 	padding-top: 1mm;
 	margin-top: 1mm !important;
 }
+.cb-attack-smite {
+	font-size: 8pt;
+	margin-bottom: 1mm !important;
+}
+.cb-attack-smite strong {
+	color: var(--cb-accent);
+}
 .cb-other-attacks {
 	width: 100%;
 	border-collapse: collapse;

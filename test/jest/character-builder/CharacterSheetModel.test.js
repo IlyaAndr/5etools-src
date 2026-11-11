@@ -413,6 +413,7 @@ describe("Reviewed character sheet calculations", () => {
 			[annotation => { annotation.minimumLevel = 0; }, /unsupported invocation annotation/],
 			[annotation => { annotation.cantripOptions = ["spell:eldritch-blast|xphb"]; }, /cantrip options without a choice/],
 			[annotation => { annotation.pactWeaponExtraAttacks = 3; }, /unsupported pact weapon extra attacks/],
+			[annotation => { annotation.pactWeaponSmite = {die: 8}; }, /unsupported pact weapon smite/],
 		];
 		for (const [mutate, expected] of cases) {
 			const broken = JSON.parse(JSON.stringify(rules));
@@ -477,7 +478,7 @@ describe("Reviewed character sheet calculations", () => {
 		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
 		const model = project(document);
 		expect(model.status).toBe("complete");
-		expect(model.attacks[0]).toMatchObject({name: "Longsword", range: "5 ft", toHit: 7, damage: "1d8+4 slashing", count: 1, unit: "attacks", mastery: null});
+		expect(model.attacks[0]).toMatchObject({name: "Longsword", range: "5 ft", toHit: 7, damage: "1d8+4 slashing", count: 1, unit: "attacks", mastery: null, smite: null});
 		expect(model.attacks[0].toHit).toBe(model.proficiencyBonus + model.abilities.find(ability => ability.id === "cha").modifier);
 	});
 
@@ -504,6 +505,21 @@ describe("Reviewed character sheet calculations", () => {
 		const model = project(document);
 		expect(model.issues).toEqual([]);
 		expect(model.attacks[0]).toMatchObject({name: "Longsword", count: 3, unit: "attacks"});
+	});
+
+	it("adds Eldritch Smite damage for the current Pact Magic slot level", () => {
+		const document = example("Warlock", 5);
+		choice(document, ":invocations").selected = ["eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "pact-of-the-blade|xphb", "eldritch-smite|xphb"];
+		document.build.choices = document.build.choices.filter(saved => saved.id !== "class:warlock|xphb:repelling-blast-cantrip");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		expect(model.resources.find(resource => resource.id === "class:warlock|xphb:pact-magic")).toMatchObject({maxUses: 2, slotLevel: 3});
+		expect(model.attacks[0]).toMatchObject({
+			name: "Longsword",
+			count: 1,
+			smite: {name: "Eldritch Smite", damage: "4d8 Force", note: "once per turn by expending a Pact Magic slot (level 3); the target can be Prone if it is Huge or smaller"},
+		});
 	});
 
 	it("flags a Pact of the Blade without a chosen Pact Weapon", () => {

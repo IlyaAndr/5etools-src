@@ -197,7 +197,8 @@ function attacks (model) {
 	const unit = attack.unit === "beams" ? "beam" : "attack";
 	const label = attack.count ? `${attack.count} ${unit}${attack.count === 1 ? "" : "s"} · ` : "";
 	const extra = [attack.mastery ? `Mastery: ${attack.mastery}` : null, attack.criticalRange ? `Critical: ${attack.criticalRange.min}–${attack.criticalRange.max}` : null].filter(Boolean).join(" · ");
-	const main = `<section class="cb-attack-panel"><h2>${text(attack.name)}</h2><div class="cb-attack-stats"><div><span>${text(attack.action)}</span><strong>${escape(label + signed(attack.toHit))}</strong></div><div><span>Each hit</span><strong>${text(attack.damage)}</strong></div></div>${extra ? `<p>${escape(extra)}</p>` : ""}<p class="cb-attack-meta">${text(attack.range)}</p></section>`;
+	const smite = attack.smite ? `<p class="cb-attack-smite"><strong>${text(attack.smite.name)}:</strong> ${text(attack.smite.damage)} · ${text(attack.smite.note)}</p>` : "";
+	const main = `<section class="cb-attack-panel"><h2>${text(attack.name)}</h2><div class="cb-attack-stats"><div><span>${text(attack.action)}</span><strong>${escape(label + signed(attack.toHit))}</strong></div><div><span>Each hit</span><strong>${text(attack.damage)}</strong></div></div>${smite}${extra ? `<p>${escape(extra)}</p>` : ""}<p class="cb-attack-meta">${text(attack.range)}</p></section>`;
 	const secondary = others.length ? block("Other attacks", `<table class="cb-other-attacks"><thead><tr><th scope="col">Weapon / range</th><th scope="col">Attack</th><th scope="col">Damage</th></tr></thead><tbody>${others.map(other => `<tr><td>${text(other.name)} <small>${text(other.range)}</small></td><td>${signed(other.toHit)}</td><td>${text(other.damage)}</td></tr>`).join("")}</tbody></table>`) : "";
 	return main + secondary;
 }

@@ -656,20 +656,24 @@ def main():
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 1
             assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 1
-            # Thirsting Blade gives the Pact Weapon an Extra Attack, which the
-            # sheet shows as two attacks. Swapping out two invocations without
-            # dependent choices keeps the five slots exact, so the sheet stays
-            # complete while the replacement is checked.
-            for label in ['Armor of Shadows', "Devil's Sight"]:
+            # Thirsting Blade gives the Pact Weapon an Extra Attack and Eldritch
+            # Smite adds slot-fuelled damage, both shown on that attack. Swapping
+            # out three invocations without dependent choices keeps the five
+            # slots exact, so the sheet stays complete while they are checked.
+            for label in ['Armor of Shadows', "Devil's Sight", 'Eldritch Mind']:
                 editor.get_by_label(label, exact=True).uncheck()
             editor.get_by_label('Pact of the Blade', exact=True).check()
             editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
             editor.get_by_label('Thirsting Blade', exact=True).check()
+            editor.get_by_label('Eldritch Smite', exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert '2 attacks' in page.locator('.cb-attack-panel').inner_text()
+            assert 'Eldritch Smite: 4d8 Force' in page.locator('.cb-attack-panel').inner_text()
+            assert 'expending a Pact Magic slot (level 3)' in page.locator('.cb-attack-panel').inner_text()
+            editor.get_by_label('Eldritch Smite', exact=True).uncheck()
             editor.get_by_label('Thirsting Blade', exact=True).uncheck()
             editor.get_by_label('Pact of the Blade', exact=True).uncheck()
-            for label in ['Armor of Shadows', "Devil's Sight"]:
+            for label in ['Armor of Shadows', "Devil's Sight", 'Eldritch Mind']:
                 editor.get_by_label(label, exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             warlock_pdf = output / 'created-warlock.pdf'

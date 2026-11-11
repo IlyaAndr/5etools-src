@@ -94,6 +94,15 @@ describe("Calculated character sheet renderer", () => {
 		expect(html).toContain("<strong>Prerequisite:</strong> Warlock level 5, Pact of the Blade");
 	});
 
+	it("shows Eldritch Smite damage on the Pact Weapon attack", () => {
+		const document = character("tiefling");
+		document.build.choices.find(candidate => candidate.id.endsWith(":invocations")).selected = ["eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "pact-of-the-blade|xphb", "eldritch-smite|xphb"];
+		document.build.choices = document.build.choices.filter(saved => saved.id !== "class:warlock|xphb:repelling-blast-cantrip");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const html = render(document);
+		expect(html).toContain("class=\"cb-attack-smite\"><strong>Eldritch Smite:</strong> 4d8 Force · once per turn by expending a Pact Magic slot (level 3); the target can be Prone if it is Huge or smaller");
+	});
+
 	it("keeps partial Short Rest resources, separate species uses, and pencil trackers visible", () => {
 		const fighter = render(character());
 		expect(fighter).toContain("data-resource=\"class:fighter|xphb:second-wind\"");
