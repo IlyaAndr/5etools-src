@@ -141,6 +141,18 @@ describe("Warlock editor choices", () => {
 		expect(options(12, ["pact-of-the-blade|xphb"])).not.toContain("devouring-blade|xphb");
 	});
 
+	it("offers the Pact Weapon choice only while Pact of the Blade is selected", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		expect(choice(draft, ":pact-weapon")).toMatchObject({available: false, count: 1, label: "Pact Weapon"});
+		const withBlade = setCharacterChoice(draft, "class:warlock|xphb:invocations", ["pact-of-the-blade|xphb"]);
+		const pactWeapon = choice(withBlade, ":pact-weapon");
+		expect(pactWeapon).toMatchObject({available: true, count: 1, label: "Pact Weapon"});
+		expect(pactWeapon.options).toHaveLength(28);
+		expect(pactWeapon.options.map(option => option.id)).toEqual(expect.arrayContaining(["longsword|xphb", "greatsword|xphb", "rapier|xphb", "dagger|xphb", "whip|xphb"]));
+		expect(pactWeapon.options).toContainEqual({id: "longsword|xphb", label: "Longsword"});
+		expect(pactWeapon.options).toContainEqual({id: "dagger|xphb", label: "Dagger"});
+	});
+
 	it("withholds invocations whose choices are not reviewed yet and says why", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		const invocationChoice = choice(draft, "class:warlock|xphb:invocations");
@@ -199,6 +211,7 @@ describe("Warlock editor choices", () => {
 			"eldritch-mind|xphb", "armor-of-shadows|xphb", "agonizing-blast|xphb", "devils-sight|xphb", "repelling-blast|xphb",
 			"pact-of-the-blade|xphb", "thirsting-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb", "devouring-blade|xphb",
 		);
+		document.build.choices.push({id: `${owner}:pact-weapon`, selected: ["longsword|xphb"]});
 		saved("cantrips").push("spell:chill-touch|xphb");
 		saved("prepared-spells").push(
 			"spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:expeditious-retreat|xphb",

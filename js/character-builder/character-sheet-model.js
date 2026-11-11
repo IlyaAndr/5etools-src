@@ -18,7 +18,7 @@ const signed = value => `${value >= 0 ? "+" : ""}${value}`;
 function checkRules (rules, document) {
 	if (rules.schemaVersion !== 1 || rules.ruleset !== document.ruleset) throw new TypeError("sheetRules: unsupported version or ruleset");
 	if (["id", "version", "revision"].some(field => rules.dataset?.[field] !== document.dataset[field])) throw new TypeError("sheetRules.dataset: does not match the character's pinned dataset");
-	for (const field of ["classes", "backgrounds", "feats", "weapons", "equipment", "invocations", "standardLanguages"]) {
+	for (const field of ["classes", "backgrounds", "feats", "weapons", "equipment", "invocations", "pactWeapons", "standardLanguages"]) {
 		if (!rules[field] || typeof rules[field] !== "object" || Array.isArray(rules[field])) throw new TypeError(`sheetRules.${field}: missing reviewed records`);
 	}
 	for (const record of Object.values(rules.classes)) {
@@ -40,6 +40,14 @@ function checkRules (rules, document) {
 		if (invocation.cantripChoice !== undefined && (typeof invocation.cantripChoice !== "string" || !invocation.cantripChoice.trim()
 			|| !Array.isArray(invocation.cantripOptions) || !invocation.cantripOptions.length || invocation.cantripOptions.some(value => typeof value !== "string"))) throw new TypeError(`sheetRules.invocations.${id}: unsupported cantrip choice`);
 		if (invocation.cantripChoice === undefined && invocation.cantripOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: cantrip options without a choice`);
+		if (invocation.weaponChoice !== undefined && (typeof invocation.weaponChoice !== "string" || !invocation.weaponChoice.trim()
+			|| !Array.isArray(invocation.weaponOptions) || !invocation.weaponOptions.length || invocation.weaponOptions.some(value => typeof value !== "string" || !rules.pactWeapons[value]))) throw new TypeError(`sheetRules.invocations.${id}: unsupported weapon choice`);
+		if (invocation.weaponChoice === undefined && invocation.weaponOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: weapon options without a choice`);
+	}
+	for (const [id, weapon] of Object.entries(rules.pactWeapons)) {
+		if (!weapon || typeof weapon !== "object" || Array.isArray(weapon)
+			|| typeof weapon.name !== "string" || !weapon.name.trim()
+			|| typeof weapon.damage !== "string" || typeof weapon.type !== "string" || typeof weapon.range !== "string") throw new TypeError(`sheetRules.pactWeapons.${id}: unsupported pact weapon annotation`);
 	}
 	for (const [id, background] of Object.entries(rules.backgrounds)) {
 		if (!background || typeof background !== "object" || Array.isArray(background)
@@ -206,6 +214,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	let initiateAbility;
 	let initiateCantrips = [];
 	let initiateSpell;
+	let pactWeapon = null;
 	if (featRule.spellGroup) {
 		[initiateAbility] = select(`${featOwner}:ability`, featOptions || featRule.abilities, 1, "Magic Initiate ability");
 		initiateCantrips = select(`${featOwner}:cantrips`, featRule.cantrips, featRule.cantrips.length, "Magic Initiate cantrips");
@@ -229,6 +238,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			const [cantrip] = select(`${classOwner}:${invocation.cantripChoice}`, invocation.cantripOptions, 1, invocation.name);
 			if (cantrip && !cantrips.includes(cantrip)) issue(`${classOwner}:${invocation.cantripChoice}`, "The invocation must affect a known Warlock cantrip.");
 			invocationCantrips.set(id, cantrip);
+		}
+		for (const id of invocations) {
+			const invocation = rules.invocations[id];
+			if (!invocation.weaponChoice) continue;
+			const [weaponId] = select(`${classOwner}:${invocation.weaponChoice}`, invocation.weaponOptions, 1, "Pact Weapon");
+			pactWeapon = weaponId ? rules.pactWeapons[weaponId] : null;
 		}
 	}
 	for (const id of decisions.keys()) {
@@ -498,6 +513,9 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const bonus = effectsOf("spellDamageBonus").filter(candidate => candidate.spellId === effect.spellId && candidate.casterId === effect.casterId).reduce((total, candidate) => total + candidate.amount, 0);
 		const {name, action, range, dice, damageType, unit} = effect.value;
 		model.attacks.unshift({name, action, range, toHit: caster.attack, count: progression.value, unit, damage: `${dice}${bonus ? signed(bonus) : ""} ${damageType}`, provenance: effect.source, annotationId: effect.annotationId});
+	}
+	if (pactWeapon) {
+		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null});
 	}
 	for (const state of session.resources) {
 		const definition = model.resources.find(value => value.id === state.id);

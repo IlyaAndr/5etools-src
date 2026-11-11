@@ -99,6 +99,10 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 		const options = value.cantripOptions.filter(spell => (decisions.get(`${owner}:cantrips`) || []).includes(spell));
 		result.push(descriptor(`${owner}:${value.cantripChoice}`, `${value.name} Cantrip`, 1, getSpellOptions(rawSpells, options), value.minimumLevel, invocationChoices.includes(id)));
 	}
+	for (const [id, value] of Object.entries(rules.invocations).filter(([, value]) => value.weaponChoice)) {
+		const options = value.weaponOptions.map(weaponId => option(weaponId, rules.pactWeapons[weaponId].name));
+		result.push(descriptor(`${owner}:${value.weaponChoice}`, "Pact Weapon", 1, options, value.minimumLevel, invocationChoices.includes(id)));
+	}
 	result.push(
 		descriptor(`${owner}:subclass`, "Subclass", 1, [option(warlock.subclass.id, warlock.subclass.name)], 3),
 		descriptor(`${owner}:level-4-feat`, "Level 4 Feat", 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], 4),

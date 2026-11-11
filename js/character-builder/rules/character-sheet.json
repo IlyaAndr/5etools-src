@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock (Fiend) levels 1–20; any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, and all 28 reviewed Eldritch Invocations with their level and prerequisite checks. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock (Fiend) levels 1–20; any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, and Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -562,7 +562,38 @@
 		},
 		"pact-of-the-blade|xphb": {
 			"name": "Pact of the Blade",
-			"minimumLevel": 1
+			"minimumLevel": 1,
+			"weaponChoice": "pact-weapon",
+			"weaponOptions": [
+				"club|xphb",
+				"dagger|xphb",
+				"greatclub|xphb",
+				"handaxe|xphb",
+				"javelin|xphb",
+				"light-hammer|xphb",
+				"mace|xphb",
+				"quarterstaff|xphb",
+				"sickle|xphb",
+				"spear|xphb",
+				"battleaxe|xphb",
+				"flail|xphb",
+				"glaive|xphb",
+				"greataxe|xphb",
+				"greatsword|xphb",
+				"halberd|xphb",
+				"lance|xphb",
+				"longsword|xphb",
+				"maul|xphb",
+				"morningstar|xphb",
+				"pike|xphb",
+				"rapier|xphb",
+				"scimitar|xphb",
+				"shortsword|xphb",
+				"trident|xphb",
+				"war-pick|xphb",
+				"warhammer|xphb",
+				"whip|xphb"
+			]
 		},
 		"pact-of-the-chain|xphb": {
 			"name": "Pact of the Chain",
@@ -638,6 +669,176 @@
 			"range": "5 ft / thrown 20/60 ft",
 			"finesse": true,
 			"mastery": "Nick"
+		}
+	},
+	"pactWeapons": {
+		"club|xphb": {
+			"name": "Club",
+			"damage": "1d4",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"dagger|xphb": {
+			"name": "Dagger",
+			"damage": "1d4",
+			"type": "piercing",
+			"range": "5 ft / thrown 20/60 ft"
+		},
+		"greatclub|xphb": {
+			"name": "Greatclub",
+			"damage": "1d8",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"handaxe|xphb": {
+			"name": "Handaxe",
+			"damage": "1d6",
+			"type": "slashing",
+			"range": "5 ft / thrown 20/60 ft"
+		},
+		"javelin|xphb": {
+			"name": "Javelin",
+			"damage": "1d6",
+			"type": "piercing",
+			"range": "5 ft / thrown 30/120 ft"
+		},
+		"light-hammer|xphb": {
+			"name": "Light Hammer",
+			"damage": "1d4",
+			"type": "bludgeoning",
+			"range": "5 ft / thrown 20/60 ft"
+		},
+		"mace|xphb": {
+			"name": "Mace",
+			"damage": "1d6",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"quarterstaff|xphb": {
+			"name": "Quarterstaff",
+			"damage": "1d6",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"sickle|xphb": {
+			"name": "Sickle",
+			"damage": "1d4",
+			"type": "slashing",
+			"range": "5 ft"
+		},
+		"spear|xphb": {
+			"name": "Spear",
+			"damage": "1d6",
+			"type": "piercing",
+			"range": "5 ft / thrown 20/60 ft"
+		},
+		"battleaxe|xphb": {
+			"name": "Battleaxe",
+			"damage": "1d8",
+			"type": "slashing",
+			"range": "5 ft"
+		},
+		"flail|xphb": {
+			"name": "Flail",
+			"damage": "1d8",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"glaive|xphb": {
+			"name": "Glaive",
+			"damage": "1d10",
+			"type": "slashing",
+			"range": "10 ft"
+		},
+		"greataxe|xphb": {
+			"name": "Greataxe",
+			"damage": "1d12",
+			"type": "slashing",
+			"range": "5 ft"
+		},
+		"greatsword|xphb": {
+			"name": "Greatsword",
+			"damage": "2d6",
+			"type": "slashing",
+			"range": "5 ft"
+		},
+		"halberd|xphb": {
+			"name": "Halberd",
+			"damage": "1d10",
+			"type": "slashing",
+			"range": "10 ft"
+		},
+		"lance|xphb": {
+			"name": "Lance",
+			"damage": "1d10",
+			"type": "piercing",
+			"range": "10 ft"
+		},
+		"longsword|xphb": {
+			"name": "Longsword",
+			"damage": "1d8",
+			"type": "slashing",
+			"range": "5 ft"
+		},
+		"maul|xphb": {
+			"name": "Maul",
+			"damage": "2d6",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"morningstar|xphb": {
+			"name": "Morningstar",
+			"damage": "1d8",
+			"type": "piercing",
+			"range": "5 ft"
+		},
+		"pike|xphb": {
+			"name": "Pike",
+			"damage": "1d10",
+			"type": "piercing",
+			"range": "10 ft"
+		},
+		"rapier|xphb": {
+			"name": "Rapier",
+			"damage": "1d8",
+			"type": "piercing",
+			"range": "5 ft"
+		},
+		"scimitar|xphb": {
+			"name": "Scimitar",
+			"damage": "1d6",
+			"type": "slashing",
+			"range": "5 ft"
+		},
+		"shortsword|xphb": {
+			"name": "Shortsword",
+			"damage": "1d6",
+			"type": "piercing",
+			"range": "5 ft"
+		},
+		"trident|xphb": {
+			"name": "Trident",
+			"damage": "1d8",
+			"type": "piercing",
+			"range": "5 ft / thrown 20/60 ft"
+		},
+		"war-pick|xphb": {
+			"name": "War Pick",
+			"damage": "1d8",
+			"type": "piercing",
+			"range": "5 ft"
+		},
+		"warhammer|xphb": {
+			"name": "Warhammer",
+			"damage": "1d8",
+			"type": "bludgeoning",
+			"range": "5 ft"
+		},
+		"whip|xphb": {
+			"name": "Whip",
+			"damage": "1d4",
+			"type": "slashing",
+			"range": "10 ft"
 		}
 	},
 	"equipment": {

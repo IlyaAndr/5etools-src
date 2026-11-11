@@ -272,6 +272,18 @@ describe("Calculated character sheet renderer", () => {
 		expect(renderCharacterSheet(model, catalog)).toContain("M (a pearl; 100 gp; consumed)");
 	});
 
+	it("shows the Pact Weapon as the primary attack using Charisma", () => {
+		const document = character("tiefling", 5);
+		document.build.choices.find(candidate => candidate.id === "class:warlock|xphb:invocations").selected = ["pact-of-the-blade|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb"];
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const html = render(document);
+		expect(html).toContain("data-sheet-status=\"complete\"");
+		const panel = /<section class="cb-attack-panel">([\s\S]*?)<\/section>/.exec(html)[1];
+		expect(panel).toContain("Longsword");
+		expect(panel).toContain("+7");
+		expect(panel).toContain("1d8+4 slashing");
+	});
+
 	it("preserves long names and notes without changing the document, model, or catalog", () => {
 		const document = character();
 		document.name = "A".repeat(200);
