@@ -1121,6 +1121,261 @@
 					"casterId": "class:warlock|xphb"
 				}
 			]
+		},
+		{
+			"id": "invocation-ascendant-step",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Ascendant Step",
+				"source": "XPHB",
+				"page": 155
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "ascendant-step|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:levitate|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:ascendant-step",
+						"kind": "invocation",
+						"label": "Ascendant Step",
+						"atWill": true,
+						"freeLevel": 2,
+						"target": "self",
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-master-of-myriad-forms",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Master of Myriad Forms",
+				"source": "XPHB",
+				"page": 156
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "master-of-myriad-forms|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:alter-self|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:master-of-myriad-forms",
+						"kind": "invocation",
+						"label": "Master of Myriad Forms",
+						"atWill": true,
+						"freeLevel": 2,
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-mask-of-many-faces",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Mask of Many Faces",
+				"source": "XPHB",
+				"page": 156
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "mask-of-many-faces|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:disguise-self|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:mask-of-many-faces",
+						"kind": "invocation",
+						"label": "Mask of Many Faces",
+						"atWill": true,
+						"freeLevel": 1,
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-misty-visions",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Misty Visions",
+				"source": "XPHB",
+				"page": 156
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "misty-visions|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:silent-image|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:misty-visions",
+						"kind": "invocation",
+						"label": "Misty Visions",
+						"atWill": true,
+						"freeLevel": 1,
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-one-with-shadows",
+			"source": {
+				"type": "optionalfeature",
+				"name": "One with Shadows",
+				"source": "XPHB",
+				"page": 156
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "one-with-shadows|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:invisibility|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:one-with-shadows",
+						"kind": "invocation",
+						"label": "One with Shadows",
+						"atWill": true,
+						"freeLevel": 2,
+						"target": "self",
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-otherworldly-leap",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Otherworldly Leap",
+				"source": "XPHB",
+				"page": 156
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "otherworldly-leap|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:jump|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:otherworldly-leap",
+						"kind": "invocation",
+						"label": "Otherworldly Leap",
+						"atWill": true,
+						"freeLevel": 1,
+						"target": "self",
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-pact-of-the-chain",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Pact of the Chain",
+				"source": "XPHB",
+				"page": 157
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "pact-of-the-chain|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:find-familiar|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:pact-of-the-chain",
+						"kind": "invocation",
+						"label": "Pact of the Chain",
+						"atWill": true,
+						"freeLevel": 1,
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-visions-of-distant-realms",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Visions of Distant Realms",
+				"source": "XPHB",
+				"page": 157
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "visions-of-distant-realms|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:arcane-eye|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:visions-of-distant-realms",
+						"kind": "invocation",
+						"label": "Visions of Distant Realms",
+						"atWill": true,
+						"freeLevel": 4,
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-whispers-of-the-grave",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Whispers of the Grave",
+				"source": "XPHB",
+				"page": 157
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "whispers-of-the-grave|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:speak-with-dead|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:whispers-of-the-grave",
+						"kind": "invocation",
+						"label": "Whispers of the Grave",
+						"atWill": true,
+						"freeLevel": 3,
+						"componentsRequired": true
+					}
+				}
+			]
 		}
 	]
 }
