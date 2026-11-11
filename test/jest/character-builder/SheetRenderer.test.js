@@ -100,7 +100,22 @@ describe("Calculated character sheet renderer", () => {
 		document.build.choices = document.build.choices.filter(saved => saved.id !== "class:warlock|xphb:repelling-blast-cantrip");
 		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
 		const html = render(document);
-		expect(html).toContain("class=\"cb-attack-smite\"><strong>Eldritch Smite:</strong> 4d8 Force · once per turn by expending a Pact Magic slot (level 3); the target can be Prone if it is Huge or smaller");
+		expect(html).toContain("class=\"cb-attack-rider\"><strong>Eldritch Smite:</strong> 4d8 Force · once per turn by expending a Pact Magic slot (level 3); the target can be Prone if it is Huge or smaller");
+	});
+
+	it("shows Lifedrinker's rider beside Eldritch Smite and the Hit Point Die recovery it offers", () => {
+		const document = character("tiefling");
+		document.build.level = 12;
+		document.build.choices.find(candidate => candidate.id.endsWith(":invocations")).selected = [
+			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
+			"pact-of-the-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb",
+		];
+		document.build.choices.find(candidate => candidate.id.endsWith(":cantrips")).selected.push("spell:prestidigitation|xphb");
+		document.build.choices.find(candidate => candidate.id.endsWith(":prepared-spells")).selected.push("spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:expeditious-retreat|xphb");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const html = render(document);
+		expect(html).toContain("<strong>Eldritch Smite:</strong> 6d8 Force · once per turn by expending a Pact Magic slot (level 5); the target can be Prone if it is Huge or smaller</p><p class=\"cb-attack-rider\"><strong>Lifedrinker:</strong> 1d6 Necrotic, Psychic, or Radiant · once per turn on a hit</p>");
+		expect(html).toContain("Hit Dice 12d8</strong><p class=\"cb-resource-detail\">Recovery: Long Rest: all uses · Lifedrinker: expend one to regain 1d8 +2 HP (minimum 1)");
 	});
 
 	it("keeps partial Short Rest resources, separate species uses, and pencil trackers visible", () => {

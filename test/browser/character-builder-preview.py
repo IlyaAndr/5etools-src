@@ -676,6 +676,24 @@ def main():
             for label in ['Armor of Shadows', "Devil's Sight", 'Eldritch Mind']:
                 editor.get_by_label(label, exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            # Lifedrinker is a level 9 invocation, so the check raises the level
+            # and fills the seven invocation and ten prepared-spell slots the
+            # sheet needs before it renders a calculated page again.
+            editor.get_by_label('Level', exact=True).select_option('9')
+            editor.get_by_label('Pact of the Blade', exact=True).check()
+            editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
+            editor.get_by_label('Lifedrinker', exact=True).check()
+            for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
+                editor.get_by_label(label, exact=True).check()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert 'Lifedrinker: 1d6 Necrotic, Psychic, or Radiant' in page.locator('.cb-attack-panel').inner_text()
+            assert 'expend one to regain 1d8' in page.locator('.cb-resource').filter(has_text='Hit Dice').inner_text()
+            editor.get_by_label('Lifedrinker', exact=True).uncheck()
+            editor.get_by_label('Pact of the Blade', exact=True).uncheck()
+            for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
+                editor.get_by_label(label, exact=True).uncheck()
+            editor.get_by_label('Level', exact=True).select_option('5')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             warlock_pdf = output / 'created-warlock.pdf'
             export_pdf(page, warlock_pdf)
             pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(warlock_pdf), '-'], text=True))

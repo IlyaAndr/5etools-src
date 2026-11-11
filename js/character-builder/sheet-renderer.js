@@ -181,7 +181,7 @@ function resources (model, hasDifferentCasting) {
 		return selected.length ? `<p class="cb-rest-label">${label} · mark spent</p>${selected.map(resource => resourceRow(resource, model, hasDifferentCasting)).join("")}` : "";
 	}).join("");
 	const hitDiceRecovery = Object.entries(model.hitDice.recovery).map(([rest, amount]) => `${title(rest)} Rest: ${amount === "all" ? "all uses" : `${amount} uses`}`).join(" · ");
-	const hitDice = `<div class="cb-resource"><div><strong>Hit Dice ${model.hitDice.count}d${escape(model.hitDice.die)}</strong><p class="cb-resource-detail">Recovery: ${escape(hitDiceRecovery)}</p></div>${checks(model.hitDice.count, `${model.hitDice.count} blank Hit Die boxes`)}</div>`;
+	const hitDice = `<div class="cb-resource"><div><strong>Hit Dice ${model.hitDice.count}d${escape(model.hitDice.die)}</strong><p class="cb-resource-detail">Recovery: ${escape(hitDiceRecovery)}${model.hitDice.note ? ` · ${escape(model.hitDice.note)}` : ""}</p></div>${checks(model.hitDice.count, `${model.hitDice.count} blank Hit Die boxes`)}</div>`;
 	const survival = `<div class="cb-survival-trackers"><div class="cb-death-saves"><span class="cb-field-label">Death saves</span><span>Success</span>${checks(3, "3 blank death-save success boxes")}<span>Failure</span>${checks(3, "3 blank death-save failure boxes")}</div><div class="cb-inspiration"><span class="cb-field-label">Heroic Inspiration</span>${checks(1, "Blank Heroic Inspiration box")}</div></div>`;
 	return block("Resources & trackers · calculated", content + hitDice + survival, "cb-resource-block");
 }
@@ -197,8 +197,8 @@ function attacks (model) {
 	const unit = attack.unit === "beams" ? "beam" : "attack";
 	const label = attack.count ? `${attack.count} ${unit}${attack.count === 1 ? "" : "s"} · ` : "";
 	const extra = [attack.mastery ? `Mastery: ${attack.mastery}` : null, attack.criticalRange ? `Critical: ${attack.criticalRange.min}–${attack.criticalRange.max}` : null].filter(Boolean).join(" · ");
-	const smite = attack.smite ? `<p class="cb-attack-smite"><strong>${text(attack.smite.name)}:</strong> ${text(attack.smite.damage)} · ${text(attack.smite.note)}</p>` : "";
-	const main = `<section class="cb-attack-panel"><h2>${text(attack.name)}</h2><div class="cb-attack-stats"><div><span>${text(attack.action)}</span><strong>${escape(label + signed(attack.toHit))}</strong></div><div><span>Each hit</span><strong>${text(attack.damage)}</strong></div></div>${smite}${extra ? `<p>${escape(extra)}</p>` : ""}<p class="cb-attack-meta">${text(attack.range)}</p></section>`;
+	const riders = [attack.smite, attack.lifedrinker].filter(Boolean).map(rider => `<p class="cb-attack-rider"><strong>${text(rider.name)}:</strong> ${text(rider.damage)} · ${text(rider.note)}</p>`).join("");
+	const main = `<section class="cb-attack-panel"><h2>${text(attack.name)}</h2><div class="cb-attack-stats"><div><span>${text(attack.action)}</span><strong>${escape(label + signed(attack.toHit))}</strong></div><div><span>Each hit</span><strong>${text(attack.damage)}</strong></div></div>${riders}${extra ? `<p>${escape(extra)}</p>` : ""}<p class="cb-attack-meta">${text(attack.range)}</p></section>`;
 	const secondary = others.length ? block("Other attacks", `<table class="cb-other-attacks"><thead><tr><th scope="col">Weapon / range</th><th scope="col">Attack</th><th scope="col">Damage</th></tr></thead><tbody>${others.map(other => `<tr><td>${text(other.name)} <small>${text(other.range)}</small></td><td>${signed(other.toHit)}</td><td>${text(other.damage)}</td></tr>`).join("")}</tbody></table>`) : "";
 	return main + secondary;
 }
