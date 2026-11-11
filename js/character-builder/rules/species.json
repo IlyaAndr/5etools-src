@@ -26,6 +26,7 @@
 				]
 			},
 			"lineageChoice": "lineage",
+		"lineageLabel": "Gnomish Lineage",
 			"commonSpells": [],
 			"savingThrowAdvantages": [
 				{
@@ -76,6 +77,7 @@
 				]
 			},
 			"lineageChoice": "legacy",
+		"lineageLabel": "Fiendish Legacy",
 			"commonSpells": [
 				"thaumaturgy|xphb"
 			],

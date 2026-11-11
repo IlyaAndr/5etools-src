@@ -89,7 +89,7 @@ function validateRules (rules) {
 	array(rules.species, "rules.species");
 	const refs = new Set();
 	for (const rule of rules.species) {
-		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages"]);
+		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages"]);
 		reference(rule.ref, "rules.species.ref");
 		const key = refKey(rule.ref);
 		if (!SUPPORTED_REFS.includes(key) || refs.has(key)) fail("rules.species", `unsupported or duplicate species ${key}`);
@@ -100,6 +100,7 @@ function validateRules (rules) {
 		if (!rule.provenance.pages.length) fail("rules.species.provenance.pages", "missing page references");
 		rule.provenance.pages.forEach(page => integer(page, "rules.species.provenance.pages", 1));
 		if (!["lineage", "legacy"].includes(rule.lineageChoice)) fail("rules.species.lineageChoice", "unsupported choice name");
+		string(rule.lineageLabel, "rules.species.lineageLabel");
 		array(rule.commonSpells, "rules.species.commonSpells");
 		if (new Set(rule.commonSpells).size !== rule.commonSpells.length) fail("rules.species.commonSpells", "duplicate common spell");
 		rule.commonSpells.forEach(uid => string(uid, "rules.species.commonSpells"));
@@ -261,6 +262,7 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			darkvision: raw.darkvision,
 			creatureTypes: [...raw.creatureTypes],
 			lineageChoiceId: `${id}:${rule.lineageChoice}`,
+			lineageLabel: rule.lineageLabel,
 			abilityChoiceId: `${id}:spellcasting-ability`,
 			sizeChoiceId: raw.size.length > 1 ? `${id}:size` : null,
 			savingThrowAdvantages: copy(rule.savingThrowAdvantages),

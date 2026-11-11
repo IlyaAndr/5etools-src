@@ -1,8 +1,9 @@
 import {validateCharacterDocument} from "./character-document.js";
+import {composeChoiceDescriptors} from "./compose-choices.js";
+import {findClassRecord, getIncreaseOptions, option} from "./choice-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
-import {getBackgroundSourceChoices, getClassSkillChoices, getSourceRecord} from "./source-choices.js";
+import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 import {createCharacterDraft} from "./editor-common.js";
-const option = (id, label) => ({id, label});
 
 /** Read Fighter class choices and progression from its original record. */
 export function getFighterSourceChoices (sources) {
@@ -46,41 +47,6 @@ export function isSupportedFighterDocument (document) {
 		&& build.background?.name === "Soldier" && build.background.source === "XPHB";
 }
 
-function increaseOptions (allowed, backgroundWeights, abilityName, selected = []) {
-	const result = [];
-	if (backgroundWeights) {
-		const seen = new Set();
-		for (const {from, weights} of backgroundWeights) {
-			const add = (chosen = []) => {
-				if (chosen.length < weights.length) {
-					for (const id of from) if (!chosen.includes(id)) add([...chosen, id]);
-					return;
-				}
-				const parts = chosen.map((id, index) => `${id}-${weights[index]}`);
-				const key = [...parts].sort().join(".");
-				if (seen.has(key)) return;
-				seen.add(key);
-				result.push(option(parts.join("."), chosen.map((id, index) => `${abilityName(id)} +${weights[index]}`).join(", ")));
-			};
-			add();
-		}
-	} else {
-		for (const first of allowed) {
-			result.push(option(`${first}-2`, `${abilityName(first)} +2`));
-			for (const second of allowed.slice(allowed.indexOf(first) + 1)) result.push(option(`${first}-1.${second}-1`, `${abilityName(first)} +1, ${abilityName(second)} +1`));
-		}
-	}
-	// Existing documents may use a different order for equivalent increases.
-	// Keep the saved identifier visible without rewriting the underlying choice.
-	const normalized = value => value.split(".").sort().join(".");
-	for (const value of selected) {
-		if (result.some(entry => entry.id === value)) continue;
-		const equivalent = result.find(entry => normalized(entry.id) === normalized(value));
-		if (equivalent) result.push(option(value, equivalent.label));
-	}
-	return result;
-}
-
 /**
  * Contribute Fighter-owned choices independently of the character's species or
  * background. Equipment packages and skill-proficiency conflicts are resolved
@@ -110,45 +76,22 @@ export function getFighterClassChoiceDescriptors (document, {rules, sources} = {
 		descriptor("class:fighter|xphb:weapon-masteries", "Weapon Masteries", sourceChoices.masteries(level), masteryOptions),
 		descriptor("class:fighter|xphb:subclass", "Subclass", 1, [option(fighter.subclass.id, fighter.subclass.name)], 3),
 		descriptor("class:fighter|xphb:level-4-feat", "Level 4 Feat", 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], 4),
-		descriptor("class:fighter|xphb:level-4-ability-increases", "Level 4 Ability Increases", 1, increaseOptions(abilities.map(ability => ability.id), false, abilityName, choices.get("class:fighter|xphb:level-4-ability-increases")), 4),
+		descriptor("class:fighter|xphb:level-4-ability-increases", "Level 4 Ability Increases", 1, getIncreaseOptions(abilities.map(ability => ability.id), false, abilityName, choices.get("class:fighter|xphb:level-4-ability-increases")), 4),
 	];
 }
 
 /**
- * Return reviewed choice options and current selections. Locked choices stay
- * visible when lowering level; the caller may explicitly clear them.
- * The sheet model remains the final authority for build legality.
+ * Return reviewed choice options and current selections for the Gnome /
+ * Soldier / Fighter reference preset. Locked choices stay visible when lowering
+ * level; the caller may explicitly clear them. The sheet model remains the
+ * final authority for build legality.
  */
-export function getFighterChoiceDescriptors (document, catalog, {rules, sources} = {}) {
+export function getFighterChoiceDescriptors (document, catalog, context = {}) {
 	validateCharacterDocument(document);
 	if (!isSupportedFighterDocument(document)) return [];
-	const species = catalog.species.find(entry => entry.ref.name === "Gnome" && entry.ref.source === "XPHB");
-	const fighter = rules?.classes?.["fighter|xphb"];
-	const soldier = rules?.backgrounds?.["soldier|xphb"];
-	if (!species || !fighter || !soldier || !rules?.standardLanguages || !rules?.equipment || !rules?.weapons) throw new TypeError("Missing reviewed Fighter editor data.");
-	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
-	const backgroundChoices = getBackgroundSourceChoices(sources, document.build.background);
-	const abilityName = id => abilities.find(ability => ability.id === id)?.name || id;
-	const choices = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));
-	const level = document.build.level;
-	const descriptor = (id, label, count, options, minimumLevel = 1) => ({
-		id, label, count, options, selected: [...(choices.get(id) || [])], available: level >= minimumLevel, minimumLevel,
+	const fighter = findClassRecord(context.sources, "fighter", document.build.class);
+	return composeChoiceDescriptors(document, catalog, context, {
+		classDescriptors: getFighterClassChoiceDescriptors(document, context),
+		spellcastingAbility: fighter?.spellcastingAbility || null,
 	});
-	const selectedLineage = species.lineages.find(lineage => lineage.id === choices.get(species.lineageChoiceId)?.[0]);
-	const abilityOptions = selectedLineage?.abilityOptions || [...new Set(species.lineages.flatMap(lineage => lineage.abilityOptions))];
-	const equipmentOptions = Object.entries(rules.equipment).filter(([, value]) => value.classId === "fighter|xphb" && value.backgroundId === "soldier|xphb")
-		.map(([id, value]) => option(id, value.gear.join(", ")));
-	const classChoices = getFighterClassChoiceDescriptors(document, {rules, sources});
-	const classSkills = classChoices.find(entry => entry.id === "class:fighter|xphb:skills");
-	const distinctClassSkills = {...classSkills, options: classSkills.options.filter(entry => !backgroundChoices.backgroundSkills.includes(entry.id))};
-	return [
-		descriptor(species.lineageChoiceId, "Gnomish Lineage", 1, species.lineages.map(lineage => option(lineage.id, lineage.name))),
-		descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))),
-		descriptor("background:soldier|xphb:ability-increases", "Background Ability Increases", 1, increaseOptions(backgroundChoices.backgroundAbilityIds, backgroundChoices.backgroundWeights, abilityName, choices.get("background:soldier|xphb:ability-increases"))),
-		descriptor("background:soldier|xphb:tool", "Background Tool", 1, Object.entries(soldier.toolOptions).map(([id, label]) => option(id, label))),
-		descriptor("character:languages", "Languages (include Common)", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label))),
-		distinctClassSkills,
-		descriptor("class:fighter|xphb:equipment", "Starting Equipment", 1, equipmentOptions),
-		...classChoices.filter(entry => entry.id !== classSkills.id),
-	];
 }

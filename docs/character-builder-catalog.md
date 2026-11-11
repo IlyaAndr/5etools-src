@@ -42,6 +42,9 @@ The supplemental JSON adds the relationships and effects that the builder needs:
   legacy selection is pending.
 - Rock Gnome clockwork devices do not create automated timers or spent-use
   marks. Their rules are available in the original species description.
+- `lineageLabel` names the original species trait that presents the lineage
+  choice, so shared code can mark the selected lineage without branching on
+  species names. It must match the source trait name.
 
 Spell lists, levels, counts, and references remain sourced from `additionalSpells`
 and the spell catalog. Unsupported reference/progression shapes, missing or

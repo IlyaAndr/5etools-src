@@ -3,8 +3,10 @@ import {projectSpecies} from "./species-projection.js";
 import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
 import {createSkillCatalog} from "./skill-catalog.js";
-import {getFighterChoiceDescriptors, getFighterClassChoiceDescriptors, getFighterSourceChoices, isSupportedFighterDocument} from "./fighter-choices.js";
-import {getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "./warlock-choices.js";
+import {getFighterSourceChoices} from "./fighter-choices.js";
+import {getWarlockSourceChoices} from "./warlock-choices.js";
+import {getEditorChoiceDescriptors} from "./editor-profile.js";
+import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -15,11 +17,24 @@ const signed = value => `${value >= 0 ? "+" : ""}${value}`;
 function checkRules (rules, document) {
 	if (rules.schemaVersion !== 1 || rules.ruleset !== document.ruleset) throw new TypeError("sheetRules: unsupported version or ruleset");
 	if (["id", "version", "revision"].some(field => rules.dataset?.[field] !== document.dataset[field])) throw new TypeError("sheetRules.dataset: does not match the character's pinned dataset");
-	for (const field of ["classes", "backgrounds", "weapons", "equipment", "invocations", "standardLanguages"]) {
+	for (const field of ["classes", "backgrounds", "feats", "weapons", "equipment", "invocations", "standardLanguages"]) {
 		if (!rules[field] || typeof rules[field] !== "object" || Array.isArray(rules[field])) throw new TypeError(`sheetRules.${field}: missing reviewed records`);
 	}
 	for (const record of Object.values(rules.classes)) {
 		if (!Array.isArray(record.levels) || !record.levels.length || record.levels.length > 20 || !Number.isSafeInteger(record.hitDie) || record.hitDie < 2 || record.hitDie > 100 || record.hitDie % 2) throw new TypeError("sheetRules.classes: unsupported class progression");
+	}
+	for (const [id, feat] of Object.entries(rules.feats)) {
+		if (!feat || typeof feat !== "object" || Array.isArray(feat) || typeof feat.name !== "string"
+			|| !feat.record || typeof feat.record.name !== "string" || typeof feat.record.source !== "string") throw new TypeError(`sheetRules.feats.${id}: unsupported feat annotation`);
+		if (feat.spellGroup !== undefined && (typeof feat.spellGroup !== "string"
+			|| !Array.isArray(feat.abilities) || !Array.isArray(feat.cantrips) || !Array.isArray(feat.spells))) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choices`);
+	}
+	for (const [id, background] of Object.entries(rules.backgrounds)) {
+		if (!background || typeof background !== "object" || Array.isArray(background)
+			|| typeof background.featId !== "string" || !rules.feats[background.featId]) throw new TypeError(`sheetRules.backgrounds.${id}: missing reviewed feat mapping`);
+		if (!background.equipment || typeof background.equipment !== "object" || Array.isArray(background.equipment)
+			|| typeof background.equipment.cost !== "number" || background.equipment.cost < 0
+			|| !Array.isArray(background.equipment.gear) || background.equipment.gear.some(item => typeof item !== "string")) throw new TypeError(`sheetRules.backgrounds.${id}: unsupported equipment annotation`);
 	}
 }
 
@@ -64,9 +79,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const classRule = rules.classes[classId];
 	const backgroundId = build.background ? key(build.background) : null;
 	const background = rules.backgrounds[backgroundId];
+	const featRule = background?.featId ? rules.feats?.[background.featId] : null;
 	if (!classRule) issue("class", "This class and source are outside the reviewed sheet subset.");
 	if (!background) issue("background", "Choose a supported background: Soldier or Acolyte (2024).");
 	if (!classRule || !background) return model;
+	if (!featRule || featRule.name !== background.feat) throw new TypeError("sheetRules.backgrounds: missing or inconsistent feat annotation.");
+	const featOwner = `feat:${background.featId}`;
 	if (!["Fighter", "Warlock"].includes(classRule.name)) {
 		issue("class", "This class choice profile is outside the reviewed sheet subset.");
 		return model;
@@ -83,7 +101,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const consumed = new Set(build.choices.filter(choice => choice.id.startsWith(`${species.speciesId}:`)).map(choice => choice.id));
 	const hasChoiceCatalog = sources?.skills && sources?.abilityNames;
 	const classSources = classId === "fighter|xphb" ? sources?.fighter : classId === "warlock|xphb" ? sources?.warlock : null;
-	if (hasChoiceCatalog && (!classSources?.class || !sources?.backgrounds?.background || (background.feat === "Magic Initiate (Cleric)" && !sources?.feats?.feat))) {
+	if (hasChoiceCatalog && (!classSources?.class || !sources?.backgrounds?.background || (featRule.spellGroup && !sources?.feats?.feat))) {
 		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
 		return model;
 	}
@@ -91,17 +109,15 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const warlockSourceChoices = hasChoiceCatalog && classId === "warlock|xphb" ? getWarlockSourceChoices(sources) : null;
 	const classSourceChoices = fighterSourceChoices || warlockSourceChoices;
 	const backgroundSourceChoices = hasChoiceCatalog ? getBackgroundSourceChoices(sources, build.background) : null;
-	const magicInitiateRecords = background.feat === "Magic Initiate (Cleric)" ? (sources?.feats?.feat || []).filter(candidate => candidate.name === "Magic Initiate" && candidate.source === "XPHB") : [];
-	const rawFeat = magicInitiateRecords.length === 1 ? magicInitiateRecords[0] : null;
-	const featOptions = rawFeat?.additionalSpells?.find(group => group.name === "Cleric Spells")?.ability?.choose;
-	if (hasChoiceCatalog && background.feat === "Magic Initiate (Cleric)" && (!Array.isArray(featOptions) || !featOptions.length || featOptions.some(ability => !ABILITY_IDS.includes(ability)))) {
+	const featRecords = (sources?.feats?.feat || []).filter(candidate => candidate.name === featRule.record.name && candidate.source === featRule.record.source);
+	const rawFeat = featRecords.length === 1 ? featRecords[0] : null;
+	const featOptions = featRule.spellGroup ? rawFeat?.additionalSpells?.find(group => group.name === featRule.spellGroup)?.ability?.choose : null;
+	if (hasChoiceCatalog && featRule.spellGroup && (!Array.isArray(featOptions) || !featOptions.length || featOptions.some(ability => !ABILITY_IDS.includes(ability)))) {
 		issue("source-descriptions", "Original feature descriptions are unavailable. Reload the source data.");
 		return model;
 	}
 	const levelRule = warlockSourceChoices ? {...reviewedLevelRule, ...warlockSourceChoices.progression(build.level)} : reviewedLevelRule;
-	const descriptors = fighterSourceChoices
-		? isSupportedFighterDocument(document) ? getFighterChoiceDescriptors(document, catalog, {rules, sources}) : getFighterClassChoiceDescriptors(document, {rules, sources})
-		: warlockSourceChoices && isSupportedWarlockDocument(document) ? getWarlockChoiceDescriptors(document, catalog, {rules, sources, spells: spells || []}) : [];
+	const descriptors = hasChoiceCatalog ? getEditorChoiceDescriptors(document, catalog, {rules, sources, spells: spells || []}) : [];
 	const sharedChoices = new Map(descriptors.map(descriptor => [descriptor.id, descriptor]));
 	function select (id, options, count, label) {
 		consumed.add(id);
@@ -163,8 +179,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		select(`${classOwner}:level-4-feat`, ["ability-score-improvement|xphb"], 1, "Level 4 feat");
 		increases(`${classOwner}:level-4-ability-increases`, ABILITY_IDS, scores, false);
 	}
-	const [equipmentId] = select(`${classOwner}:equipment`, Object.entries(rules.equipment).filter(([, value]) => value.classId === classId && value.backgroundId === backgroundId).map(([id]) => id), 1, "Equipment purchase");
-	const equipment = rules.equipment[equipmentId];
+	const equipmentIds = Object.entries(rules.equipment).filter(([, value]) => value.classId === classId).map(([id]) => id);
+	if (!equipmentIds.length) issue(`${classOwner}:equipment`, "No reviewed starting equipment is available for this class.");
+	const [equipmentId] = select(`${classOwner}:equipment`, equipmentIds, 1, "Equipment purchase");
+	const equipment = equipmentId ? resolveStartingEquipment(document, rules, equipmentId) : null;
 	if (equipment && equipment.cost > classRule.gold + background.gold) issue(`${classOwner}:equipment`, "The selected equipment exceeds the starting gold budget.");
 	let masteries = [];
 	let invocations = [];
@@ -174,10 +192,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	let initiateAbility;
 	let initiateCantrips = [];
 	let initiateSpell;
-	if (background.feat === "Magic Initiate (Cleric)") {
-		[initiateAbility] = select("feat:magic-initiate-cleric|xphb:ability", featOptions || ["int", "wis", "cha"], 1, "Magic Initiate ability");
-		initiateCantrips = select("feat:magic-initiate-cleric|xphb:cantrips", ["spell:guidance|xphb", "spell:light|xphb"], 2, "Magic Initiate cantrips");
-		[initiateSpell] = select("feat:magic-initiate-cleric|xphb:spell", ["spell:healing-word|xphb"], 1, "Magic Initiate level 1 spell");
+	if (featRule.spellGroup) {
+		[initiateAbility] = select(`${featOwner}:ability`, featOptions || featRule.abilities, 1, "Magic Initiate ability");
+		initiateCantrips = select(`${featOwner}:cantrips`, featRule.cantrips, featRule.cantrips.length, "Magic Initiate cantrips");
+		[initiateSpell] = select(`${featOwner}:spell`, featRule.spells, 1, "Magic Initiate level 1 spell");
 	}
 	if (classRule.name === "Fighter") {
 		select(`${classOwner}:fighting-style`, ["defense|xphb"], 1, "Fighting Style");
@@ -218,10 +236,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const catalogSpecies = catalog.species.find(candidate => candidate.id === species.speciesId);
 	const lineageId = catalogSpecies && (decisions.get(catalogSpecies.lineageChoiceId) || [])[0];
 	const selectedLineage = catalogSpecies?.lineages.find(candidate => candidate.id === lineageId);
-	if (selectedLineage && rawClass && (!background.feat?.startsWith("Magic Initiate") || Array.isArray(featOptions))) {
+	if (selectedLineage && rawClass && (!featRule.spellGroup || Array.isArray(featOptions))) {
 		const castingChoices = [{id: species.speciesId, allowed: [...selectedLineage.abilityOptions], selected: species.spellcastingAbility}];
 		if (rawClass.spellcastingAbility) castingChoices.push({id: classOwner, allowed: [rawClass.spellcastingAbility], selected: rawClass.spellcastingAbility});
-		if (featOptions) castingChoices.push({id: "feat:magic-initiate-cleric|xphb", allowed: [...featOptions], selected: initiateAbility || null});
+		if (featOptions) castingChoices.push({id: featOwner, allowed: [...featOptions], selected: initiateAbility || null});
 		model.spellcastingChoicePlan = planSpellcastingChoices({sources: castingChoices, abilityScores: scores});
 	}
 	if (model.issues.length) return model;
@@ -359,11 +377,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	if (!selectedLineage) throw new TypeError("Missing selected species lineage.");
 	model.speciesLineage = {id: selectedLineage.id, name: selectedLineage.name};
 	if (!rawClass) throw new TypeError("Missing original class spellcasting metadata.");
-	if (background.feat === "Magic Initiate (Cleric)" && !Array.isArray(featOptions)) throw new TypeError("Missing original Magic Initiate ability options.");
+	if (featRule.spellGroup && !Array.isArray(featOptions)) throw new TypeError("Missing original Magic Initiate ability options.");
 	for (const entry of rawSpecies.entries || []) {
 		const result = feature({...entry, source: rawSpecies.source, page: rawSpecies.page}, "Species", "race");
-		if (["Gnomish Lineage", "Fiendish Legacy"].includes(entry.name)) {
-			result.selection = {label: entry.name === "Gnomish Lineage" ? "Selected lineage" : "Selected legacy", value: selectedLineage.name};
+		if (entry.name === catalogSpecies?.lineageLabel) {
+			result.selection = {label: catalogSpecies.lineageChoiceId.endsWith(":lineage") ? "Selected lineage" : "Selected legacy", value: selectedLineage.name};
 		}
 	}
 	for (const entry of classData.classFeature) {
@@ -385,7 +403,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			if (!referenced.has(uid)) feature(entry, model.subclassName, "subclassFeature");
 		}
 	}
-	feature(record(sources.feats.feat, background.feat === "Magic Initiate (Cleric)" ? "Magic Initiate" : background.feat, "feat"), "Origin Feat", "feat");
+	feature(record(sources.feats.feat, featRule.record.name, "feat"), "Origin Feat", "feat");
 	if (build.level >= 4) feature(record(sources.feats.feat, "Ability Score Improvement", "feat"), "Feat", "feat");
 	function resource (definition) {
 		model.resources.push({...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0});
@@ -397,7 +415,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	const speciesCasting = casting(species.speciesId, "Species", species.spellcastingAbility);
 	const classCasting = rawClass.spellcastingAbility ? casting(classOwner, classRule.name, rawClass.spellcastingAbility) : null;
-	const initiateCasting = initiateAbility ? casting("feat:magic-initiate-cleric|xphb", "Magic Initiate", initiateAbility) : null;
+	const initiateCasting = initiateAbility ? casting(featOwner, featRule.record.name, initiateAbility) : null;
 	const collected = new Map();
 	function addSpell (id, spellSource) {
 		const metadata = spellIndex.get(id);
@@ -437,7 +455,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	if (initiateCasting) {
 		for (const id of initiateCantrips) addSpell(id, {...initiateCasting, kind: "feat", label: "Magic Initiate"});
-		const resourceId = "feat:magic-initiate-cleric|xphb:healing-word";
+		const resourceId = `${featOwner}:healing-word`;
 		addSpell(initiateSpell, {...initiateCasting, kind: "feat", label: "Magic Initiate", resourceId, alwaysPrepared: true, canCastWithSlots: true, freeLevel: 1, slotLevel: classCasting ? levelRule.slotLevel : null});
 	}
 	model.spells = [...collected.values()].sort((a, b) => a.level - b.level || a.ref.name.localeCompare(b.ref.name));

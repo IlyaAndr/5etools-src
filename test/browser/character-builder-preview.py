@@ -337,7 +337,7 @@ def main():
                 'Species Spellcasting Ability': 'int',
                 'Background Ability Increases': 'str-2.con-1',
                 'Background Tool': 'dice-set|xphb',
-                'Starting Equipment': 'soldier-sword-and-shield',
+                'Starting Equipment': 'fighter-sword-and-shield',
                 'Fighting Style': 'defense|xphb',
             }.items():
                 control = editor.get_by_label(label, exact=True)
@@ -441,7 +441,7 @@ def main():
             page.evaluate('''async () => {
                 const {createSpeciesCatalog} = await import('/js/character-builder/species-catalog.js');
                 const {createCharacterEditor} = await import('/js/character-builder/character-editor.js');
-                const {FIGHTER_EDITOR_PROFILE} = await import('/js/character-builder/fighter-editor-profile.js');
+                const {createEditorProfiles} = await import('/js/character-builder/editor-profile.js');
                 const get = path => fetch(path).then(response => response.json());
                 const [races, spells, speciesRules, rules, skills, fighter, backgrounds] = await Promise.all([
                     get('/data/races.json'), get('/data/spells/spells-xphb.json'),
@@ -454,7 +454,8 @@ def main():
                 document.body.append(container);
                 let accepted = null;
                 let allow = true;
-                const editor = createCharacterEditor({container, catalog, profiles:[FIGHTER_EDITOR_PROFILE], context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
+                const [fighterProfile] = createEditorProfiles({catalog, rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}});
+                const editor = createCharacterEditor({container, catalog, profiles:[fighterProfile], context:{rules, sources:{skills, fighter, backgrounds, abilityNames:Parser.ATB_ABV_TO_FULL}}, onChange:next => {
                     if (!allow) return false;
                     accepted = next;
                     return true;
@@ -502,7 +503,7 @@ def main():
                 'Fiendish Legacy': 'infernal',
                 'Size': 'medium',
                 'Background Ability Increases': 'cha-2.wis-1',
-                'Starting Equipment': 'acolyte-pact-mage',
+                'Starting Equipment': 'warlock-pact-mage',
                 'Magic Initiate Level 1 Spell': 'spell:healing-word|xphb',
                 'Eldritch Invocations': 'eldritch-mind|xphb',
             }.items():
@@ -565,6 +566,18 @@ def main():
             retained_warlock = json.loads(Path(download_info.value.path()).read_text())
             assert retained_warlock['build']['choices'] == mixed_warlock['build']['choices']
             assert retained_warlock['session'] == mixed_warlock['session']
+
+            # Compose a cross-preset character through the independent selectors.
+            page.select_option('#new-species', 'Gnome|XPHB')
+            page.select_option('#new-class', 'Warlock|XPHB')
+            page.select_option('#new-background', 'Soldier|XPHB')
+            page.click('#new-character')
+            editor = page.locator('#fighter-editor')
+            assert 'Character editor' in editor.inner_text()
+            assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == ''
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'cha'
+            assert editor.get_by_label('Background Tool', exact=True).count() == 1
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
             assert not errors, errors
         finally:
             browser.close()

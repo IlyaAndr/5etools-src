@@ -1,8 +1,10 @@
 # Online draft sheet and PDF preview
 
-`characterbuilder.html` includes Gnome/Fighter and Tiefling/Warlock editors and displays six
-calculated Forest Gnome/Fighter and Infernal Tiefling/Warlock reference builds
-at levels 1, 3, and 5. It also imports and exports v1 character JSON files.
+`characterbuilder.html` composes independent species, background, origin-feat,
+class, and equipment choices and displays six calculated Forest Gnome/Fighter and
+Infernal Tiefling/Warlock reference builds at levels 1, 3, and 5. Any reviewed
+combination of Gnome or Tiefling, Fighter or Warlock, and Soldier or Acolyte can
+be created. The page also imports and exports v1 character JSON files.
 
 ## Run locally
 
@@ -19,7 +21,9 @@ and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
 
-Select **New Fighter** or **New Warlock** to build a character, or edit a supported imported build.
+Select **New Fighter** or **New Warlock** for a reference preset, choose a
+species, class, and background and select **New character** for another
+combination, or edit a supported imported build.
 Choose an example or open a saved character file, then select **Print / Save PDF**.
 Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
 examples produce a main sheet and separate references. Full descriptions and
@@ -35,34 +39,37 @@ build. Gnomish Cunning is annotated alongside the relevant saving throws.
 All 18 skills are shown. Known current and temporary HP are displayed from the
 imported session.
 
-The editors support Gnome / Soldier / Fighter and Tiefling / Acolyte / Warlock,
-including Champion and the Fiend patron, with the explicitly listed level 1–5
-options. They do not offer every legal class, spell, feat, equipment, or invocation
-choice. Choices and their validation use the same reviewed
-catalog; skill associations come from 2024 `data/skills.json`, ability names
-come from the site's existing parser, and Fighter skills, hit die, saving throws,
-Weapon Mastery progression, Second Wind uses, and Soldier skill and ability
-choices come from the original class and background records. Warlock skill choices,
-Acolyte skill and ability choices, and the Warlock spell and invocation progression
-also use those records. Equipment and the supported spell and invocation lists still
-use reviewed annotations. An imported build with missing or
-unsupported choices produces an incomplete draft summary rather than invented
-statistics. Selections no longer available after a level change remain visible
-until the player explicitly removes them. New documents have unique IDs.
+The editors support every combination of Gnome or Tiefling, Fighter or Warlock,
+and Soldier or Acolyte, including Champion and the Fiend patron, with the
+explicitly listed level 1–5 options. They do not offer every legal class, spell,
+feat, equipment, or invocation choice. Choices and their validation use the same
+reviewed catalog; skill associations come from 2024 `data/skills.json`, ability
+names come from the site's existing parser, and class skills, hit dice, saving
+throws, Weapon Mastery progression, Second Wind uses, background skills, and
+background ability choices come from the original class and background records.
+Warlock spell and invocation progression also uses those records. Equipment,
+spell, invocation, and origin-feat choice lists use reviewed annotations. An
+imported build with missing or unsupported choices produces an incomplete draft
+summary rather than invented statistics. Selections no longer available after a
+level change remain visible until the player explicitly removes them. New
+documents have unique IDs.
 
-Class and background source records are resolved independently of species. The
-sheet calculator also checks Gnome / Warlock / Acolyte and Tiefling / Fighter /
-Soldier combinations, but the editor does not yet offer species or background
-switching. Some other combinations lack a reviewed equipment package and remain
-incomplete. Further editor expansion requires composable species, class,
-background and feat choice providers and independent equipment selection. Fighter
-class choices are already supplied separately from species and background choices.
+Species, background, origin-feat, class, and equipment choices are supplied by
+independent providers and composed by shared code. The sheet calculator applies
+the same composition. Each class selects its own starting equipment package, and
+the selected background adds its fixed gear independently, so changing a
+background never changes the class package or its armor and weapons. Background
+skills are removed from the class skill list, and species and feat spellcasting
+abilities are limited to a shared ability when every source allows one. Imported
+characters retain their explicit values, which remain visible beside the allowed
+options.
 
-The Tiefling/Warlock editor chooses **Charisma** for class, species, and feat
-spells because all three sources allow it. Imported characters retain their
-explicit choices; previously selected different abilities remain visible and each
-source's values are displayed separately. Species-only reference fixtures also
-verify that rules permit independent choices.
+A new Warlock chooses **Charisma** for class, species, and feat spells because all
+three sources allow it, whichever reviewed species and background are selected.
+Imported characters retain their explicit choices; previously selected different
+abilities remain visible and each source's values are displayed separately.
+Species-only reference fixtures also verify that rules permit independent
+choices.
 
 When the supported species, class, and feat allow one common spellcasting
 ability, an incomplete draft suggests it for unresolved choices. Each source
@@ -75,8 +82,8 @@ Reviewed feature-specific effects are stored in `rules/character-sheet.json`
 and resolved by `rules/effects.js` using typed, validated operations and
 source-qualified conditions. This covers the currently annotated features; it
 is not a universal D&D rules engine. Class and option validation remain limited
-to the supported reference profiles, and the effect annotations themselves are
-curated data rather than automatically extracted rule text.
+to the reviewed coverage, and the effect annotations themselves are curated data
+rather than automatically extracted rule text.
 
 The editor changes build decisions and can export a JSON document. Ability scores
 are stored only when all six are entered; partial score entries remain in the

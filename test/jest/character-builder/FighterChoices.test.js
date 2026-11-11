@@ -70,7 +70,7 @@ describe("Fighter editor choices", () => {
 			"background:soldier|xphb:tool": ["dice-set|xphb"],
 			"character:languages": ["common", "gnomish", "dwarvish"],
 			"class:fighter|xphb:skills": ["perception", "survival"],
-			"class:fighter|xphb:equipment": ["soldier-sword-and-shield"],
+			"class:fighter|xphb:equipment": ["fighter-sword-and-shield"],
 			"class:fighter|xphb:fighting-style": ["defense|xphb"],
 			"class:fighter|xphb:weapon-masteries": ["longsword|xphb", "javelin|xphb", "handaxe|xphb"],
 		};

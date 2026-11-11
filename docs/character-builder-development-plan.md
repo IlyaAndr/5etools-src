@@ -1,6 +1,6 @@
 # D&D 2024 Character Builder Development Plan
 
-Status: PRs #1–#4 are merged, covering the draft save format, reviewed species catalog, early online sheet and PDF preview, and initial Fighter editor. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
+Status: PRs #1–#5 are merged, covering the draft save format, reviewed species catalog, early online sheet and PDF preview, initial Fighter editor, and Tiefling Warlock editor. The current work replaces preset coupling with independent species, background, feat, class, and equipment choice providers. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
 
 The first six reference cases cover two selected Fighter and Warlock builds at levels 1/3/5. The current prototype calculates their sheets from saved decisions and provides editors for limited options; broader build coverage remains later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations and [character-builder-preview.md](character-builder-preview.md) for current editor scope.
 
@@ -55,16 +55,13 @@ Shared mechanic types include proficiency and expertise, bonuses, conditional ad
 
 Species is an independent source of effects alongside class, subclass, background, and feat. Species information is not embedded in individual class handlers. D&D 2024 ability score increases come from backgrounds; do not automatically apply 2014 racial increases to 2024 species.
 
-Class and background source adapters resolve their own records independently,
-and the sheet model combines their contributions with the species projection.
-Editor presets currently cover only Gnome / Soldier / Fighter and Tiefling /
-Acolyte / Warlock; the presets are coverage boundaries, not a data-model rule.
-Fighter-owned choice descriptors are independent of species and background,
-and the shared editor and draft operations are class-independent. Before
-exposing arbitrary combinations in the editor, provide the same separation for
-species, backgrounds, feats, and the remaining class choices; resolve their
-interactions in shared validation and replace class/background-specific equipment
-packages with independently sourced choices.
+Class, background, species, origin-feat, and equipment choices are provided by
+independent adapters and composed by shared code that the editor and the sheet
+model both use. The reference presets remain convenience starting points; the
+editor also creates and edits any combination with reviewed coverage. Background
+skills are removed from the class skill list, species and feat spellcasting
+abilities are limited to a shared ability when one exists, and each class selects
+its own equipment package while the background adds its fixed gear independently.
 Keep unsupported combinations incomplete until every required contribution has
 reviewed coverage. Changing an entity must preserve unrelated decisions and
 session state, and flag stale or incompatible choices for explicit correction.
