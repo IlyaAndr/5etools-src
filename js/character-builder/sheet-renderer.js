@@ -274,7 +274,7 @@ export function renderCharacterSheet (model, catalog) {
 	const defenseValues = model.defenses.map(defense => {
 		if (defense.type === "resistance") return `Resistance: ${title(defense.damageType)}`;
 		if (defense.type === "vision") return `${defense.name}: ${defense.range} ft · ${defense.lighting.join(" / ")} · ${defense.magical && defense.nonmagical ? "magical / nonmagical" : ""}`;
-		if (defense.type === "swim") return `Swim: ${defense.feet} ft${defense.breatheUnderwater ? " · breathe underwater" : ""}`;
+		if (defense.type === "swim") return `${defense.name}: Swim ${defense.feet} ft${defense.breatheUnderwater ? " · breathe underwater" : ""}`;
 		if (defense.type === "truesight") return `Truesight: ${defense.range} ft`;
 		if (defense.type === "speed-penalty") return `Speed: −${defense.amount} ft · ${defense.armor} Strength requirement: ${defense.minimumStrength}`;
 		throw new Error(`Unsupported defense value: ${defense.type}`);

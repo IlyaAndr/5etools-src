@@ -123,7 +123,7 @@ describe("Calculated character sheet renderer", () => {
 		document.build.choices = document.build.choices.filter(entry => !entry.id.endsWith("-cantrip"));
 		document.build.choices.find(entry => entry.id === "class:warlock|xphb:invocations").selected = ["eldritch-mind|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "fiendish-vigor|xphb", "gift-of-the-depths|xphb"];
 		const html = render(document);
-		expect(html).toContain("Swim: 30 ft · breathe underwater");
+		expect(html).toContain("Gift of the Depths: Swim 30 ft · breathe underwater");
 		expect(html).toContain("data-resource=\"class:warlock|xphb:gift-of-the-depths-water-breathing\"");
 		expect(card(html, "false-life")).toContain("<strong>Fiendish Vigor:</strong>");
 		expect(card(html, "false-life")).toContain("At will · Target: self · Components: required");
