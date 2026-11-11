@@ -107,6 +107,26 @@ export function setCharacterChoice (document, id, selected) {
 }
 
 /**
+ * Drop the saved selection of a choice whose reviewed prerequisite was removed
+ * by the same edit, such as an invocation's Pact Weapon or cantrip after the
+ * invocation itself is deselected. The prerequisite must have been satisfied
+ * before the edit and be gone afterwards, so opening an imported document or
+ * lowering the level keeps saved choices for the user to review.
+ */
+export function pruneDependentChoices (previous, next, descriptors) {
+	const selections = (document, id) => document?.build.choices.find(choice => choice.id === id)?.selected || [];
+	let result = next;
+	for (const descriptor of descriptors) {
+		const dependency = descriptor.dependsOn;
+		if (!dependency || !selections(result, descriptor.id).length) continue;
+		if (selections(next, dependency.choice).includes(dependency.option)) continue;
+		if (!selections(previous, dependency.choice).includes(dependency.option)) continue;
+		result = setCharacterChoice(result, descriptor.id, []);
+	}
+	return result;
+}
+
+/**
  * Fill every selection that is not a real decision: options the reviewed source
  * requires, and choices that offer exactly one legal option. Saved selections
  * are never replaced, and the same document is returned when nothing changes so

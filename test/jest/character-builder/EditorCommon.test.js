@@ -1,6 +1,6 @@
 import {
 	MANUAL_SCORE_RANGE, POINT_BUY_BUDGET, POINT_BUY_COSTS, STANDARD_ARRAY,
-	createScoreDrafts, pointBuySpent, readScoreDraft, scoresForBuild,
+	createCharacterDraft, createScoreDrafts, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
 } from "../../../js/character-builder/editor-common.js";
 
 const abilityIds = ["str", "dex", "con", "int", "wis", "cha"];
@@ -75,5 +75,55 @@ describe("Ability-score drafts", () => {
 	it("keeps the reviewed standard array and manual range", () => {
 		expect(STANDARD_ARRAY).toEqual([15, 14, 13, 12, 10, 8]);
 		expect(MANUAL_SCORE_RANGE).toEqual({min: 1, max: 20});
+	});
+});
+
+describe("Dependent choices", () => {
+	const dataset = {id: "5etools", version: "test", revision: "a".repeat(40)};
+	const owner = "class:warlock|xphb";
+	const invocation = "pact-of-the-blade|xphb";
+	const descriptors = [{
+		id: `${owner}:pact-weapon`,
+		label: "Pact Weapon",
+		count: 1,
+		options: [],
+		selected: ["longsword|xphb"],
+		available: false,
+		minimumLevel: 1,
+		dependsOn: {choice: `${owner}:invocations`, option: invocation},
+	}];
+	const warlockDraft = () => createCharacterDraft(dataset, {
+		characterClass: {name: "Warlock", source: "XPHB"},
+		species: {name: "Tiefling", source: "XPHB"},
+		background: {name: "Acolyte", source: "XPHB"},
+	});
+	const draftWithPactWeapon = () => setCharacterChoice(
+		setCharacterChoice(warlockDraft(), `${owner}:invocations`, [invocation]),
+		`${owner}:pact-weapon`, ["longsword|xphb"],
+	);
+
+	it("drops a dependent choice when the same edit removes its prerequisite", () => {
+		const previous = setCharacterChoice(draftWithPactWeapon(), `${owner}:cantrips`, ["spell:eldritch-blast|xphb"]);
+		const next = setCharacterChoice(previous, `${owner}:invocations`, []);
+		const pruned = pruneDependentChoices(previous, next, descriptors);
+		expect(pruned.build.choices.map(choice => choice.id)).toEqual([`${owner}:cantrips`]);
+	});
+
+	it("keeps a dependent choice while its prerequisite stays selected", () => {
+		const previous = draftWithPactWeapon();
+		const next = setCharacterChoice(previous, `${owner}:cantrips`, ["spell:eldritch-blast|xphb"]);
+		expect(pruneDependentChoices(previous, next, descriptors)).toBe(next);
+	});
+
+	it("keeps an imported dependent choice whose prerequisite was already missing", () => {
+		const previous = setCharacterChoice(warlockDraft(), `${owner}:pact-weapon`, ["longsword|xphb"]);
+		const next = setCharacterChoice(previous, `${owner}:cantrips`, ["spell:eldritch-blast|xphb"]);
+		expect(pruneDependentChoices(previous, next, descriptors)).toBe(next);
+	});
+
+	it("ignores choices without a reviewed dependency", () => {
+		const previous = draftWithPactWeapon();
+		const next = setCharacterChoice(previous, `${owner}:invocations`, []);
+		expect(pruneDependentChoices(previous, next, [])).toBe(next);
 	});
 });

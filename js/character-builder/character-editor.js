@@ -1,6 +1,6 @@
 import {
 	ABILITY_SCORE_METHODS, MANUAL_SCORE_RANGE, POINT_BUY_BUDGET, POINT_BUY_COSTS, POINT_BUY_RANGE, STANDARD_ARRAY,
-	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, readScoreDraft, scoresForBuild, setCharacterChoice,
+	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
 } from "./editor-common.js";
 import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
 import {getBackgroundEquipment} from "./background-choices.js";
@@ -75,7 +75,12 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const active = container.contains(document.activeElement) ? document.activeElement : null;
 		const focusKey = focusHint || active?.dataset.cbFocus;
 		const fallbackKey = fallbackHint || active?.dataset.cbFocusFallback;
-		if (!character || next.build !== character.build) next = autoSelectSingleOptions(next);
+		if (!character || next.build !== character.build) {
+			const previous = character;
+			next = autoSelectSingleOptions(next);
+			const profile = profileFor(next);
+			if (previous && profile) next = pruneDependentChoices(previous, next, profile.getChoiceDescriptors(next, catalog, context));
+		}
 		if (!onChange(next)) {
 			if (character) { render(); restoreFocus(focusKey, fallbackKey); }
 			return false;
@@ -343,7 +348,12 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				: `Choose ${descriptor.count} (${descriptor.selected.length} of ${descriptor.count} selected).`, "cb-editor__help"));
 		} else if (descriptor.count === 1) group.append(element("p", "Choose 1.", "cb-editor__help"));
 		if (descriptor.help) group.append(element("p", descriptor.help, "cb-editor__help"));
-		if (!descriptor.available) group.append(element("p", "This saved choice is unavailable at the current level. Remove it or restore the previous level.", "cb-editor__help"));
+		if (!descriptor.available) {
+			const prerequisite = descriptor.dependsOn ? character.build.choices.find(choice => choice.id === descriptor.dependsOn.choice)?.selected || [] : [];
+			group.append(element("p", descriptor.dependsOn && !prerequisite.includes(descriptor.dependsOn.option)
+				? "This saved choice is unavailable because its prerequisite is not selected. Remove it or select the prerequisite again."
+				: "This saved choice is unavailable at the current level. Remove it or restore the previous level.", "cb-editor__help"));
+		}
 		const options = element("div", null, "cb-editor__options");
 		if (fixedOption) {
 			group.append(element("p", fixedOption.detail ? `${fixedOption.label} · ${fixedOption.detail}` : fixedOption.label, "cb-editor__fixed"));

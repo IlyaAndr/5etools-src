@@ -622,6 +622,18 @@ def main():
             assert editor.get_by_label('Thirsting Blade', exact=True).count() == 0
             assert editor.get_by_label('Pact of the Tome', exact=True).count() == 0
             assert 'Pact of the Tome' in group_text(page, editor, 'Eldritch Invocations')
+            # A dependent choice leaves with its prerequisite: the Pact Weapon is
+            # offered only while Pact of the Blade is selected, and deselecting
+            # the invocation removes the saved weapon instead of leaving an
+            # unavailable group behind.
+            editor.get_by_label('Pact of the Blade', exact=True).check()
+            assert editor.get_by_label('Pact Weapon', exact=True).count() == 1
+            editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
+            editor.get_by_label('Pact of the Blade', exact=True).uncheck()
+            assert editor.get_by_label('Pact Weapon', exact=True).count() == 0
+            editor.get_by_label('Pact of the Blade', exact=True).check()
+            assert editor.get_by_label('Pact Weapon', exact=True).input_value() == ''
+            editor.get_by_label('Pact of the Blade', exact=True).uncheck()
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
             # Spell lists expose the same filter once they grow, and level and
             # school hints are searchable along with names.
