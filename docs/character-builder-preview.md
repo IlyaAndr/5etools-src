@@ -118,14 +118,16 @@ Pact of the Tome and Lessons of the First Ones stay out of the selectable list
 and name the reason beside the group, because the cantrips, rituals, and Origin
 feat they grant have no reviewed choice yet. Repeatable invocations (Agonizing
 Blast, Eldritch Spear, Repelling Blast, Lessons of the First Ones) can be taken
-once, because indexed repeats are not represented in the build document. Thirteen
+once, because indexed repeats are not represented in the build document. Sixteen
 invocations carry reviewed effect annotations: Eldritch Mind, Devil's Sight,
-Armor of Shadows, and Agonizing Blast change calculated values, and nine more
-grant their spell at will — Ascendant Step, Mask of Many Faces, Master of Myriad
-Forms, Misty Visions, One with Shadows, Otherworldly Leap, Pact of the Chain,
-Visions of Distant Realms, and Whispers of the Grave. The remaining invocations
-currently contribute their original description until their effects are
-reviewed.
+Armor of Shadows, and Agonizing Blast change calculated values; ten grant their
+spell at will — Ascendant Step, Fiendish Vigor (False Life on yourself), Mask of
+Many Faces, Master of Myriad Forms, Misty Visions, One with Shadows, Otherworldly
+Leap, Pact of the Chain, Visions of Distant Realms, and Whispers of the Grave —
+and Gift of the Depths adds a Swim Speed, underwater breathing, and one free
+Water Breathing per Long Rest, while Witch Sight adds 30-foot Truesight. The
+remaining invocations currently contribute their original description until
+their effects are reviewed.
 
 The editor changes build decisions and can export a JSON document. Ability scores
 are stored only when all six are entered; partial score entries remain in the

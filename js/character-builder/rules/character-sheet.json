@@ -1376,6 +1376,103 @@
 					}
 				}
 			]
+		},
+		{
+			"id": "invocation-fiendish-vigor",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Fiendish Vigor",
+				"source": "XPHB",
+				"page": 155
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "fiendish-vigor|xphb"
+			},
+			"effects": [
+				{
+					"type": "spellGrant",
+					"spellId": "spell:false-life|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:fiendish-vigor",
+						"kind": "invocation",
+						"label": "Fiendish Vigor",
+						"atWill": true,
+						"freeLevel": 1,
+						"target": "self",
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-gift-of-the-depths",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Gift of the Depths",
+				"source": "XPHB",
+				"page": 156
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "gift-of-the-depths|xphb"
+			},
+			"effects": [
+				{
+					"type": "swimSpeed",
+					"value": {
+						"type": "swimSpeed",
+						"name": "Gift of the Depths",
+						"breatheUnderwater": true
+					}
+				},
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:gift-of-the-depths-water-breathing",
+						"name": "Water Breathing",
+						"maxUses": 1,
+						"recovery": {
+							"long": "all"
+						},
+						"spellId": "spell:water-breathing|xphb",
+						"freeLevel": 3
+					}
+				},
+				{
+					"type": "spellGrant",
+					"spellId": "spell:water-breathing|xphb",
+					"casterId": "class:warlock|xphb",
+					"value": {
+						"id": "class:warlock|xphb:gift-of-the-depths",
+						"kind": "invocation",
+						"label": "Gift of the Depths",
+						"resourceId": "class:warlock|xphb:gift-of-the-depths-water-breathing",
+						"freeLevel": 3,
+						"componentsRequired": true
+					}
+				}
+			]
+		},
+		{
+			"id": "invocation-witch-sight",
+			"source": {
+				"type": "optionalfeature",
+				"name": "Witch Sight",
+				"source": "XPHB",
+				"page": 157
+			},
+			"when": {
+				"classId": "warlock|xphb",
+				"invocation": "witch-sight|xphb"
+			},
+			"effects": [
+				{
+					"type": "truesight",
+					"range": 30
+				}
+			]
 		}
 	]
 }

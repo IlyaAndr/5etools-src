@@ -185,6 +185,18 @@ describe("Reviewed character sheet calculations", () => {
 		expect(granted("Find Familiar")).toMatchObject({label: "Pact of the Chain", atWill: true, canCastWithSlots: false});
 	});
 
+	it("grants Fiendish Vigor's False Life and Gift of the Depths' swim speed", () => {
+		const document = example("Warlock");
+		document.build.choices = document.build.choices.filter(saved => !saved.id.endsWith("-cantrip"));
+		choice(document, ":invocations").selected = ["eldritch-mind|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "fiendish-vigor|xphb", "gift-of-the-depths|xphb"];
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		expect(model.spells.find(spell => spell.ref.name === "False Life").sources[0]).toMatchObject({kind: "invocation", label: "Fiendish Vigor", atWill: true, canCastWithSlots: false, freeLevel: 1, target: "self"});
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "swim", name: "Gift of the Depths", feet: model.speed, breatheUnderwater: true}));
+		expect(model.resources).toContainEqual(expect.objectContaining({id: "class:warlock|xphb:gift-of-the-depths-water-breathing", name: "Water Breathing", maxUses: 1, recovery: {long: "all"}, freeLevel: 3}));
+		expect(model.spells.find(spell => spell.ref.name === "Water Breathing").sources[0]).toMatchObject({kind: "invocation", label: "Gift of the Depths", resourceId: "class:warlock|xphb:gift-of-the-depths-water-breathing", canCastWithSlots: false, freeLevel: 3});
+	});
+
 	it("grants higher-level invocation spells without spending Pact Magic slots", () => {
 		const document = example("Warlock");
 		document.build.level = 9;

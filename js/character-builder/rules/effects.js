@@ -3,7 +3,7 @@ import {ABILITY_IDS} from "../character-document.js";
 /** Evaluate reviewed, declarative mechanics without inspecting rule descriptions. */
 const EFFECT_TYPES = new Set([
 	"resource", "savingThrowAdvantage", "skillAdvantage", "initiativeAdvantage",
-	"armorBonus", "armorOverride", "criticalRange", "vision", "spellGrant", "spellAttack", "spellDamageBonus",
+	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus",
 ]);
 const CONDITION_KEYS = new Set(["classId", "backgroundId", "subclassId", "minimumLevel", "invocation", "knownSpell", "choice", "wearingArmor"]);
 
@@ -33,6 +33,8 @@ const EFFECT_FIELDS = {
 	armorOverride: ["type", "name", "base", "ability", "fallbackBase"],
 	criticalRange: ["type", "min", "max"],
 	vision: ["type", "value"],
+	swimSpeed: ["type", "value"],
+	truesight: ["type", "range"],
 	spellGrant: ["type", "spellId", "casterId", "value"],
 	spellAttack: ["type", "spellId", "casterId", "value"],
 	spellDamageBonus: ["type", "spellId", "casterId", "amount"],
@@ -84,9 +86,16 @@ function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 			if (vision.type !== "vision" || !nonempty(vision.name) || !integer(vision.range, 1) || !Array.isArray(vision.lighting) || !vision.lighting.length || vision.lighting.some(item => !nonempty(item)) || typeof vision.magical !== "boolean" || typeof vision.nonmagical !== "boolean") throw new TypeError("Invalid vision mechanic values.");
 			break;
 		}
+		case "swimSpeed": {
+			const swim = effect.value;
+			keys(swim, ["type", "name", "breatheUnderwater"], "swim speed mechanic");
+			if (swim.type !== "swimSpeed" || !nonempty(swim.name) || typeof swim.breatheUnderwater !== "boolean") throw new TypeError("Invalid swim speed mechanic values.");
+			break;
+		}
+		case "truesight": if (!validInt(effect.range, 1)) throw new TypeError("Invalid truesight mechanic."); break;
 		case "spellGrant":
-			keys(effect.value, ["id", "kind", "label", "atWill", "freeLevel", "target", "componentsRequired"], "spell grant mechanic");
-			if (!validText(effect.spellId) || !validText(effect.casterId) || !nonempty(effect.value.id) || !nonempty(effect.value.kind) || !nonempty(effect.value.label) || (effect.value.atWill !== undefined && typeof effect.value.atWill !== "boolean") || (effect.value.freeLevel !== undefined && !integer(effect.value.freeLevel, 0, 9)) || (effect.value.target !== undefined && !nonempty(effect.value.target)) || (effect.value.componentsRequired !== undefined && typeof effect.value.componentsRequired !== "boolean")) throw new TypeError("Invalid spell grant mechanic values.");
+			keys(effect.value, ["id", "kind", "label", "atWill", "freeLevel", "target", "componentsRequired", "resourceId"], "spell grant mechanic");
+			if (!validText(effect.spellId) || !validText(effect.casterId) || !nonempty(effect.value.id) || !nonempty(effect.value.kind) || !nonempty(effect.value.label) || (effect.value.atWill !== undefined && typeof effect.value.atWill !== "boolean") || (effect.value.freeLevel !== undefined && !integer(effect.value.freeLevel, 0, 9)) || (effect.value.target !== undefined && !nonempty(effect.value.target)) || (effect.value.componentsRequired !== undefined && typeof effect.value.componentsRequired !== "boolean") || (effect.value.resourceId !== undefined && !nonempty(effect.value.resourceId))) throw new TypeError("Invalid spell grant mechanic values.");
 			break;
 		case "spellAttack": {
 			const attack = effect.value;
