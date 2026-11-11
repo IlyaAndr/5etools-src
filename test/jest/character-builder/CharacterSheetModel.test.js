@@ -365,6 +365,19 @@ describe("Reviewed character sheet calculations", () => {
 		expect(model.issues).toContainEqual({id: "level", message: "This class level is outside the reviewed sheet coverage."});
 	});
 
+	it("rejects malformed invocation annotations instead of guessing", () => {
+		const cases = [
+			[annotation => { annotation.requires = ["missing|xphb"]; }, /unsupported prerequisite/],
+			[annotation => { annotation.minimumLevel = 0; }, /unsupported invocation annotation/],
+			[annotation => { annotation.cantripOptions = ["spell:eldritch-blast|xphb"]; }, /cantrip options without a choice/],
+		];
+		for (const [mutate, expected] of cases) {
+			const broken = JSON.parse(JSON.stringify(rules));
+			mutate(broken.invocations["eldritch-smite|xphb"]);
+			expect(() => createCharacterSheetModel(example("Warlock"), catalog, {...context, rules: broken})).toThrow(expected);
+		}
+	});
+
 	it("rejects an otherwise valid higher-level spell at a lower Pact slot level", () => {
 		const document = example("Warlock", 1);
 		choice(document, ":prepared-spells").selected[0] = "spell:counterspell|xphb";

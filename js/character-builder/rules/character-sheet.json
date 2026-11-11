@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) and Warlock (Fiend), levels 1–5; any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats, invocations, and spells. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock (Fiend) levels 1–20; any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, and all 28 reviewed Eldritch Invocations with their level and prerequisite checks. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -453,33 +453,153 @@
 		}
 	},
 	"invocations": {
-		"eldritch-mind|xphb": {
-			"name": "Eldritch Mind",
-			"minimumLevel": 1
-		},
-		"armor-of-shadows|xphb": {
-			"name": "Armor of Shadows",
-			"minimumLevel": 1
-		},
 		"agonizing-blast|xphb": {
 			"name": "Agonizing Blast",
 			"minimumLevel": 2,
+			"repeatable": true,
 			"cantripChoice": "agonizing-blast-cantrip",
 			"cantripOptions": [
 				"spell:eldritch-blast|xphb"
 			]
 		},
+		"armor-of-shadows|xphb": {
+			"name": "Armor of Shadows",
+			"minimumLevel": 1
+		},
+		"ascendant-step|xphb": {
+			"name": "Ascendant Step",
+			"minimumLevel": 5
+		},
 		"devils-sight|xphb": {
 			"name": "Devil's Sight",
 			"minimumLevel": 2
 		},
+		"devouring-blade|xphb": {
+			"name": "Devouring Blade",
+			"minimumLevel": 12,
+			"requires": [
+				"thirsting-blade|xphb"
+			]
+		},
+		"eldritch-mind|xphb": {
+			"name": "Eldritch Mind",
+			"minimumLevel": 1
+		},
+		"eldritch-smite|xphb": {
+			"name": "Eldritch Smite",
+			"minimumLevel": 5,
+			"requires": [
+				"pact-of-the-blade|xphb"
+			]
+		},
+		"eldritch-spear|xphb": {
+			"name": "Eldritch Spear",
+			"minimumLevel": 2,
+			"repeatable": true,
+			"cantripChoice": "eldritch-spear-cantrip",
+			"cantripOptions": [
+				"spell:eldritch-blast|xphb"
+			]
+		},
+		"fiendish-vigor|xphb": {
+			"name": "Fiendish Vigor",
+			"minimumLevel": 2
+		},
+		"gaze-of-two-minds|xphb": {
+			"name": "Gaze of Two Minds",
+			"minimumLevel": 5
+		},
+		"gift-of-the-depths|xphb": {
+			"name": "Gift of the Depths",
+			"minimumLevel": 5
+		},
+		"gift-of-the-protectors|xphb": {
+			"name": "Gift of the Protectors",
+			"minimumLevel": 9,
+			"requires": [
+				"pact-of-the-tome|xphb"
+			]
+		},
+		"investment-of-the-chain-master|xphb": {
+			"name": "Investment of the Chain Master",
+			"minimumLevel": 5,
+			"requires": [
+				"pact-of-the-chain|xphb"
+			]
+		},
+		"lessons-of-the-first-ones|xphb": {
+			"name": "Lessons of the First Ones",
+			"minimumLevel": 2,
+			"repeatable": true,
+			"unsupported": "The Origin feat it grants has no reviewed choice or effect yet."
+		},
+		"lifedrinker|xphb": {
+			"name": "Lifedrinker",
+			"minimumLevel": 9,
+			"requires": [
+				"pact-of-the-blade|xphb"
+			]
+		},
+		"mask-of-many-faces|xphb": {
+			"name": "Mask of Many Faces",
+			"minimumLevel": 2
+		},
+		"master-of-myriad-forms|xphb": {
+			"name": "Master of Myriad Forms",
+			"minimumLevel": 5
+		},
+		"misty-visions|xphb": {
+			"name": "Misty Visions",
+			"minimumLevel": 2
+		},
+		"one-with-shadows|xphb": {
+			"name": "One with Shadows",
+			"minimumLevel": 5
+		},
+		"otherworldly-leap|xphb": {
+			"name": "Otherworldly Leap",
+			"minimumLevel": 2
+		},
+		"pact-of-the-blade|xphb": {
+			"name": "Pact of the Blade",
+			"minimumLevel": 1
+		},
+		"pact-of-the-chain|xphb": {
+			"name": "Pact of the Chain",
+			"minimumLevel": 1
+		},
+		"pact-of-the-tome|xphb": {
+			"name": "Pact of the Tome",
+			"minimumLevel": 1,
+			"unsupported": "The three cantrips and two rituals it grants have no reviewed choice yet."
+		},
 		"repelling-blast|xphb": {
 			"name": "Repelling Blast",
 			"minimumLevel": 2,
+			"repeatable": true,
 			"cantripChoice": "repelling-blast-cantrip",
 			"cantripOptions": [
 				"spell:eldritch-blast|xphb"
 			]
+		},
+		"thirsting-blade|xphb": {
+			"name": "Thirsting Blade",
+			"minimumLevel": 5,
+			"requires": [
+				"pact-of-the-blade|xphb"
+			]
+		},
+		"visions-of-distant-realms|xphb": {
+			"name": "Visions of Distant Realms",
+			"minimumLevel": 9
+		},
+		"whispers-of-the-grave|xphb": {
+			"name": "Whispers of the Grave",
+			"minimumLevel": 7
+		},
+		"witch-sight|xphb": {
+			"name": "Witch Sight",
+			"minimumLevel": 15
 		}
 	},
 	"weapons": {

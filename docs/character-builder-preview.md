@@ -108,6 +108,20 @@ is not a universal D&D rules engine. Class and option validation remain limited
 to the reviewed coverage, and the effect annotations themselves are curated data
 rather than automatically extracted rule text.
 
+All 28 Eldritch Invocations of the pinned data are reviewed in
+`rules/character-sheet.json` with their minimum Warlock level and, where the
+source requires one, the prerequisite invocation. The editor and the sheet use
+the same list, so an invocation is offered only when the level reaches its
+minimum and its prerequisite is already selected; a saved dependent invocation
+without its prerequisite leaves the sheet incomplete instead of being dropped.
+Pact of the Tome and Lessons of the First Ones stay out of the selectable list
+and name the reason beside the group, because the cantrips, rituals, and Origin
+feat they grant have no reviewed choice yet. Repeatable invocations (Agonizing
+Blast, Eldritch Spear, Repelling Blast, Lessons of the First Ones) can be taken
+once, because indexed repeats are not represented in the build document. Only
+the four invocations with reviewed effect annotations change calculated values;
+the others currently contribute their original description.
+
 The editor changes build decisions and can export a JSON document. Ability scores
 are stored only when all six are entered; partial score entries remain in the
 open editor but cannot yet be represented in the saved format. The sheet itself

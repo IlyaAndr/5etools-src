@@ -615,6 +615,13 @@ def main():
             assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 0
             editor.get_by_label('Level', exact=True).select_option('5')
             assert 'Ability Score Improvement' in group_text(page, editor, 'Level 4 Feat')
+            # Invocations appear only when their annotated prerequisite is
+            # selected, and the ones whose choices are not reviewed yet are
+            # withheld with the reason beside the group.
+            assert editor.get_by_label('Pact of the Blade', exact=True).count() == 1
+            assert editor.get_by_label('Thirsting Blade', exact=True).count() == 0
+            assert editor.get_by_label('Pact of the Tome', exact=True).count() == 0
+            assert 'Pact of the Tome' in group_text(page, editor, 'Eldritch Invocations')
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
             # Spell lists expose the same filter once they grow, and level and
             # school hints are searchable along with names.
