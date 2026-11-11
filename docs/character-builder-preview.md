@@ -119,15 +119,15 @@ and name the reason beside the group, because the cantrips, rituals, and Origin
 feat they grant have no reviewed choice yet. Repeatable invocations (Agonizing
 Blast, Eldritch Spear, Repelling Blast, Lessons of the First Ones) can be taken
 once, because indexed repeats are not represented in the build document. Sixteen
-invocations carry reviewed effect annotations: Eldritch Mind, Devil's Sight,
-Armor of Shadows, and Agonizing Blast change calculated values; ten grant their
-spell at will — Ascendant Step, Fiendish Vigor (False Life on yourself), Mask of
-Many Faces, Master of Myriad Forms, Misty Visions, One with Shadows, Otherworldly
-Leap, Pact of the Chain, Visions of Distant Realms, and Whispers of the Grave —
-and Gift of the Depths adds a Swim Speed, underwater breathing, and one free
-Water Breathing per Long Rest, while Witch Sight adds 30-foot Truesight. The
-remaining invocations currently contribute their original description until
-their effects are reviewed.
+further invocations carry reviewed effect annotations: Eldritch Mind, Devil's
+Sight, Armor of Shadows, and Agonizing Blast change calculated values; ten grant
+their spell at will — Ascendant Step, Fiendish Vigor (False Life on yourself),
+Mask of Many Faces, Master of Myriad Forms, Misty Visions, One with Shadows,
+Otherworldly Leap, Pact of the Chain, Visions of Distant Realms, and Whispers of
+the Grave — and Gift of the Depths adds a Swim Speed, underwater breathing, and
+one free Water Breathing per Long Rest, while Witch Sight adds 30-foot Truesight.
+The remaining invocations, Lifedrinker among them, contribute their original
+description until their effects are reviewed.
 
 Pact of the Blade adds a Pact Weapon choice to the sheet. When the invocation is
 selected, the editor offers the 28 reviewed Simple and Martial melee weapons from
@@ -139,10 +139,13 @@ the saved Pact Weapon and the choice disappears with it instead of lingering as 
 unavailable group. Thirsting Blade adds a second Pact Weapon attack, and
 Devouring Blade replaces that extra attack with two, so the Pact Weapon attack
 shows 2 attacks with Thirsting Blade and 3 once Devouring Blade is selected.
-Both invocations require Pact of the Blade, and the features reference page prints
-that prerequisite under each entry. Eldritch Smite and Lifedrinker are
-not yet calculated and keep their original descriptions until their own effect
-annotations arrive.
+Eldritch Smite adds its slot-fuelled Force damage to that same attack: the panel
+prints the dice for the character's own Pact Magic slot level, so a level 5
+Warlock with level 3 slots reads 4d8, and it names the Prone option for Huge or
+smaller targets. All three invocations require Pact of the Blade, and the
+features reference page prints that prerequisite under each entry. Lifedrinker is
+not yet calculated and keeps its original description until its own effect
+annotation arrives.
 
 The editor changes build decisions and can export a JSON document. Ability scores
 are stored only when all six are entered; partial score entries remain in the
