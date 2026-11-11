@@ -2,6 +2,13 @@
 
 export const option = (id, label) => ({id, label});
 
+/** Narrow display options by a case-insensitive search over names and detail hints. */
+export function filterOptions (options, query) {
+	const needle = `${query ?? ""}`.trim().toLowerCase();
+	if (!needle) return options;
+	return options.filter(entry => `${entry.label} ${entry.detail || ""}`.toLowerCase().includes(needle));
+}
+
 /** Resolve a source-qualified reference to the lowercase key used by reviewed rules. */
 export const refKey = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
 

@@ -51,8 +51,10 @@ Warlock spell and invocation progression also uses those records. Equipment,
 spell, invocation, and origin-feat choice lists use reviewed annotations. An
 imported build with missing or unsupported choices produces an incomplete draft
 summary rather than invented statistics. Selections no longer available after a
-level change remain visible until the player explicitly removes them. New
-documents have unique IDs.
+level change remain visible until the player explicitly removes them. Choice
+groups with at least eight options include a text filter; it narrows only the
+displayed entries, keeps selected entries visible, and never changes the saved
+decisions. New documents have unique IDs.
 
 Species, background, origin-feat, class, and equipment choices are supplied by
 independent providers and composed by shared code. The sheet calculator applies
@@ -127,9 +129,10 @@ Chrome/Chromium, plus `pdfinfo` and `pdftotext`. It starts a temporary server on
 Use `--browser /path/to/chrome` or `--output /path/to/artifacts` when needed.
 
 The check covers desktop and mobile navigation, character creation and edits,
-JSON round-tripping, all six examples, 390-pixel mobile layouts, A4 dimensions
-and page counts, invalid imports, delayed file-read races, pending choices,
-escaped HTML input, print-button behavior, and full long notes in the PDF.
+option filtering, JSON round-tripping, all six examples, 390-pixel mobile
+layouts, A4 dimensions and page counts, invalid imports, delayed file-read
+races, pending choices, escaped HTML input, print-button behavior, and full long
+notes in the PDF.
 Desktop/mobile screenshots and PDF samples support visual review. Browser QA
 is a local check; GitHub Actions runs module tests, JS/SCSS lint, and verifies
 that the committed generated CSS matches its Sass source.

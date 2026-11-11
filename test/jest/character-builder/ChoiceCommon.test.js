@@ -1,4 +1,4 @@
-import {getSpellOptions, spellOption, spellOptionDetail} from "../../../js/character-builder/choice-common.js";
+import {filterOptions, getSpellOptions, spellOption, spellOptionDetail} from "../../../js/character-builder/choice-common.js";
 
 const spells = [
 	{name: "Eldritch Blast", source: "XPHB", level: 0, school: "V"},
@@ -32,5 +32,33 @@ describe("Spell choice options", () => {
 
 	it("rejects ambiguous spell identifiers", () => {
 		expect(() => getSpellOptions([...spells, {...spells[0]}], ["spell:eldritch-blast|xphb"])).toThrow(/Ambiguous spell spell:eldritch-blast\|xphb/);
+	});
+});
+
+describe("Option filtering", () => {
+	const options = [
+		{id: "spell:hex|xphb", label: "Hex", detail: "L1, Enchantment"},
+		{id: "spell:eldritch-blast|xphb", label: "Eldritch Blast", detail: "Cantrip, Evocation"},
+		{id: "spell:armor-of-agathys|xphb", label: "Armor of Agathys", detail: "L1, Abjuration"},
+	];
+
+	it("matches names without regard to case or surrounding whitespace", () => {
+		expect(filterOptions(options, "  BLAST ").map(option => option.id)).toEqual(["spell:eldritch-blast|xphb"]);
+		expect(filterOptions(options, "hex").map(option => option.id)).toEqual(["spell:hex|xphb"]);
+	});
+
+	it("matches level and school details", () => {
+		expect(filterOptions(options, "abjuration").map(option => option.id)).toEqual(["spell:armor-of-agathys|xphb"]);
+		expect(filterOptions(options, "cantrip").map(option => option.id)).toEqual(["spell:eldritch-blast|xphb"]);
+	});
+
+	it("keeps every option for an empty query", () => {
+		expect(filterOptions(options, "")).toBe(options);
+		expect(filterOptions(options, "   ")).toBe(options);
+		expect(filterOptions(options, undefined)).toBe(options);
+	});
+
+	it("returns no options when nothing matches", () => {
+		expect(filterOptions(options, "wish")).toEqual([]);
 	});
 });
