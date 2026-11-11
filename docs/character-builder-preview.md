@@ -56,6 +56,26 @@ groups with at least eight options include a text filter; it narrows only the
 displayed entries, keeps selected entries visible, and never changes the saved
 decisions. New documents have unique IDs.
 
+Base ability scores are chosen with three labelled method options, and each method
+shows the controls that fit it. The standard array assigns each of 15, 14, 13, 12,
+10, and 8 once by selection, listing only the values no other ability uses, so an
+illegal combination cannot be entered. Point buy replaces typing with stepper
+buttons that show each score's cost, disable a step that would pass 15 or the
+27-point budget, and display a budget bar with points spent and left. Manual entry
+keeps number fields in the 1–20 range, marks entries the method cannot accept
+without coercing them, and leaves the sheet incomplete until they are fixed. The
+first visit to a method starts from the scores already entered; after that each
+method keeps its own entries, so switching between methods restores what was
+already entered there instead of clearing it, and the totals update beside the
+controls. Background ability increases are edited inside the same block, and the
+combined scores (base, background, and the level 4 increase) are shown beside them.
+A choice with exactly one legal option, such as a shared
+spellcasting ability, is displayed as a fixed value with the reason instead of a
+selector; imported values that differ remain selectable so they are never
+silently replaced. Common is required for languages, is included automatically,
+and is explained by the rules text; the player chooses two further Standard
+languages. Rare languages are not offered yet.
+
 Species, background, origin-feat, class, and equipment choices are supplied by
 independent providers and composed by shared code. The sheet calculator applies
 the same composition. Each class selects its own starting equipment package, and

@@ -25,11 +25,17 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) 
 	const result = [
 		descriptor(species.lineageChoiceId, species.lineageLabel, 1, species.lineages.map(lineage => option(lineage.id, lineage.name))),
 	];
-	if (species.abilityChoiceId) result.push(descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))));
-	if (species.sizeChoiceId) {
+	if (species.abilityChoiceId) {
 		result.push({
-			...descriptor(species.sizeChoiceId, "Size", 1, species.sizes.map(id => option(id, id[0].toUpperCase() + id.slice(1)))),
-			help: "This species offers more than one legal size. Choose the size you want at character creation.",
+			...descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))),
+			help: `The ${document.build.species.name} spellcasting trait lets you choose the ability used by its spells.`,
+		});
+	}
+	if (species.sizeChoiceId) {
+		const sizeLabels = species.sizes.map(id => id[0].toUpperCase() + id.slice(1));
+		result.push({
+			...descriptor(species.sizeChoiceId, "Size", 1, species.sizes.map((id, index) => option(id, sizeLabels[index]))),
+			help: `The 2024 ${document.build.species.name} entry lists ${sizeLabels.join(" or ")}, so either is legal at character creation.`,
 		});
 	}
 	return result;

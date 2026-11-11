@@ -31,9 +31,16 @@ function restrictToSharedSpellcastingAbility (document, descriptors, {catalog, r
 	if (abilitySets.length < 2) return descriptors;
 	const common = abilitySets.reduce((result, values) => result.filter(id => values.includes(id)));
 	if (!common.length) return descriptors;
-	const restrict = descriptor => descriptor && {
-		...descriptor,
-		options: descriptor.options.filter(entry => common.includes(entry.id) || descriptor.selected.includes(entry.id)),
+	const restrict = descriptor => {
+		if (!descriptor) return descriptor;
+		const options = descriptor.options.filter(entry => common.includes(entry.id) || descriptor.selected.includes(entry.id));
+		const legal = options.filter(entry => common.includes(entry.id));
+		const fixed = legal.length === 1 && !descriptor.selected.some(id => id !== legal[0].id);
+		return {
+			...descriptor,
+			options,
+			help: fixed ? `${legal[0].label} is the only spellcasting ability allowed by every selected source, so it is fixed for this character.` : descriptor.help,
+		};
 	};
 	return descriptors.map(descriptor => descriptor.id === speciesAbilityId || descriptor.id === featAbilityId ? restrict(descriptor) : descriptor);
 }
@@ -56,8 +63,9 @@ export function composeChoiceDescriptors (document, catalog, {rules, sources, sp
 		: null;
 	const languages = rules?.standardLanguages
 		? {
-			...descriptor("character:languages", "Languages (Common required)", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label))),
-			help: "Choose three Standard languages. Common is required, which leaves two free choices.",
+			...descriptor("character:languages", "Languages", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label))),
+			required: ["common"],
+			help: "Every 2024 character knows Common, so it is included automatically. Choose two more Standard languages; rare languages are not offered yet.",
 		}
 		: null;
 	const descriptors = [

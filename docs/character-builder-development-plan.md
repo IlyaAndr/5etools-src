@@ -187,6 +187,25 @@ Refine mobile usability, choice correction, regeneration, data transfer, and sav
 
 Then plan multiclassing, additional books, house rules, and the 2014 edition. Multiclassing needs its own checks for prerequisites, starting proficiencies, spellcasting progressions, overlapping features, and resources. A full combat engine, automatic battlefield-condition detection, accounts, and synchronization are outside the proposed initial release.
 
+## Editor Review Follow-Ups (2026-11-11)
+
+The editor review of the current preview produced the items below. Each item stays open until its PR is merged; verified items keep a browser assertion so they cannot regress.
+
+| Area | Reported issue | Status |
+| --- | --- | --- |
+| Base ability scores | No method hints: which standard-array values are still available, and how many point-buy points remain. | PR #9: the editor shows the remaining array values, the point-buy spend, and the manual range, and marks entries that the selected method cannot accept. |
+| Base ability score methods | The method picker only changed validation text, so all three methods shared free-text fields and illegal entries were reported only after typing. | PR #9: the methods are labelled options, and each one gets controls that fit it — standard-array selects that cannot repeat a value, point-buy steppers with per-score costs and a budget bar that cannot be exceeded, and manual fields that flag out-of-range entries without coercing them. |
+| Background Ability Increases | Edited away from the base scores, so the combined result is invisible. | PR #9: the increases are edited inside the base-score block and the resulting scores are shown beside them. Some tables allow any ability; arbitrary increases are a documented house rule (`build.options`), not a silent relaxation of the 2024 validation, and follow in a separate PR. |
+| Species Spellcasting Ability | Offers a choice when the composed build allows only one ability. | PR #9: a choice with one legal option is rendered as a fixed value that explains why it is fixed. |
+| Magic Initiate Spellcasting Ability | Same issue: a selector with a single option. | PR #9: fixed-value rendering, including the reason from the shared-ability composition. |
+| Size | Tiefling offers Small and Medium. | Verified: the 2024 Tiefling record lists `size: ["S", "M"]`. The help text now names the sizes in the species entry instead of only saying that a choice exists. |
+| Languages (include Common) | The source of Common is unexplained, and the group accepted three languages without Common. | PR #9: Common is required, shown as a fixed entry, and explained by the rules text; the player chooses two further Standard languages. Rare languages stay unavailable. |
+| Warlock Skills | More than two skills can be selected. | Verified in the current build: unchecked skills disable at the class count. The browser check now asserts the limit for both classes. |
+| Spell and cantrip selection | Should use the site's own search instead of a short static list. | Planned as its own PR: reuse the 5etools spell search and filters, keep the reviewed legality checks, and add the chosen spells to the document. |
+| Invocation-gated cantrips | Agonizing Blast and Repelling Blast cantrip groups appeared without selecting the invocation. | Verified in the current build: a cantrip group is available only while its invocation is selected. Browser assertions cover levels 1–3. |
+| Level-gated choices at level 1 | Subclass, Level 4 Feat, and Level 4 Ability Increases appeared at level 1. | Verified fixed in PR #7a. The browser check asserts that all three groups are absent at level 1. |
+| High-level creation | No guided flow for creating a character above level 1. | Planned: create the character level by level, applying each level's cantrips, prepared spells, invocations, and feats in class-progression order, including the level-up replacements the class allows. |
+
 ## Checks Throughout Development
 
 Add checks alongside their mechanics rather than postponing them until the final stage:
