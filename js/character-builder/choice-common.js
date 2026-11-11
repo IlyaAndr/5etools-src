@@ -65,24 +65,47 @@ export function getIncreaseOptions (allowed, weights, abilityName, selected = []
 
 const slug = value => value.toLowerCase().replaceAll(" ", "-");
 
+const SCHOOL_NAMES = Object.freeze({
+	A: "Abjuration",
+	C: "Conjuration",
+	D: "Divination",
+	E: "Enchantment",
+	I: "Illusion",
+	N: "Necromancy",
+	P: "Psionics",
+	T: "Transmutation",
+	V: "Evocation",
+});
+
+/** Describe a spell's level and school without replacing its display name. */
+export function spellOptionDetail ({level, school}) {
+	const parts = [];
+	if (Number.isInteger(level)) parts.push(level === 0 ? "Cantrip" : `L${level}`);
+	if (school) parts.push(school);
+	return parts.length ? parts.join(", ") : null;
+}
+
+/** Build a spell option with the reviewed name and a separate level/school hint. */
+export function spellOption ({id, label, level, school}) {
+	const detail = spellOptionDetail({level, school});
+	return detail ? {...option(id, label), detail} : option(id, label);
+}
+
 /** Resolve a reviewed spell identifier to its original display name. */
 export function createSpellOptionReader (rawSpells) {
 	if (!Array.isArray(rawSpells)) throw new TypeError("Missing spell data.");
 	return id => {
 		const matches = rawSpells.filter(spell => `spell:${slug(spell.name)}|${spell.source.toLowerCase()}` === id);
 		if (matches.length > 1) throw new TypeError(`Ambiguous spell ${id}.`);
-		if (!matches.length) return {id, label: `Spell data unavailable: ${id}`, level: null};
-		return {id, label: matches[0].name, level: matches[0].level};
+		if (!matches.length) return {id, label: `Spell data unavailable: ${id}`, level: null, school: null};
+		return {id, label: matches[0].name, level: matches[0].level, school: SCHOOL_NAMES[matches[0].school] || null};
 	};
 }
 
 /** Map reviewed spell identifiers to selection options in their source order. */
 export function getSpellOptions (rawSpells, ids) {
 	const read = createSpellOptionReader(rawSpells);
-	return ids.map(id => {
-		const {label} = read(id);
-		return option(id, label);
-	});
+	return ids.map(id => spellOption(read(id)));
 }
 
 /** Find one source-qualified class record without silently choosing among duplicates. */

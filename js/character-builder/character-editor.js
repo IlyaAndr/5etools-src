@@ -1,4 +1,4 @@
-import {ABILITY_SCORE_METHODS, getEditorAbilities, setCharacterChoice} from "./editor-common.js";
+import {ABILITY_SCORE_METHODS, applySingleOptionSelections, getEditorAbilities, setCharacterChoice} from "./editor-common.js";
 import {getBackgroundEquipment} from "./background-choices.js";
 
 /** A small editor for the subset currently supported by the sheet calculator. */
@@ -32,10 +32,23 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		}
 	}
 
+	function autoSelectSingleOptions (document) {
+		let current = document;
+		for (let pass = 0; pass < 8; pass++) {
+			const profile = profileFor(current);
+			if (!profile) return current;
+			const next = applySingleOptionSelections(current, profile.getChoiceDescriptors(current, catalog, context));
+			if (next === current) return current;
+			current = next;
+		}
+		return current;
+	}
+
 	function publish (next, redraw = true) {
 		const active = container.contains(document.activeElement) ? document.activeElement : null;
 		const focusKey = active?.dataset.cbFocus;
 		const fallbackKey = active?.dataset.cbFocusFallback;
+		if (!character || next.build !== character.build) next = autoSelectSingleOptions(next);
 		if (!onChange(next)) {
 			if (character) { render(); restoreFocus(focusKey, fallbackKey); }
 			return false;
@@ -52,7 +65,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	function select (options, selected, emptyLabel = "Choose…") {
 		const input = document.createElement("select");
 		input.append(new Option(emptyLabel, ""));
-		for (const option of options) input.add(new Option(option.label, option.id));
+		for (const option of options) input.add(new Option(option.detail ? `${option.label} · ${option.detail}` : option.label, option.id));
 		input.value = selected || "";
 		return input;
 	}
@@ -124,10 +137,13 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const choices = element("div", null, "cb-editor__choices");
 		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
 		for (const descriptor of descriptors) {
+			const hasSavedChoice = character.build.choices.some(choice => choice.id === descriptor.id);
+			if (!descriptor.available && !descriptor.selected.length && !hasSavedChoice) continue;
 			const group = element("fieldset", null, "cb-editor__group");
 			group.append(element("legend", descriptor.label));
-			if (descriptor.count) group.append(element("p", `Choose ${descriptor.count}.`, "cb-editor__help"));
-			if (!descriptor.available) group.append(element("p", "This choice is unavailable at the current level. Remove the retained selection to complete this character, or restore the previous level.", "cb-editor__help"));
+			if (descriptor.count) group.append(element("p", descriptor.count > 1 ? `Choose ${descriptor.count} (${descriptor.selected.length} of ${descriptor.count} selected).` : "Choose 1.", "cb-editor__help"));
+			if (descriptor.help) group.append(element("p", descriptor.help, "cb-editor__help"));
+			if (!descriptor.available) group.append(element("p", "This saved choice is unavailable at the current level. Remove it or restore the previous level.", "cb-editor__help"));
 			const options = element("div", null, "cb-editor__options");
 			const displayedOptions = [...descriptor.options, ...descriptor.selected.filter(id => !descriptor.options.some(option => option.id === id)).map(id => ({id, label: `${id} (previous selection)`}))];
 			if (descriptor.count === 1 && descriptor.selected.length <= 1) {
@@ -138,18 +154,20 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				input.addEventListener("change", () => publish(setCharacterChoice(character, descriptor.id, input.value ? [input.value] : [])));
 				options.append(input);
 			} else {
+				const atLimit = descriptor.selected.length >= descriptor.count;
 				for (const option of displayedOptions) {
 					const label = element("label", null, "cb-editor__option");
 					const input = element("input");
 					input.type = "checkbox";
+					input.setAttribute("aria-label", option.label);
 					input.dataset.cbFocus = `${descriptor.id}|${option.id}`;
 					input.checked = descriptor.selected.includes(option.id);
-					input.disabled = !descriptor.available && !input.checked;
+					input.disabled = (!descriptor.available && !input.checked) || (atLimit && !input.checked);
 					input.addEventListener("change", () => {
 						const selected = input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id);
 						publish(setCharacterChoice(character, descriptor.id, selected));
 					});
-					label.append(input, element("span", option.label));
+					label.append(input, element("span", option.detail ? `${option.label} · ${option.detail}` : option.label));
 					options.append(label);
 				}
 			}
@@ -159,7 +177,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			}
 			const backgroundEquipment = getBackgroundEquipment(character.build.background, context.rules);
 			if (descriptor.id.endsWith(":equipment") && backgroundEquipment?.gear?.length) group.append(element("p", `Background equipment: ${backgroundEquipment.gear.join(", ")}`, "cb-editor__package"));
-			if (!descriptor.available && character.build.choices.some(choice => choice.id === descriptor.id)) {
+			if (!descriptor.available && hasSavedChoice) {
 				const remove = element("button", "Remove saved choice", "cb-button");
 				remove.type = "button";
 				remove.setAttribute("aria-label", `Remove saved choice ${descriptor.label}`);

@@ -55,7 +55,10 @@ export function composeChoiceDescriptors (document, catalog, {rules, sources, sp
 		? {...classSkills, options: classSkills.options.filter(entry => !backgroundSkills.includes(entry.id))}
 		: null;
 	const languages = rules?.standardLanguages
-		? descriptor("character:languages", "Languages (include Common)", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label)))
+		? {
+			...descriptor("character:languages", "Languages (Common required)", 3, Object.entries(rules.standardLanguages).map(([id, label]) => option(id, label))),
+			help: "Choose three Standard languages. Common is required, which leaves two free choices.",
+		}
 		: null;
 	const descriptors = [
 		...getSpeciesChoiceDescriptors(document, catalog, {sources}),

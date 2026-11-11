@@ -322,6 +322,13 @@ def main():
             page.screenshot(path=str(output / 'fighter-editor-mobile.png'))
             page.set_viewport_size({'width': 1100, 'height': 1300})
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            # Level-gated choices stay hidden at level 1, and choices with a
+            # single legal option are saved without an extra interaction.
+            assert editor.get_by_label('Subclass', exact=True).count() == 0
+            assert editor.get_by_label('Level 4 Feat', exact=True).count() == 0
+            assert editor.get_by_label('Starting Equipment', exact=True).input_value() == 'fighter-sword-and-shield'
+            assert editor.get_by_label('Fighting Style', exact=True).input_value() == 'defense|xphb'
+            assert editor.get_by_label('Background Tool', exact=True).input_value() == 'dice-set|xphb'
             editor.get_by_label('Character name').fill('Created fighter')
             editor.get_by_label('Character name').press('Tab')
             editor.get_by_label('Strength', exact=True).fill('15')
@@ -348,6 +355,8 @@ def main():
                 control = editor.get_by_label(label, exact=True)
                 control.check()
                 assert page.evaluate("document.activeElement.type") == 'checkbox'
+            assert editor.get_by_label('Elvish', exact=True).is_disabled()
+            assert editor.get_by_label('Flail (Sap)', exact=True).is_disabled()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('tr[data-ability="str"] .cb-number').first.inner_text() == '17'
             assert page.locator('.cb-hp-max').inner_text() == '/ 12'
@@ -494,6 +503,10 @@ def main():
             assert 'Warlock editor' in editor.inner_text()
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'cha'
             assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).input_value() == 'cha'
+            assert editor.get_by_label('Subclass', exact=True).count() == 0
+            assert editor.get_by_label('Level 4 Feat', exact=True).count() == 0
+            assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
+            assert editor.get_by_label('Starting Equipment', exact=True).input_value() == 'warlock-pact-mage'
             editor.get_by_label('Character name').fill('Created warlock')
             editor.get_by_label('Character name').press('Tab')
             for ability, value in {'Strength': 8, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 15}.items():
