@@ -103,6 +103,35 @@ describe("Warlock editor choices", () => {
 		expect(descriptors(draft).find(value => value.id === id)).toMatchObject({available: false, selected: ["spell:eldritch-blast|xphb"]});
 	});
 
+	it.each([6, 11, 17, 20])("offers the full reviewed spell list at level %i", level => {
+		const draft = createWarlockDraft(catalog.dataset);
+		draft.build.level = level;
+		const progression = getWarlockSourceChoices(context.sources).progression(level);
+		const leveled = {1: 15, 2: 27, 3: 41, 4: 47, 5: 56}[progression.slotLevel];
+		const cantrips = choice(draft, "class:warlock|xphb:cantrips");
+		const prepared = choice(draft, "class:warlock|xphb:prepared-spells");
+		const invocations = choice(draft, "class:warlock|xphb:invocations");
+		expect(cantrips).toMatchObject({count: progression.cantrips});
+		expect(cantrips.options).toHaveLength(12);
+		expect(cantrips.options.every(option => !option.label.startsWith("Spell data unavailable"))).toBe(true);
+		expect(prepared).toMatchObject({count: progression.prepared});
+		expect(prepared.options).toHaveLength(leveled);
+		expect(prepared.options.every(option => !option.label.startsWith("Spell data unavailable"))).toBe(true);
+		expect(invocations).toMatchObject({count: progression.invocations});
+	});
+
+	it("keeps a prepared spell list limited to the current Pact Magic slot level", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		const options = () => choice(draft, "class:warlock|xphb:prepared-spells").options.map(option => option.id);
+		draft.build.level = 3;
+		expect(options()).not.toContain("spell:fear|xphb");
+		draft.build.level = 5;
+		expect(options()).toContain("spell:fear|xphb");
+		expect(options()).not.toContain("spell:banishment|xphb");
+		draft.build.level = 9;
+		expect(options()).toContain("spell:jallarzi's-storm-of-radiance|xphb");
+	});
+
 	it("preserves imported different spellcasting abilities and equivalent increase ordering", () => {
 		let draft = createWarlockDraft(catalog.dataset);
 		draft = setCharacterChoice(draft, "species:tiefling|xphb:spellcasting-ability", ["int"]);

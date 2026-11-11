@@ -580,7 +580,7 @@ def main():
             # Long option lists can be narrowed by name. Filtering never changes
             # saved decisions; selected entries stay visible, and the query
             # survives an editor redraw.
-            assert editor.get_by_label('Filter Prepared Warlock Spells', exact=True).count() == 0
+            assert editor.get_by_label('Filter Prepared Warlock Spells', exact=True).count() == 1
             language_filter = editor.get_by_label('Filter Languages', exact=True)
             language_filter.fill('drac')
             assert editor.get_by_label('Draconic', exact=True).is_visible()
@@ -624,7 +624,7 @@ def main():
             assert editor.get_by_label('Charm Person', exact=True).is_visible()
             assert editor.get_by_label('Invisibility', exact=True).is_hidden()
             assert editor.get_by_label('Armor of Agathys', exact=True).is_visible()
-            assert editor.locator('.cb-editor__filter-status').filter(has_text='Showing 5 of 8 options').is_visible()
+            assert editor.locator('.cb-editor__filter-status').filter(has_text='Showing 11 of 41 options').is_visible()
             spell_filter.fill('wish')
             assert editor.get_by_label('Hex', exact=True).is_visible()
             assert editor.get_by_label('Invisibility', exact=True).is_hidden()
