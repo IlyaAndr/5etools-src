@@ -521,6 +521,24 @@ def main():
                 'Eldritch Invocations': 'eldritch-mind|xphb',
             }.items():
                 editor.get_by_label(label, exact=True).select_option(value)
+            # Long option lists can be narrowed by name. Filtering never changes
+            # saved decisions; selected entries stay visible, and the query
+            # survives an editor redraw.
+            assert editor.get_by_label('Filter Prepared Warlock Spells', exact=True).count() == 0
+            language_filter = editor.get_by_label('Filter Languages (Common required)', exact=True)
+            language_filter.fill('drac')
+            assert editor.get_by_label('Draconic', exact=True).is_visible()
+            assert editor.get_by_label('Elvish', exact=True).is_hidden()
+            editor.get_by_label('Draconic', exact=True).check()
+            language_filter = editor.get_by_label('Filter Languages (Common required)', exact=True)
+            assert language_filter.input_value() == 'drac'
+            language_filter.fill('wish')
+            assert editor.get_by_label('Draconic', exact=True).is_visible()
+            assert editor.get_by_label('Elvish', exact=True).is_hidden()
+            assert editor.locator('.cb-editor__filter-status').filter(has_text='No options match this filter').is_visible()
+            language_filter.fill('')
+            assert editor.get_by_label('Elvish', exact=True).is_visible()
+            assert editor.locator('.cb-editor__filter-status').filter(has_text='No options match this filter').count() == 0
             for label in ['Common', 'Draconic', 'Elvish', 'Arcana', 'Intimidation', 'Guidance', 'Light', 'Eldritch Blast', 'Mind Sliver', 'Armor of Agathys', 'Hex']:
                 editor.get_by_label(label, exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
@@ -537,6 +555,21 @@ def main():
             editor.get_by_label('Level', exact=True).select_option('5')
             editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
+            # Spell lists expose the same filter once they grow, and level and
+            # school hints are searchable along with names.
+            spell_filter = editor.get_by_label('Filter Prepared Warlock Spells', exact=True)
+            spell_filter.fill('enchantment')
+            assert editor.get_by_label('Hex', exact=True).is_visible()
+            assert editor.get_by_label('Charm Person', exact=True).is_visible()
+            assert editor.get_by_label('Invisibility', exact=True).is_hidden()
+            assert editor.get_by_label('Armor of Agathys', exact=True).is_visible()
+            assert editor.locator('.cb-editor__filter-status').filter(has_text='Showing 5 of 8 options').is_visible()
+            spell_filter.fill('wish')
+            assert editor.get_by_label('Hex', exact=True).is_visible()
+            assert editor.get_by_label('Invisibility', exact=True).is_hidden()
+            assert editor.locator('.cb-editor__filter-status').filter(has_text='No options match this filter').is_visible()
+            spell_filter.fill('')
+            assert editor.get_by_label('Invisibility', exact=True).is_visible()
             for label in ['Mage Hand', 'Counterspell', 'Hunger of Hadar', "Devil's Sight", 'Repelling Blast']:
                 editor.get_by_label(label, exact=True).check()
             editor.get_by_label('Repelling Blast Cantrip', exact=True).select_option('spell:eldritch-blast|xphb')

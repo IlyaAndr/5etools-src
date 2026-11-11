@@ -1,5 +1,9 @@
 import {ABILITY_SCORE_METHODS, applySingleOptionSelections, getEditorAbilities, setCharacterChoice} from "./editor-common.js";
+import {filterOptions} from "./choice-common.js";
 import {getBackgroundEquipment} from "./background-choices.js";
+
+/** Show a name filter once a checkbox group grows past a short, scannable list. */
+const OPTION_FILTER_MINIMUM = 8;
 
 /** A small editor for the subset currently supported by the sheet calculator. */
 export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
@@ -9,6 +13,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		: undefined;
 	let character;
 	let scoreInputs;
+	const optionFilters = new Map();
 
 	function element (tag, text, className) {
 		const out = document.createElement(tag);
@@ -27,7 +32,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	function restoreFocus (...keys) {
 		const controls = [...container.querySelectorAll("[data-cb-focus]")];
 		for (const key of keys.filter(Boolean)) {
-			const target = controls.find(input => input.dataset.cbFocus === key);
+			const target = controls.find(input => input.dataset.cbFocus === key && !input.closest("[hidden]"));
 			if (target) { target.focus(); return; }
 		}
 	}
@@ -155,12 +160,30 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				options.append(input);
 			} else {
 				const atLimit = descriptor.selected.length >= descriptor.count;
+				let filterInput = null;
+				let filterStatus = null;
+				if (displayedOptions.length >= OPTION_FILTER_MINIMUM) {
+					filterInput = element("input");
+					filterInput.type = "search";
+					filterInput.value = optionFilters.get(descriptor.id) ?? "";
+					filterInput.placeholder = "Type to narrow the list";
+					filterInput.setAttribute("aria-label", `Filter ${descriptor.label}`);
+					filterInput.dataset.cbFocus = `filter:${descriptor.id}`;
+					filterStatus = element("p", null, "cb-editor__help cb-editor__filter-status");
+					filterStatus.setAttribute("aria-live", "polite");
+					filterStatus.hidden = true;
+					const wrapper = element("label", null, "cb-editor__field cb-editor__filter");
+					wrapper.append(element("span", "Filter options"), filterInput);
+					group.append(wrapper, filterStatus);
+				}
+				const rows = [];
 				for (const option of displayedOptions) {
 					const label = element("label", null, "cb-editor__option");
 					const input = element("input");
 					input.type = "checkbox";
 					input.setAttribute("aria-label", option.label);
 					input.dataset.cbFocus = `${descriptor.id}|${option.id}`;
+					if (filterInput) input.dataset.cbFocusFallback = filterInput.dataset.cbFocus;
 					input.checked = descriptor.selected.includes(option.id);
 					input.disabled = (!descriptor.available && !input.checked) || (atLimit && !input.checked);
 					input.addEventListener("change", () => {
@@ -169,6 +192,24 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 					});
 					label.append(input, element("span", option.detail ? `${option.label} · ${option.detail}` : option.label));
 					options.append(label);
+					rows.push({option, label});
+				}
+				if (filterInput && filterStatus) {
+					const applyFilter = () => {
+						const query = filterInput.value;
+						optionFilters.set(descriptor.id, query);
+						const matches = new Set(filterOptions(displayedOptions, query).map(option => option.id));
+						let shown = 0;
+						for (const row of rows) {
+							const keep = matches.has(row.option.id) || descriptor.selected.includes(row.option.id);
+							row.label.hidden = !keep;
+							if (keep) shown++;
+						}
+						filterStatus.hidden = !query.trim() || shown === rows.length;
+						filterStatus.textContent = matches.size ? `Showing ${shown} of ${rows.length} options.` : "No options match this filter.";
+					};
+					filterInput.addEventListener("input", applyFilter);
+					applyFilter();
 				}
 			}
 			group.append(options);
@@ -216,6 +257,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);
 			const previous = scoreInputs;
 			scoreInputs = {};
+			optionFilters.clear();
 			if (!publish(profile.createDraft(catalog.dataset, selection))) {
 				scoreInputs = previous;
 				if (character) render();
@@ -223,7 +265,10 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		},
 		open (document) {
 			if (!profileFor(document)) return;
-			if (document !== character) scoreInputs = {...document.build.abilities.scores};
+			if (document !== character) {
+				scoreInputs = {...document.build.abilities.scores};
+				optionFilters.clear();
+			}
 			character = document;
 			render();
 		},
