@@ -2,8 +2,67 @@ import {validateCharacterDocument} from "./character-document.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 
 export const ABILITY_SCORE_METHODS = [
-	{id: "standard", label: "Standard Array"}, {id: "pointBuy", label: "Point Buy"}, {id: "manual", label: "Manual"},
+	{id: "standard", label: "Standard Array", note: "Fastest. Use each of 15, 14, 13, 12, 10, and 8 exactly once."},
+	{id: "pointBuy", label: "Point Buy", note: "Spend 27 points on scores from 8 to 15; each step shows its cost."},
+	{id: "manual", label: "Manual", note: "Type the six scores from 1 to 20 when your table rolls or assigns them."},
 ];
+
+/** Reviewed 2024 ability-score values, mirrored by the sheet-model checks. */
+export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+export const POINT_BUY_COSTS = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9};
+export const POINT_BUY_BUDGET = 27;
+export const POINT_BUY_RANGE = {min: 8, max: 15};
+export const MANUAL_SCORE_RANGE = {min: 1, max: 20};
+
+/** Total point-buy cost, or NaN when a score is outside the reviewed table. */
+export function pointBuySpent (values) {
+	return Object.values(values).reduce((sum, value) => sum + (POINT_BUY_COSTS[value] ?? NaN), 0);
+}
+
+/** Read a draft as numbers, keeping null for entries that are not whole numbers. */
+export function readScoreDraft (abilityIds, draft) {
+	const values = {};
+	for (const id of abilityIds) {
+		const raw = `${draft[id] ?? ""}`.trim();
+		values[id] = /^-?\d+$/.test(raw) ? Number(raw) : null;
+	}
+	return values;
+}
+
+/** The six base scores the document can save, or null while they are incomplete or outside the method. */
+export function scoresForBuild (method, abilityIds, draft) {
+	const values = readScoreDraft(abilityIds, draft);
+	if (Object.values(values).some(value => value == null)) return null;
+	if (method === "manual") return Object.values(values).every(value => value >= MANUAL_SCORE_RANGE.min && value <= MANUAL_SCORE_RANGE.max) ? values : null;
+	if (method === "pointBuy") return Object.values(values).every(value => POINT_BUY_COSTS[value] !== undefined) && pointBuySpent(values) === POINT_BUY_BUDGET ? values : null;
+	const expected = [...STANDARD_ARRAY].sort((a, b) => a - b).join(",");
+	return Object.values(values).sort((a, b) => a - b).join(",") === expected ? values : null;
+}
+
+/**
+ * Prepare one independent draft per method from saved scores, so switching the
+ * method keeps what the player already entered instead of discarding it.
+ */
+export function createScoreDrafts (abilityIds, scores) {
+	const source = scores || {};
+	const standard = {};
+	const used = new Set();
+	for (const id of abilityIds) {
+		const value = Number.isInteger(source[id]) && STANDARD_ARRAY.includes(source[id]) && !used.has(source[id]) ? source[id] : null;
+		if (value != null) used.add(value);
+		standard[id] = value;
+	}
+	const pointBuy = {};
+	for (const id of abilityIds) pointBuy[id] = Number.isInteger(source[id]) ? Math.min(POINT_BUY_RANGE.max, Math.max(POINT_BUY_RANGE.min, source[id])) : POINT_BUY_RANGE.min;
+	// Lower the highest scores until the converted draft fits the reviewed budget.
+	while (pointBuySpent(pointBuy) > POINT_BUY_BUDGET) {
+		const highest = abilityIds.filter(id => pointBuy[id] > POINT_BUY_RANGE.min).sort((a, b) => pointBuy[b] - pointBuy[a])[0];
+		pointBuy[highest] -= 1;
+	}
+	const manual = {};
+	for (const id of abilityIds) manual[id] = Number.isInteger(source[id]) && source[id] >= MANUAL_SCORE_RANGE.min && source[id] <= MANUAL_SCORE_RANGE.max ? `${source[id]}` : "";
+	return {standard, pointBuy, manual};
+}
 
 const copy = value => JSON.parse(JSON.stringify(value));
 export const getEditorAbilities = sources => createSkillCatalog(sources?.skills, sources?.abilityNames).map(({id, name}) => ({id, label: name}));

@@ -1,19 +1,22 @@
-import {ABILITY_SCORE_METHODS, applySingleOptionSelections, getEditorAbilities, setCharacterChoice} from "./editor-common.js";
+import {
+	ABILITY_SCORE_METHODS, MANUAL_SCORE_RANGE, POINT_BUY_BUDGET, POINT_BUY_COSTS, POINT_BUY_RANGE, STANDARD_ARRAY,
+	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, readScoreDraft, scoresForBuild, setCharacterChoice,
+} from "./editor-common.js";
 import {filterOptions, parseIncreaseOption} from "./choice-common.js";
 import {getBackgroundEquipment} from "./background-choices.js";
 
 /** Show a name filter once a checkbox group grows past a short, scannable list. */
 const OPTION_FILTER_MINIMUM = 8;
 
-/** Reviewed 2024 ability-score methods, mirrored by the sheet model checks. */
-const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
-const POINT_BUY_COSTS = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9};
-const POINT_BUY_BUDGET = 27;
-const METHOD_SETTINGS = {
-	standard: {min: 8, max: 15, help: "Standard array: enter 15, 14, 13, 12, 10, and 8 once each."},
-	pointBuy: {min: 8, max: 15, help: "Point buy: 27 points, scores from 8 to 15. Scores 8–13 cost their value minus 8; 14 costs 7 and 15 costs 9."},
-	manual: {min: 1, max: 20, help: "Manual entry: any score from 1 to 20. Background and feat increases cannot raise a score above 20."},
+/** The reset action of each ability-score method, matching what it clears. */
+const SCORE_RESET_LABELS = {
+	standard: "Clear all assignments",
+	pointBuy: "Reset all to 8",
+	manual: "Clear all scores",
 };
+
+/** Radio groups of separate editors must not share a name. */
+let scoreMethodGroups = 0;
 
 const isBackgroundIncrease = descriptor => descriptor.id.startsWith("background:") && descriptor.id.endsWith(":ability-increases");
 
@@ -23,8 +26,9 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	const profileFor = document => document?.build?.level >= 1 && document.build.level <= 5
 		? profiles.find(profile => profile.isSupportedDocument(document))
 		: undefined;
+	const methodGroup = `cb-score-method-${++scoreMethodGroups}`;
 	let character;
-	let scoreInputs;
+	let scoreDrafts;
 	const optionFilters = new Map();
 
 	function element (tag, text, className) {
@@ -44,7 +48,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	function restoreFocus (...keys) {
 		const controls = [...container.querySelectorAll("[data-cb-focus]")];
 		for (const key of keys.filter(Boolean)) {
-			const target = controls.find(input => input.dataset.cbFocus === key && !input.closest("[hidden]"));
+			const target = controls.find(input => input.dataset.cbFocus === key && !input.closest("[hidden]") && !input.disabled);
 			if (target) { target.focus(); return; }
 		}
 	}
@@ -61,10 +65,10 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return current;
 	}
 
-	function publish (next, redraw = true) {
+	function publish (next, redraw = true, focusHint = null, fallbackHint = null) {
 		const active = container.contains(document.activeElement) ? document.activeElement : null;
-		const focusKey = active?.dataset.cbFocus;
-		const fallbackKey = active?.dataset.cbFocusFallback;
+		const focusKey = focusHint || active?.dataset.cbFocus;
+		const fallbackKey = fallbackHint || active?.dataset.cbFocusFallback;
 		if (!character || next.build !== character.build) next = autoSelectSingleOptions(next);
 		if (!onChange(next)) {
 			if (character) { render(); restoreFocus(focusKey, fallbackKey); }
@@ -79,6 +83,42 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return publish({...character, build: {...character.build, ...changes}}, redraw);
 	}
 
+	/** A method's neutral draft: no array value, base point-buy scores, or manual entries. */
+	function emptyDraft (method) {
+		const fallback = method === "pointBuy" ? POINT_BUY_RANGE.min : method === "manual" ? "" : null;
+		return Object.fromEntries(abilities.map(({id}) => [id, fallback]));
+	}
+
+	/**
+	 * The first visit to a method converts the scores on screen; later visits
+	 * keep that method's own entries, so switching back never loses work.
+	 */
+	function methodDraft (method) {
+		if (scoreDrafts?.[method]) return scoreDrafts[method];
+		const converted = createScoreDrafts(abilities.map(({id}) => id), character?.build.abilities.scores)[method];
+		scoreDrafts = {...scoreDrafts, [method]: converted};
+		return converted;
+	}
+
+	/** Save a draft as the method's scores, and restore it if the change is rejected. */
+	function commitScores (method, draft, focusKey, fallbackKey) {
+		const previous = methodDraft(method);
+		scoreDrafts = {...scoreDrafts, [method]: draft};
+		const scores = scoresForBuild(method, abilities.map(({id}) => id), draft);
+		const next = {...character, build: {...character.build, abilities: {...character.build.abilities, method, scores}}};
+		if (publish(next, true, focusKey, fallbackKey)) return true;
+		scoreDrafts = {...scoreDrafts, [method]: previous};
+		render();
+		restoreFocus(focusKey, fallbackKey);
+		return false;
+	}
+
+	/** Switch methods without discarding either method's entries. */
+	function commitMethod (method) {
+		const scores = scoresForBuild(method, abilities.map(({id}) => id), methodDraft(method));
+		publish({...character, build: {...character.build, abilities: {...character.build.abilities, method, scores}}}, true, `character:score-method:${method}`);
+	}
+
 	function select (options, selected, emptyLabel = "Choose…") {
 		const input = document.createElement("select");
 		input.append(new Option(emptyLabel, ""));
@@ -87,57 +127,34 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return input;
 	}
 
-	/** Read the six score inputs, or null while any of them is not a number. */
-	function readScoreInputs (inputs = null) {
-		const values = {};
-		for (const {id} of abilities) {
-			const raw = `${(inputs ? inputs[id].value : scoreInputs[id]) ?? ""}`.trim();
-			if (!/^\d+$/.test(raw)) return null;
-			values[id] = Number(raw);
-		}
-		return values;
-	}
-
-	/** Explain what the selected ability-score method still allows. */
-	function describeScores (method, values, filled) {
-		const settings = METHOD_SETTINGS[method] || METHOD_SETTINGS.manual;
-		if (!values) return {text: `${filled} of ${abilities.length} scores entered. ${settings.help}`, invalid: false};
-		if (method === "standard") {
-			const remaining = [...STANDARD_ARRAY];
-			let invalid = false;
-			for (const value of Object.values(values)) {
-				const index = remaining.indexOf(value);
-				if (index === -1) invalid = true;
-				else remaining.splice(index, 1);
-			}
-			return {
-				text: invalid
-					? `Each standard-array value can be used only once. Values left: ${remaining.join(", ") || "none"}.`
-					: `Standard-array values left: ${remaining.join(", ") || "none"}.`,
-				invalid,
-			};
-		}
+	/** Say what the selected method still needs, and whether an entry is outside its range. */
+	function scoreSummary (method, values) {
+		const ids = abilities.map(({id}) => id);
+		const entered = ids.filter(id => values[id] != null);
 		if (method === "pointBuy") {
-			let spent = 0;
-			let invalid = false;
-			for (const value of Object.values(values)) {
-				if (POINT_BUY_COSTS[value] === undefined) invalid = true;
-				else spent += POINT_BUY_COSTS[value];
-			}
-			const remaining = POINT_BUY_BUDGET - spent;
-			const text = invalid
-				? "Point buy uses scores from 8 to 15."
-				: remaining < 0
-					? `Over budget by ${-remaining} points (${spent} of ${POINT_BUY_BUDGET} spent).`
-					: `${spent} of ${POINT_BUY_BUDGET} points spent; ${remaining} remaining.`;
-			return {text, invalid: invalid || remaining < 0};
+			const spent = pointBuySpent(values);
+			return spent === POINT_BUY_BUDGET
+				? {text: `All ${POINT_BUY_BUDGET} points are spent.`}
+				: {text: `${spent} of ${POINT_BUY_BUDGET} points spent. ${POINT_BUY_BUDGET - spent} left.`};
 		}
-		const invalid = Object.values(values).some(value => value < 1 || value > 20);
-		return {text: invalid ? "Manual scores must be between 1 and 20." : "Manual scores are within the supported range.", invalid};
+		if (method === "manual") {
+			const invalid = entered.filter(id => values[id] < MANUAL_SCORE_RANGE.min || values[id] > MANUAL_SCORE_RANGE.max);
+			if (invalid.length) return {text: `${invalid.length} of ${ids.length} scores must be between ${MANUAL_SCORE_RANGE.min} and ${MANUAL_SCORE_RANGE.max}.`, invalid: true};
+			if (entered.length < ids.length) return {text: `${entered.length} of ${ids.length} scores entered.`};
+			return {text: `All six scores are within ${MANUAL_SCORE_RANGE.min}–${MANUAL_SCORE_RANGE.max}.`};
+		}
+		const left = [...STANDARD_ARRAY];
+		for (const id of entered) {
+			const index = left.indexOf(values[id]);
+			if (index !== -1) left.splice(index, 1);
+		}
+		return entered.length === ids.length
+			? {text: "All six standard-array values are assigned."}
+			: {text: `${entered.length} of ${ids.length} assigned. Values left: ${left.join(", ")}.`};
 	}
 
 	/** Show the combined result of the base scores and the reviewed increases. */
-	function finalScoreNodes (descriptors, base = readScoreInputs()) {
+	function finalScoreNodes (descriptors, values) {
 		const amounts = Object.fromEntries(abilities.map(({id}) => [id, []]));
 		for (const descriptor of descriptors.filter(entry => entry.available && entry.id.endsWith("ability-increases"))) {
 			const [selected] = character.build.choices.find(choice => choice.id === descriptor.id)?.selected || [];
@@ -146,80 +163,157 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const grid = element("div", null, "cb-editor__scores cb-editor__final-scores");
 		for (const ability of abilities) {
 			const parts = amounts[ability.id];
-			const total = base ? base[ability.id] + parts.reduce((sum, value) => sum + value, 0) : null;
+			// Preview only scores the saved document supports, so an out-of-range
+			// manual entry never looks like an accepted total.
+			const raw = values[ability.id];
+			const base = raw == null || raw < MANUAL_SCORE_RANGE.min || raw > MANUAL_SCORE_RANGE.max ? null : raw;
+			const total = base == null ? null : base + parts.reduce((sum, value) => sum + value, 0);
 			const modifier = total == null ? "" : Math.floor((total - 10) / 2);
 			const cell = element("div", null, "cb-editor__final-score");
 			cell.append(element("span", ability.label, "cb-editor__final-label"));
 			cell.append(element("strong", total == null ? "—" : `${total} (${modifier >= 0 ? "+" : ""}${modifier})`, "cb-editor__final-value"));
-			if (parts.length && base) cell.append(element("small", `${base[ability.id]} + ${parts.join(" + ")}`, "cb-editor__final-detail"));
+			if (parts.length && base != null) cell.append(element("small", `${base} + ${parts.join(" + ")}`, "cb-editor__final-detail"));
 			grid.append(cell);
 		}
 		return [element("p", "Final scores after background and level increases", "cb-editor__help"), grid];
 	}
 
-	/** Render the base-score method, its live hints, and the combined totals. */
+	/** Describe the three methods as radios, because the choice changes the controls below it. */
+	function renderMethods (method) {
+		const methods = element("fieldset", null, "cb-editor__methods");
+		methods.append(element("legend", "Method"));
+		for (const entry of ABILITY_SCORE_METHODS) {
+			const label = element("label", null, "cb-editor__method");
+			const radio = element("input");
+			radio.type = "radio";
+			radio.name = methodGroup;
+			radio.value = entry.id;
+			radio.checked = entry.id === method;
+			radio.setAttribute("aria-label", entry.label);
+			radio.dataset.cbFocus = `character:score-method:${entry.id}`;
+			radio.addEventListener("change", () => { if (radio.checked) commitMethod(entry.id); });
+			label.append(radio, element("span", entry.label, "cb-editor__method-name"), element("span", entry.note, "cb-editor__method-note"));
+			methods.append(label);
+		}
+		return methods;
+	}
+
+	/** Choose a standard-array value from the ones no other ability uses. */
+	function standardField (ability) {
+		const draft = methodDraft("standard");
+		const input = element("select");
+		input.dataset.cbFocus = `character:score:${ability.id}`;
+		input.append(new Option("Choose…", ""));
+		for (const value of STANDARD_ARRAY) {
+			const owner = abilities.find(entry => draft[entry.id] === value);
+			const option = new Option(owner && owner.id !== ability.id ? `${value} · used by ${owner.label}` : `${value}`, `${value}`);
+			option.disabled = !!owner && owner.id !== ability.id;
+			input.append(option);
+		}
+		input.value = draft[ability.id] == null ? "" : `${draft[ability.id]}`;
+		input.addEventListener("change", () => commitScores("standard", {...draft, [ability.id]: input.value ? Number(input.value) : null}, `character:score:${ability.id}`));
+		return field(ability.label, input);
+	}
+
+	/** Spend points with buttons, so the budget cannot be exceeded and no arithmetic is needed. */
+	function pointBuyField (ability) {
+		const draft = methodDraft("pointBuy");
+		const value = draft[ability.id];
+		const spent = pointBuySpent(draft);
+		const wrapper = element("div", null, "cb-editor__field");
+		wrapper.append(element("span", ability.label));
+		const stepper = element("div", null, "cb-editor__stepper");
+		const decrease = element("button", "−", "cb-editor__stepper-button");
+		decrease.type = "button";
+		decrease.disabled = value <= POINT_BUY_RANGE.min;
+		decrease.setAttribute("aria-label", `Decrease ${ability.label}`);
+		decrease.dataset.cbFocus = `character:score:${ability.id}:decrease`;
+		decrease.dataset.cbFocusFallback = `character:score:${ability.id}:increase`;
+		decrease.addEventListener("click", () => commitScores("pointBuy", {...draft, [ability.id]: value - 1}, decrease.dataset.cbFocus, increase.dataset.cbFocus));
+		const increase = element("button", "+", "cb-editor__stepper-button");
+		increase.type = "button";
+		increase.disabled = value >= POINT_BUY_RANGE.max || spent + (POINT_BUY_COSTS[value + 1] - POINT_BUY_COSTS[value]) > POINT_BUY_BUDGET;
+		increase.setAttribute("aria-label", `Increase ${ability.label}`);
+		increase.dataset.cbFocus = `character:score:${ability.id}:increase`;
+		increase.dataset.cbFocusFallback = `character:score:${ability.id}:decrease`;
+		increase.addEventListener("click", () => commitScores("pointBuy", {...draft, [ability.id]: value + 1}, increase.dataset.cbFocus, decrease.dataset.cbFocus));
+		stepper.append(decrease, element("output", `${value}`, "cb-editor__stepper-value"), increase);
+		wrapper.append(stepper, element("small", `${POINT_BUY_COSTS[value]} ${POINT_BUY_COSTS[value] === 1 ? "point" : "points"}`, "cb-editor__score-cost"));
+		return wrapper;
+	}
+
+	/** Accept any score the table uses, and flag entries outside 1–20 instead of coercing them. */
+	function manualField (ability) {
+		const input = element("input");
+		input.type = "number";
+		input.min = `${MANUAL_SCORE_RANGE.min}`;
+		input.max = `${MANUAL_SCORE_RANGE.max}`;
+		input.step = "1";
+		input.value = methodDraft("manual")[ability.id] ?? "";
+		input.dataset.cbFocus = `character:score:${ability.id}`;
+		input.addEventListener("change", () => commitScores("manual", {...methodDraft("manual"), [ability.id]: input.value}, `character:score:${ability.id}`));
+		return field(ability.label, input);
+	}
+
+	/** Render the method chooser, its method-specific controls, and the combined totals. */
 	function renderScores (descriptors) {
+		const ids = abilities.map(({id}) => id);
+		const method = character.build.abilities.method;
+		const draft = methodDraft(method);
 		const fieldset = element("fieldset", null, "cb-editor__group");
 		fieldset.append(element("legend", "Base ability scores"));
-		fieldset.append(element("p", "Assign all six scores before background and feat increases. Partial entries stay in this editor until all six are filled and are not included in a saved JSON file.", "cb-editor__help"));
-		const method = character.build.abilities.method;
-		const settings = METHOD_SETTINGS[method] || METHOD_SETTINGS.manual;
-		const methodSelect = select(ABILITY_SCORE_METHODS, method);
-		methodSelect.remove(0);
-		methodSelect.dataset.cbFocus = "character:score-method";
-		methodSelect.value = method;
-		methodSelect.addEventListener("change", () => updateBuild({abilities: {...character.build.abilities, method: methodSelect.value}}));
-		fieldset.append(field("Method", methodSelect), element("p", settings.help, "cb-editor__help"));
+		fieldset.append(element("p", "Pick how the six scores are assigned. They enter the saved character as soon as all six fit the method; until then the sheet stays incomplete.", "cb-editor__help"), renderMethods(method));
 		const grid = element("div", null, "cb-editor__scores");
-		const inputs = {};
-		const status = element("p", null, "cb-editor__help cb-editor__score-status");
-		status.setAttribute("aria-live", "polite");
-		const final = element("div", null, "cb-editor__final");
-		const updateStatus = () => {
-			const values = readScoreInputs(inputs);
-			const filled = abilities.filter(({id}) => /^\d+$/.test(`${inputs[id].value}`.trim())).length;
-			const feedback = describeScores(method, values, filled);
-			status.textContent = feedback.text;
-			status.classList.toggle("cb-editor__score-status--invalid", feedback.invalid);
-			for (const ability of abilities) {
-				const value = values?.[ability.id];
-				if (value != null && (value < settings.min || value > settings.max)) inputs[ability.id].setAttribute("aria-invalid", "true");
-				else inputs[ability.id].removeAttribute("aria-invalid");
-			}
-			final.replaceChildren(...finalScoreNodes(descriptors, values));
-		};
+		const manualInputs = {};
 		for (const ability of abilities) {
-			const input = element("input");
-			input.type = "number";
-			input.dataset.cbFocus = `character:score:${ability.id}`;
-			input.min = `${settings.min}`;
-			input.max = `${settings.max}`;
-			input.step = "1";
-			input.value = scoreInputs[ability.id] ?? "";
-			input.addEventListener("input", updateStatus);
-			input.addEventListener("change", () => {
-				const previous = {...scoreInputs};
-				scoreInputs[ability.id] = input.value;
-				const allScores = abilities.map(({id}) => scoreInputs[id]);
-				const complete = allScores.every(value => /^\d+$/.test(`${value}`) && Number(value) >= 1 && Number(value) <= 20);
-				const values = complete ? Object.fromEntries(abilities.map(({id}) => [id, Number(scoreInputs[id])])) : null;
-				if (!updateBuild({abilities: {...character.build.abilities, scores: values}})) {
-					scoreInputs = previous;
-					render();
-					restoreFocus(`character:score:${ability.id}`);
-				}
-			});
-			inputs[ability.id] = input;
-			grid.append(field(ability.label, input));
+			if (method === "manual") {
+				const wrapper = manualField(ability);
+				manualInputs[ability.id] = wrapper.querySelector("input");
+				grid.append(wrapper);
+			} else grid.append(method === "pointBuy" ? pointBuyField(ability) : standardField(ability));
 		}
-		fieldset.append(grid, status);
+		fieldset.append(grid);
+		const status = element("p", null, "cb-editor__score-status");
+		status.setAttribute("aria-live", "polite");
+		const reset = element("button", SCORE_RESET_LABELS[method], "cb-editor__score-reset");
+		reset.type = "button";
+		reset.dataset.cbFocus = "character:score-reset";
+		reset.addEventListener("click", () => commitScores(method, emptyDraft(method), "character:score-reset"));
+		const summary = element("div", null, "cb-editor__score-summary");
+		if (method === "pointBuy") {
+			const budget = element("progress", null, "cb-editor__score-budget");
+			budget.max = POINT_BUY_BUDGET;
+			budget.value = pointBuySpent(draft);
+			budget.setAttribute("aria-label", `Points spent of ${POINT_BUY_BUDGET}`);
+			summary.append(budget);
+		}
+		summary.append(status, reset);
+		fieldset.append(summary);
 		const backgroundIncrease = descriptors.find(isBackgroundIncrease);
 		if (backgroundIncrease) {
 			const group = renderChoiceGroup(backgroundIncrease);
 			if (group) fieldset.append(group);
 		}
+		const final = element("div", null, "cb-editor__final");
 		fieldset.append(final);
-		updateStatus();
+		const readValues = () => method === "manual"
+			? readScoreDraft(ids, Object.fromEntries(ids.map(id => [id, manualInputs[id].value])))
+			: readScoreDraft(ids, draft);
+		const refresh = () => {
+			const values = readValues();
+			const feedback = scoreSummary(method, values);
+			status.textContent = feedback.text;
+			status.classList.toggle("cb-editor__score-status--invalid", !!feedback.invalid);
+			for (const id of ids) {
+				const input = manualInputs[id];
+				if (!input) continue;
+				if (values[id] != null && (values[id] < MANUAL_SCORE_RANGE.min || values[id] > MANUAL_SCORE_RANGE.max)) input.setAttribute("aria-invalid", "true");
+				else input.removeAttribute("aria-invalid");
+			}
+			final.replaceChildren(...finalScoreNodes(descriptors, values));
+		};
+		for (const input of Object.values(manualInputs)) input.addEventListener("input", refresh);
+		refresh();
 		return fieldset;
 	}
 
@@ -393,18 +487,18 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		create (profileId, selection) {
 			const profile = profiles.find(candidate => candidate.id === profileId);
 			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);
-			const previous = scoreInputs;
-			scoreInputs = {};
+			const previous = scoreDrafts;
+			scoreDrafts = {};
 			optionFilters.clear();
 			if (!publish(profile.createDraft(catalog.dataset, selection))) {
-				scoreInputs = previous;
+				scoreDrafts = previous;
 				if (character) render();
 			}
 		},
 		open (document) {
 			if (!profileFor(document)) return;
 			if (document !== character) {
-				scoreInputs = {...document.build.abilities.scores};
+				scoreDrafts = {};
 				optionFilters.clear();
 				character = document;
 				const next = autoSelectSingleOptions(document);

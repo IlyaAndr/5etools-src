@@ -343,17 +343,20 @@ def main():
             assert 'Dice Set' in group_text(page, editor, 'Background Tool')
             editor.get_by_label('Character name').fill('Created fighter')
             editor.get_by_label('Character name').press('Tab')
-            editor.get_by_label('Strength', exact=True).fill('15')
-            editor.get_by_label('Strength', exact=True).press('Tab')
+            # The method decides the control: standard-array values are picked
+            # from the ones no other ability uses, so duplicates cannot be
+            # entered and the remaining values stay visible.
+            editor.get_by_label('Strength', exact=True).select_option('15')
+            assert '1 of 6 assigned. Values left: 14, 13, 12, 10, 8.' in editor.locator('.cb-editor__score-status').inner_text()
+            assert editor.get_by_label('Dexterity', exact=True).locator('option[value="15"]').get_attribute('disabled') is not None
             editor.get_by_role('button', name='Close editor').click()
             page.click('#edit-fighter')
             assert editor.get_by_label('Strength', exact=True).input_value() == '15'
             for ability, value in {'Strength': 15, 'Dexterity': 13, 'Constitution': 14, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
-                editor.get_by_label(ability, exact=True).fill(str(value))
-                editor.get_by_label(ability, exact=True).press('Tab')
+                editor.get_by_label(ability, exact=True).select_option(str(value))
             # The selected method explains what is still available, and the
             # combined scores include the background increases edited beside them.
-            assert 'Standard-array values left: none.' in editor.locator('.cb-editor__score-status').inner_text()
+            assert 'All six standard-array values are assigned.' in editor.locator('.cb-editor__score-status').inner_text()
             for label, value in {
                 'Gnomish Lineage': 'forest',
                 'Species Spellcasting Ability': 'int',
@@ -365,11 +368,36 @@ def main():
                 assert page.evaluate("document.activeElement.getAttribute('aria-label')") == label
             assert '17 (+3)' in final_score(editor, 'Strength')
             assert '15 + 2' in final_score(editor, 'Strength')
-            editor.get_by_label('Method', exact=True).select_option('pointBuy')
+            # Point buy keeps the entered values where they still fit the
+            # budget and can no longer exceed it: the plus buttons lock at 15
+            # and when no points are left.
+            editor.get_by_label('Point Buy', exact=True).check()
             point_buy_status = editor.locator('.cb-editor__score-status').inner_text()
-            assert '27 of 27 points spent; 0 remaining.' in point_buy_status, point_buy_status
-            assert 'Point buy: 27 points' in group_text(page, editor, 'Base ability scores')
-            editor.get_by_label('Method', exact=True).select_option('standard')
+            assert 'All 27 points are spent.' in point_buy_status, point_buy_status
+            assert '27 points' in group_text(page, editor, 'Base ability scores')
+            assert editor.get_by_role('button', name='Increase Strength').is_disabled()
+            editor.get_by_role('button', name='Decrease Strength').click()
+            assert '25 of 27 points spent. 2 left.' in editor.locator('.cb-editor__score-status').inner_text()
+            assert editor.get_by_role('button', name='Increase Strength').is_enabled()
+            editor.get_by_role('button', name='Increase Strength').click()
+            assert 'All 27 points are spent.' in editor.locator('.cb-editor__score-status').inner_text()
+            # Switching methods restores what that method held before.
+            editor.get_by_label('Standard Array', exact=True).check()
+            assert editor.get_by_label('Strength', exact=True).input_value() == '15'
+            # Manual entry takes table rolls, flags out-of-range values instead
+            # of coercing them, and clears the saved scores until they are fixed.
+            editor.get_by_label('Manual', exact=True).check()
+            assert editor.get_by_label('Strength', exact=True).input_value() == '15'
+            editor.get_by_label('Strength', exact=True).fill('21')
+            editor.get_by_label('Strength', exact=True).press('Tab')
+            assert 'must be between 1 and 20' in editor.locator('.cb-editor__score-status').inner_text()
+            assert editor.get_by_label('Strength', exact=True).get_attribute('aria-invalid') == 'true'
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            editor.get_by_label('Strength', exact=True).fill('15')
+            editor.get_by_label('Strength', exact=True).press('Tab')
+            assert 'All six scores are within 1–20.' in editor.locator('.cb-editor__score-status').inner_text()
+            editor.get_by_label('Standard Array', exact=True).check()
+            assert editor.get_by_label('Strength', exact=True).input_value() == '15'
             for label in ['Gnomish', 'Dwarvish', 'Perception', 'Survival', 'Longsword (Sap)', 'Javelin (Slow)', 'Handaxe (Vex)']:
                 control = editor.get_by_label(label, exact=True)
                 control.check()
@@ -508,15 +536,14 @@ def main():
             assert page.evaluate('window.testAcceptedCharacter().name') == 'New Character'
             rejected_score = transaction.get_by_label('Strength', exact=True)
             rejected_score.focus()
-            rejected_score.fill('15')
-            rejected_score.dispatch_event('change')
+            rejected_score.select_option('15')
             assert transaction.get_by_label('Strength', exact=True).input_value() == ''
             assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:score:str'
-            rejected_method = transaction.get_by_label('Method', exact=True)
+            rejected_method = transaction.get_by_label('Point Buy', exact=True)
             rejected_method.focus()
-            rejected_method.select_option('pointBuy')
-            assert transaction.get_by_label('Method', exact=True).input_value() == 'standard'
-            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:score-method'
+            rejected_method.click()
+            assert transaction.get_by_label('Standard Array', exact=True).is_checked()
+            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:score-method:pointBuy'
 
             # Create a Warlock from scratch and verify level-based spell grants.
             page.locator('#transaction-test-editor').evaluate('(element) => element.remove()')
@@ -541,8 +568,7 @@ def main():
             editor.get_by_label('Character name').fill('Created warlock')
             editor.get_by_label('Character name').press('Tab')
             for ability, value in {'Strength': 8, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 15}.items():
-                editor.get_by_label(ability, exact=True).fill(str(value))
-                editor.get_by_label(ability, exact=True).press('Tab')
+                editor.get_by_label(ability, exact=True).select_option(str(value))
             for label, value in {
                 'Fiendish Legacy': 'infernal',
                 'Size': 'medium',
