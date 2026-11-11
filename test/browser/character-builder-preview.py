@@ -392,10 +392,11 @@ def main():
             editor.get_by_label('Strength', exact=True).press('Tab')
             assert 'must be between 1 and 20' in editor.locator('.cb-editor__score-status').inner_text()
             assert editor.get_by_label('Strength', exact=True).get_attribute('aria-invalid') == 'true'
-            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            assert 'Assign the six base ability scores.' in page.locator('.cb-draft-summary').inner_text()
             editor.get_by_label('Strength', exact=True).fill('15')
             editor.get_by_label('Strength', exact=True).press('Tab')
             assert 'All six scores are within 1–20.' in editor.locator('.cb-editor__score-status').inner_text()
+            assert 'Assign the six base ability scores.' not in page.locator('.cb-draft-summary').inner_text()
             editor.get_by_label('Standard Array', exact=True).check()
             assert editor.get_by_label('Strength', exact=True).input_value() == '15'
             for label in ['Gnomish', 'Dwarvish', 'Perception', 'Survival', 'Longsword (Sap)', 'Javelin (Slow)', 'Handaxe (Vex)']:
