@@ -477,6 +477,7 @@
 		"devouring-blade|xphb": {
 			"name": "Devouring Blade",
 			"minimumLevel": 12,
+			"pactWeaponExtraAttacks": 2,
 			"requires": [
 				"thirsting-blade|xphb"
 			]
@@ -616,6 +617,7 @@
 		"thirsting-blade|xphb": {
 			"name": "Thirsting Blade",
 			"minimumLevel": 5,
+			"pactWeaponExtraAttacks": 1,
 			"requires": [
 				"pact-of-the-blade|xphb"
 			]
