@@ -55,6 +55,20 @@ function checkRules (rules, document) {
 				|| typeof dice.damageType !== "string" || !dice.damageType.trim()
 				|| (dice.condition !== undefined && (typeof dice.condition !== "string" || !dice.condition.trim()))) throw new TypeError(`sheetRules.invocations.${id}: unsupported pact weapon smite`);
 		}
+		if (invocation.pactWeaponLifedrinker !== undefined) {
+			const rider = invocation.pactWeaponLifedrinker;
+			const data = rider && typeof rider === "object" && !Array.isArray(rider) ? rider : {};
+			const healing = data.hitPointDieHealing;
+			if (!Number.isSafeInteger(data.dice) || data.dice < 1 || data.dice > 10
+				|| !Number.isSafeInteger(data.die) || data.die < 2 || data.die > 12
+				|| !Array.isArray(data.damageTypes) || !data.damageTypes.length
+				|| data.damageTypes.some(type => typeof type !== "string" || !type.trim())
+				|| new Set(data.damageTypes).size !== data.damageTypes.length
+				|| (healing !== undefined && (!healing || typeof healing !== "object" || Array.isArray(healing)
+					|| !Number.isSafeInteger(healing.dice) || healing.dice < 1 || healing.dice > 10
+					|| typeof healing.ability !== "string" || !healing.ability.trim()
+					|| !Number.isSafeInteger(healing.minimum) || healing.minimum < 0 || healing.minimum > 20))) throw new TypeError(`sheetRules.invocations.${id}: unsupported pact weapon lifedrinker`);
+		}
 	}
 	for (const [id, weapon] of Object.entries(rules.pactWeapons)) {
 		if (!weapon || typeof weapon !== "object" || Array.isArray(weapon)
@@ -268,6 +282,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	// damage in this subset.
 	const pactSmiteInvocation = invocations.find(id => rules.invocations[id].pactWeaponSmite);
 	const pactSmiteRule = pactSmiteInvocation ? rules.invocations[pactSmiteInvocation] : null;
+	// Lifedrinker adds a once-per-turn damage rider and can spend a Hit Point
+	// Die for healing, so the attack names the rider and the Hit Dice tracker
+	// names the recovery it offers.
+	const pactLifedrinkerInvocation = invocations.find(id => rules.invocations[id].pactWeaponLifedrinker);
+	const pactLifedrinkerRule = pactLifedrinkerInvocation ? rules.invocations[pactLifedrinkerInvocation] : null;
 	for (const id of decisions.keys()) {
 		if (!consumed.has(id)) issue(id, "This build decision is outside the reviewed sheet subset or unavailable at this level.");
 	}
@@ -386,6 +405,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	model.hp = {maximum: Math.max(1, classHitDie + mods.con) + (build.level - 1) * Math.max(1, classHitDie / 2 + 1 + mods.con), current: session.hp.current, temporary: session.hp.temporary};
 	if (session.hp.current !== null && session.hp.current > model.hp.maximum) issue("current-hit-points", "Current HP exceeds the calculated maximum for this build.");
 	model.hitDice = {count: build.level, die: classHitDie, recovery: {long: "all"}};
+	const lifedrinkerHealing = pactLifedrinkerRule?.pactWeaponLifedrinker.hitPointDieHealing;
+	if (lifedrinkerHealing) {
+		const healingModifier = mods[lifedrinkerHealing.ability];
+		if (healingModifier === undefined) throw new TypeError(`Unknown Hit Point Die healing ability: ${lifedrinkerHealing.ability}.`);
+		model.hitDice.note = `${pactLifedrinkerRule.name}: expend one to regain ${lifedrinkerHealing.dice}d${classHitDie} ${signed(healingModifier)} HP (minimum ${lifedrinkerHealing.minimum})`;
+	}
 	model.concentration = {modifier: mods.con + (classSavingThrows.includes("con") ? pb : 0), advantage: effectsOf("savingThrowAdvantage").some(effect => effect.ability === "con" && effect.concentration)};
 	function expandReferences (value, seen = new Set()) {
 		if (Array.isArray(value)) return value.map(item => expandReferences(item, seen));
@@ -543,7 +568,14 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			damage: `${smiteRule.baseDice + smiteRule.dicePerSlotLevel * (levelRule.slotLevel || 0)}d${smiteRule.die} ${smiteRule.damageType}`,
 			note: `once per turn by expending a Pact Magic slot (level ${levelRule.slotLevel || 0})${smiteRule.condition ? `; ${smiteRule.condition}` : ""}`,
 		} : null;
-		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1 + pactExtraAttacks, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null, smite});
+		const lifedrinkerRule = pactLifedrinkerRule?.pactWeaponLifedrinker;
+		const damageTypes = lifedrinkerRule?.damageTypes;
+		const lifedrinker = lifedrinkerRule ? {
+			name: pactLifedrinkerRule.name,
+			damage: `${lifedrinkerRule.dice}d${lifedrinkerRule.die} ${damageTypes.length > 1 ? `${damageTypes.slice(0, -1).join(", ")}, or ${damageTypes[damageTypes.length - 1]}` : damageTypes[0]}`,
+			note: "once per turn on a hit",
+		} : null;
+		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1 + pactExtraAttacks, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null, smite, lifedrinker});
 	}
 	for (const state of session.resources) {
 		const definition = model.resources.find(value => value.id === state.id);

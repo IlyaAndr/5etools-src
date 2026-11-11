@@ -414,6 +414,7 @@ describe("Reviewed character sheet calculations", () => {
 			[annotation => { annotation.cantripOptions = ["spell:eldritch-blast|xphb"]; }, /cantrip options without a choice/],
 			[annotation => { annotation.pactWeaponExtraAttacks = 3; }, /unsupported pact weapon extra attacks/],
 			[annotation => { annotation.pactWeaponSmite = {die: 8}; }, /unsupported pact weapon smite/],
+			[annotation => { annotation.pactWeaponLifedrinker = {die: 6}; }, /unsupported pact weapon lifedrinker/],
 		];
 		for (const [mutate, expected] of cases) {
 			const broken = JSON.parse(JSON.stringify(rules));
@@ -478,7 +479,7 @@ describe("Reviewed character sheet calculations", () => {
 		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
 		const model = project(document);
 		expect(model.status).toBe("complete");
-		expect(model.attacks[0]).toMatchObject({name: "Longsword", range: "5 ft", toHit: 7, damage: "1d8+4 slashing", count: 1, unit: "attacks", mastery: null, smite: null});
+		expect(model.attacks[0]).toMatchObject({name: "Longsword", range: "5 ft", toHit: 7, damage: "1d8+4 slashing", count: 1, unit: "attacks", mastery: null, smite: null, lifedrinker: null});
 		expect(model.attacks[0].toHit).toBe(model.proficiencyBonus + model.abilities.find(ability => ability.id === "cha").modifier);
 	});
 
@@ -520,6 +521,24 @@ describe("Reviewed character sheet calculations", () => {
 			count: 1,
 			smite: {name: "Eldritch Smite", damage: "4d8 Force", note: "once per turn by expending a Pact Magic slot (level 3); the target can be Prone if it is Huge or smaller"},
 		});
+	});
+
+	it("adds Lifedrinker's Pact Weapon rider and names the Hit Point Die recovery", () => {
+		const document = example("Warlock", 5);
+		document.build.level = 9;
+		choice(document, ":invocations").selected = [
+			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
+			"pact-of-the-blade|xphb", "lifedrinker|xphb",
+		];
+		choice(document, ":prepared-spells").selected.push("spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		expect(model.attacks[0]).toMatchObject({
+			name: "Longsword",
+			lifedrinker: {name: "Lifedrinker", damage: "1d6 Necrotic, Psychic, or Radiant", note: "once per turn on a hit"},
+		});
+		expect(model.hitDice).toMatchObject({count: 9, die: 8, note: "Lifedrinker: expend one to regain 1d8 +2 HP (minimum 1)"});
 	});
 
 	it("flags a Pact of the Blade without a chosen Pact Weapon", () => {

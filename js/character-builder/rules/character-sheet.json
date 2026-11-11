@@ -544,6 +544,20 @@
 		"lifedrinker|xphb": {
 			"name": "Lifedrinker",
 			"minimumLevel": 9,
+			"pactWeaponLifedrinker": {
+				"dice": 1,
+				"die": 6,
+				"damageTypes": [
+					"Necrotic",
+					"Psychic",
+					"Radiant"
+				],
+				"hitPointDieHealing": {
+					"dice": 1,
+					"ability": "con",
+					"minimum": 1
+				}
+			},
 			"requires": [
 				"pact-of-the-blade|xphb"
 			]
