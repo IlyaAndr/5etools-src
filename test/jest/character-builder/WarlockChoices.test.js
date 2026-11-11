@@ -2,7 +2,7 @@ import {readFileSync} from "node:fs";
 import "../../../js/parser.js";
 import {validateCharacterDocument} from "../../../js/character-builder/character-document.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
-import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
+import {pruneDependentChoices, setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "../../../js/character-builder/warlock-choices.js";
@@ -141,6 +141,39 @@ describe("Warlock editor choices", () => {
 		expect(options(12, ["pact-of-the-blade|xphb"])).not.toContain("devouring-blade|xphb");
 	});
 
+	it("offers the Pact Weapon choice only while Pact of the Blade is selected", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		expect(choice(draft, ":pact-weapon")).toMatchObject({available: false, count: 1, label: "Pact Weapon"});
+		const withBlade = setCharacterChoice(draft, "class:warlock|xphb:invocations", ["pact-of-the-blade|xphb"]);
+		const pactWeapon = choice(withBlade, ":pact-weapon");
+		expect(pactWeapon).toMatchObject({
+			available: true,
+			count: 1,
+			label: "Pact Weapon",
+			dependsOn: {choice: "class:warlock|xphb:invocations", option: "pact-of-the-blade|xphb"},
+		});
+		expect(pactWeapon.options).toHaveLength(28);
+		expect(pactWeapon.options.map(option => option.id)).toEqual(expect.arrayContaining(["longsword|xphb", "greatsword|xphb", "rapier|xphb", "dagger|xphb", "whip|xphb"]));
+		expect(pactWeapon.options).toContainEqual({id: "longsword|xphb", label: "Longsword"});
+		expect(pactWeapon.options).toContainEqual({id: "dagger|xphb", label: "Dagger"});
+	});
+
+	it("drops the saved Pact Weapon when Pact of the Blade is deselected", () => {
+		const source = createSheetExamples(catalog.dataset).find(entry => entry.id === "infernal-tiefling-warlock-level-5").document;
+		const withBlade = JSON.parse(JSON.stringify(source));
+		const invocations = withBlade.build.choices.find(value => value.id === "class:warlock|xphb:invocations");
+		invocations.selected = invocations.selected.map(id => id === "armor-of-shadows|xphb" ? "pact-of-the-blade|xphb" : id);
+		withBlade.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		expect(createCharacterSheetModel(withBlade, catalog, context).attacks[0]).toMatchObject({name: "Longsword", mastery: null});
+		const withoutBlade = setCharacterChoice(withBlade, "class:warlock|xphb:invocations", invocations.selected.map(id => id === "pact-of-the-blade|xphb" ? "armor-of-shadows|xphb" : id));
+		const pruned = pruneDependentChoices(withBlade, withoutBlade, descriptors(withoutBlade));
+		expect(pruned.build.choices.some(value => value.id === "class:warlock|xphb:pact-weapon")).toBe(false);
+		expect(choice(pruned, ":pact-weapon")).toMatchObject({available: false, selected: []});
+		const model = createCharacterSheetModel(pruned, catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.attacks.map(attack => attack.name)).not.toContain("Longsword");
+	});
+
 	it("withholds invocations whose choices are not reviewed yet and says why", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		const invocationChoice = choice(draft, "class:warlock|xphb:invocations");
@@ -199,6 +232,7 @@ describe("Warlock editor choices", () => {
 			"eldritch-mind|xphb", "armor-of-shadows|xphb", "agonizing-blast|xphb", "devils-sight|xphb", "repelling-blast|xphb",
 			"pact-of-the-blade|xphb", "thirsting-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb", "devouring-blade|xphb",
 		);
+		document.build.choices.push({id: `${owner}:pact-weapon`, selected: ["longsword|xphb"]});
 		saved("cantrips").push("spell:chill-touch|xphb");
 		saved("prepared-spells").push(
 			"spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:expeditious-retreat|xphb",

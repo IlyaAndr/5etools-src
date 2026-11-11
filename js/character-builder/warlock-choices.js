@@ -95,9 +95,22 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 		descriptor(`${owner}:prepared-spells`, "Prepared Warlock Spells", progression.prepared, preparedOptions),
 		invocationDescriptor,
 	];
+	/**
+	 * An invocation's own cantrip or weapon choice exists only while that
+	 * invocation is selected, so the descriptor names its prerequisite and the
+	 * editor drops a saved selection when the invocation is deselected.
+	 */
+	const invocationChoice = (id, choiceId, label, options, minimumLevel) => ({
+		...descriptor(`${owner}:${choiceId}`, label, 1, options, minimumLevel, invocationChoices.includes(id)),
+		dependsOn: {choice: `${owner}:invocations`, option: id},
+	});
 	for (const [id, value] of Object.entries(rules.invocations).filter(([, value]) => value.cantripChoice)) {
 		const options = value.cantripOptions.filter(spell => (decisions.get(`${owner}:cantrips`) || []).includes(spell));
-		result.push(descriptor(`${owner}:${value.cantripChoice}`, `${value.name} Cantrip`, 1, getSpellOptions(rawSpells, options), value.minimumLevel, invocationChoices.includes(id)));
+		result.push(invocationChoice(id, value.cantripChoice, `${value.name} Cantrip`, getSpellOptions(rawSpells, options), value.minimumLevel));
+	}
+	for (const [id, value] of Object.entries(rules.invocations).filter(([, value]) => value.weaponChoice)) {
+		const options = value.weaponOptions.map(weaponId => option(weaponId, rules.pactWeapons[weaponId].name));
+		result.push(invocationChoice(id, value.weaponChoice, "Pact Weapon", options, value.minimumLevel));
 	}
 	result.push(
 		descriptor(`${owner}:subclass`, "Subclass", 1, [option(warlock.subclass.id, warlock.subclass.name)], 3),

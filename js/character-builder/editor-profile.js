@@ -153,7 +153,7 @@ export function createEditorProfiles (context) {
 			id: "warlock",
 			title: "Warlock editor",
 			scope: "2024 rules · Tiefling · Acolyte · Warlock · levels 1–20",
-			intro: "This editor supports the listed options only: the Fiend patron, selected invocations and spells, Magic Initiate (Cleric), Ability Score Improvement, and the displayed Warlock equipment package. Background equipment is added independently. Hit points use the fixed value. Other choices are not yet available.",
+			intro: "This editor supports the listed options only: the Fiend patron, selected invocations and spells (including Pact of the Blade with a chosen Pact Weapon), Magic Initiate (Cleric), Ability Score Improvement, and the displayed Warlock equipment package. Background equipment is added independently. Hit points use the fixed value. Other choices are not yet available.",
 			context,
 			preset: WARLOCK_PRESET,
 			supports: document => sameRef(document.build.class, WARLOCK_PRESET.characterClass) && sameRef(document.build.species, WARLOCK_PRESET.species) && sameRef(document.build.background, WARLOCK_PRESET.background),

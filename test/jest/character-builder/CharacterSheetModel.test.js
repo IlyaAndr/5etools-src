@@ -470,6 +470,32 @@ describe("Reviewed character sheet calculations", () => {
 		expect(model).not.toHaveProperty("hp");
 	});
 
+	it("attacks with the chosen Pact Weapon using Charisma and full proficiency", () => {
+		const document = example("Warlock", 5);
+		choice(document, ":invocations").selected = ["pact-of-the-blade|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb"];
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const model = project(document);
+		expect(model.status).toBe("complete");
+		expect(model.attacks[0]).toMatchObject({name: "Longsword", range: "5 ft", toHit: 7, damage: "1d8+4 slashing", count: 1, unit: "attacks", mastery: null});
+		expect(model.attacks[0].toHit).toBe(model.proficiencyBonus + model.abilities.find(ability => ability.id === "cha").modifier);
+	});
+
+	it("flags a Pact of the Blade without a chosen Pact Weapon", () => {
+		const document = example("Warlock", 1);
+		choice(document, ":invocations").selected = ["pact-of-the-blade|xphb"];
+		const model = project(document);
+		expect(model.issues).toContainEqual(expect.objectContaining({id: "class:warlock|xphb:pact-weapon"}));
+	});
+
+	it("rejects a Pact Weapon outside the reviewed melee list", () => {
+		const document = example("Warlock", 1);
+		choice(document, ":invocations").selected = ["pact-of-the-blade|xphb"];
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longbow|xphb"]});
+		const model = project(document);
+		expect(model.issues).toContainEqual(expect.objectContaining({id: "class:warlock|xphb:pact-weapon"}));
+		expect(model.attacks.some(attack => attack.name === "Longbow")).toBe(false);
+	});
+
 	it("refuses reviewed rules from a different pinned dataset", () => {
 		expect(() => createCharacterSheetModel(example(), catalog, {rules: {...rules, dataset: {...rules.dataset, revision: "0".repeat(40)}}, spells: rawSpells})).toThrow("sheetRules.dataset");
 	});

@@ -129,6 +129,17 @@ Water Breathing per Long Rest, while Witch Sight adds 30-foot Truesight. The
 remaining invocations currently contribute their original description until
 their effects are reviewed.
 
+Pact of the Blade adds a Pact Weapon choice to the sheet. When the invocation is
+selected, the editor offers the 28 reviewed Simple and Martial melee weapons from
+`rules.pactWeapons`, and the sheet shows the chosen weapon as the primary attack,
+rolling attack and damage with Charisma and full proficiency regardless of the
+weapon's normal Strength or Finesse ability. Selecting the invocation without a
+Pact Weapon leaves the sheet incomplete, while deselecting the invocation removes
+the saved Pact Weapon and the choice disappears with it instead of lingering as an
+unavailable group. Thirsting Blade and Devouring Blade (extra attacks), Eldritch
+Smite, and Lifedrinker are not yet calculated and keep their original descriptions
+until their own effect annotations arrive.
+
 The editor changes build decisions and can export a JSON document. Ability scores
 are stored only when all six are entered; partial score entries remain in the
 open editor but cannot yet be represented in the saved format. The sheet itself
