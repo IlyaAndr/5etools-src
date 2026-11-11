@@ -455,6 +455,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const resistance of species.resistances) model.defenses.push({type: "resistance", damageType: resistance});
 	for (const effect of effectsOf("resource")) resource({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("vision")) model.defenses.push({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("swimSpeed")) model.defenses.push({type: "swim", name: effect.value.name, feet: model.speed, breatheUnderwater: effect.value.breatheUnderwater, provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("truesight")) model.defenses.push({type: "truesight", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});
 	if (classRule.name === "Fighter") {
 		feature(record(sources.feats.feat, "Defense", "fighting style"), "Fighting Style", "feat");
 		for (const mastery of [...new Set(masteries.map(id => rules.weapons[id].mastery))]) {
@@ -470,6 +472,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const effect of effectsOf("spellGrant")) {
 		const caster = model.spellcasting.find(candidate => candidate.id === effect.casterId);
 		if (!caster) throw new TypeError(`Spell-grant mechanic requires a known casting source: ${effect.casterId}.`);
+		if (effect.value.resourceId && !model.resources.some(resource => resource.id === effect.value.resourceId)) throw new TypeError(`Spell-grant mechanic requires a known resource: ${effect.value.resourceId}.`);
 		addSpell(effect.spellId, {...caster, ...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	}
 	if (initiateCasting) {

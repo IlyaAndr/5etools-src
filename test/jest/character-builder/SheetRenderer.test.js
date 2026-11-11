@@ -118,6 +118,27 @@ describe("Calculated character sheet renderer", () => {
 		expect(html).toContain("Concentration save: CON +2 · advantage");
 	});
 
+	it("shows a granted swim speed, underwater breathing, and truesight as sheet senses", () => {
+		const document = character("tiefling");
+		document.build.choices = document.build.choices.filter(entry => !entry.id.endsWith("-cantrip"));
+		document.build.choices.find(entry => entry.id === "class:warlock|xphb:invocations").selected = ["eldritch-mind|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "fiendish-vigor|xphb", "gift-of-the-depths|xphb"];
+		const html = render(document);
+		expect(html).toContain("Swim: 30 ft · breathe underwater");
+		expect(html).toContain("data-resource=\"class:warlock|xphb:gift-of-the-depths-water-breathing\"");
+		expect(card(html, "false-life")).toContain("<strong>Fiendish Vigor:</strong>");
+		expect(card(html, "false-life")).toContain("At will · Target: self · Components: required");
+		expect(card(html, "water-breathing")).toContain("<strong>Gift of the Depths:</strong>");
+		expect(card(html, "water-breathing")).toContain("1 free use / Long Rest · spell level 3");
+		const rules = JSON.parse(JSON.stringify(context.rules));
+		rules.mechanics.push({
+			id: "test:senses",
+			source: {type: "feat", name: "Savage Attacker", source: "XPHB"},
+			when: {classId: "warlock|xphb", minimumLevel: 1},
+			effects: [{type: "truesight", range: 30}],
+		});
+		expect(renderCharacterSheet(createCharacterSheetModel(document, catalog, {...context, rules}), catalog)).toContain("Truesight: 30 ft");
+	});
+
 	it("shows a single shared spellcasting profile when all sources have the same values", () => {
 		const html = render(character("tiefling"));
 		expect(html).toContain("Spell DC</span><strong>15</strong>");

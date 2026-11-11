@@ -119,6 +119,30 @@ describe("Declarative character mechanics", () => {
 		expect(() => resolveMechanicEffects([input], context())).toThrow(TypeError);
 	});
 
+	it("resolves swim speed and truesight as generic mechanics", () => {
+		const input = annotation();
+		input.effects = [
+			{type: "swimSpeed", value: {type: "swimSpeed", name: "Gift of the Depths", breatheUnderwater: true}},
+			{type: "truesight", range: 30},
+		];
+		const resolved = resolveMechanicEffects([input], context());
+		expect(resolved.map(effect => effect.type)).toEqual(["swimSpeed", "truesight"]);
+		expect(resolved[0].value).toEqual({type: "swimSpeed", name: "Gift of the Depths", breatheUnderwater: true});
+		expect(resolved[1].range).toBe(30);
+	});
+
+	it.each([
+		["an empty swim speed name", {type: "swimSpeed", value: {type: "swimSpeed", name: " ", breatheUnderwater: true}}],
+		["a non-boolean underwater flag", {type: "swimSpeed", value: {type: "swimSpeed", name: "Test Swim", breatheUnderwater: "yes"}}],
+		["an unsupported swim speed field", {type: "swimSpeed", value: {type: "swimSpeed", name: "Test Swim", breatheUnderwater: true, feet: 30}}],
+		["a non-positive truesight range", {type: "truesight", range: 0}],
+		["an unsupported truesight field", {type: "truesight", range: 30, name: "Witch Sight"}],
+	])("rejects %s", (_label, effect) => {
+		const input = annotation();
+		input.effects = [effect];
+		expect(() => resolveMechanicEffects([input], context())).toThrow(TypeError);
+	});
+
 	it("rejects a source reference that does not resolve to the checked source", () => {
 		const input = annotation();
 		input.source.name = "Different Feature";
@@ -230,6 +254,62 @@ describe("Declarative mechanics in a character sheet", () => {
 		});
 		const document = examples.find(example => example.document.build.class.name === "Fighter" && example.document.build.level === 5).document;
 		expect(() => createCharacterSheetModel(document, catalog, {rules, spells, sources})).toThrow(/cast/i);
+	});
+
+	it("results in a swim speed and truesight on the sheet defenses through annotations", () => {
+		const rules = clone(sheetRules);
+		rules.mechanics.push({
+			id: "test:senses",
+			source: {type: "feat", name: "Savage Attacker", source: "XPHB"},
+			when: {classId: "warlock|xphb", minimumLevel: 1},
+			effects: [
+				{type: "swimSpeed", value: {type: "swimSpeed", name: "Test Swim", breatheUnderwater: true}},
+				{type: "truesight", range: 30},
+			],
+		});
+		const document = examples.find(example => example.document.build.class.name === "Warlock" && example.document.build.level === 5).document;
+		const model = createCharacterSheetModel(document, catalog, {rules, spells, sources});
+		expect(model.status).toBe("complete");
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "swim", name: "Test Swim", feet: model.speed, breatheUnderwater: true}));
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "truesight", range: 30}));
+	});
+
+	it.each([
+		["fiendish-vigor|xphb", 2, "spellGrant"],
+		["gift-of-the-depths|xphb", 5, "swimSpeed"],
+		["witch-sight|xphb", 15, "truesight"],
+	])("gates the reviewed %s annotation on its invocation and keeps its reviewed level", (invocation, minimumLevel, type) => {
+		const annotation = sheetRules.mechanics.find(entry => entry.id === `invocation-${invocation.split("|")[0]}`);
+		expect(annotation).toBeDefined();
+		expect(annotation.effects[0].type).toBe(type);
+		expect(sheetRules.invocations[invocation].minimumLevel).toBe(minimumLevel);
+		const state = invocations => ({
+			skillIds: new Set(),
+			classId: "warlock|xphb",
+			backgroundId: null,
+			subclassId: null,
+			level: minimumLevel,
+			invocations,
+			knownSpells: [],
+			wearingArmor: false,
+			choices: new Map(),
+			refs: {},
+			hasSource: candidate => JSON.stringify(candidate) === JSON.stringify(annotation.source),
+		});
+		expect(resolveMechanicEffects([annotation], state([invocation])).map(effect => effect.type)).toEqual([type, ...annotation.effects.slice(1).map(effect => effect.type)]);
+		expect(resolveMechanicEffects([annotation], state([]))).toEqual([]);
+	});
+
+	it("rejects a spell-grant annotation that links to a missing resource", () => {
+		const rules = clone(sheetRules);
+		rules.mechanics.push({
+			id: "test:missing-resource",
+			source: {type: "feat", name: "Savage Attacker", source: "XPHB"},
+			when: {classId: "warlock|xphb", minimumLevel: 1},
+			effects: [{type: "spellGrant", casterId: "class:warlock|xphb", spellId: "spell:water-breathing|xphb", value: {id: "test:missing-resource", kind: "invocation", label: "Test Grant", resourceId: "test:absent-resource"}}],
+		});
+		const document = examples.find(example => example.document.build.class.name === "Warlock" && example.document.build.level === 5).document;
+		expect(() => createCharacterSheetModel(document, catalog, {rules, spells, sources})).toThrow(/resource/i);
 	});
 
 	it("adds a new gated feature resource through annotations without feature-specific evaluator code", () => {
