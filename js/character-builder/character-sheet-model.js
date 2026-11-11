@@ -1,4 +1,5 @@
 import {ABILITY_IDS, validateCharacterDocument} from "./character-document.js";
+import {parseIncreaseOption} from "./choice-common.js";
 import {projectSpecies} from "./species-projection.js";
 import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
@@ -124,8 +125,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const selected = decisions.get(id) || [];
 		const descriptor = sharedChoices.get(id);
 		const allowed = descriptor ? descriptor.options.map(option => option.id) : options;
-		const required = descriptor ? descriptor.count : count;
-		if (selected.length !== required || selected.some(value => !allowed.includes(value))) issue(id, `${label}: choose ${required} supported ${required === 1 ? "option" : "options"}.`);
+		const expectedCount = descriptor ? descriptor.count : count;
+		const requiredIds = descriptor?.required || [];
+		if (selected.length !== expectedCount || selected.some(value => !allowed.includes(value)) || requiredIds.some(value => !selected.includes(value))) {
+			issue(id, `${label}: choose ${expectedCount} supported ${expectedCount === 1 ? "option" : "options"}.`);
+		}
 		return selected.filter(value => allowed.includes(value));
 	}
 	function increases (id, allowed, scores, isBackground) {
@@ -136,11 +140,9 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			issue(id, "Choose a supported ability increase.");
 			return;
 		}
-		const parts = selected.length === 1 ? selected[0].split(".").map(value => /^([a-z]{3})-([12])$/.exec(value)) : [];
-		const values = parts.filter(Boolean).map(match => ({ability: match[1], amount: Number(match[2])}));
-		const total = values.reduce((sum, value) => sum + value.amount, 0);
-		if (!parts.length || values.length !== parts.length || new Set(values.map(value => value.ability)).size !== values.length
-			|| values.some(value => !allowed.includes(value.ability)) || total !== (isBackground ? 3 : 2)
+		const values = selected.length === 1 ? parseIncreaseOption(selected[0]) : null;
+		const total = (values || []).reduce((sum, value) => sum + value.amount, 0);
+		if (!values || values.some(value => !allowed.includes(value.ability)) || total !== (isBackground ? 3 : 2)
 			|| (isBackground && values.length !== 2 && values.length !== 3)
 			|| (isBackground && backgroundSourceChoices && !backgroundSourceChoices.backgroundWeights.some(weighted => values.every(value => weighted.from.includes(value.ability)) && values.map(value => value.amount).sort().join() === [...weighted.weights].sort().join()))) {
 			issue(id, isBackground ? "Select +2/+1 to two background abilities, or +1 to all three." : "Select a +2 ability increase or +1 to two abilities.");

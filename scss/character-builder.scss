@@ -134,6 +134,37 @@
 	margin-top: 10px;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 85px), 1fr));
 }
+.cb-editor__field input[aria-invalid="true"] {
+	border-color: var(--cb-accent);
+}
+.cb-editor__score-status--invalid {
+	color: var(--cb-accent);
+}
+.cb-editor__fixed {
+	margin: 4px 0 0 !important;
+	padding: 6px 8px;
+	border: 1px dashed var(--cb-line);
+	border-radius: 4px;
+	font-weight: 700;
+}
+.cb-editor__final {
+	margin-top: 10px;
+}
+.cb-editor__final-score {
+	display: grid;
+	gap: 2px;
+	padding: 6px 8px;
+	border: 1px solid var(--cb-line);
+	border-radius: 4px;
+}
+.cb-editor__final-label,
+.cb-editor__final-detail {
+	font-size: 11px;
+	color: var(--cb-muted);
+}
+.cb-editor__final-value {
+	font-size: 15px;
+}
 .cb-editor__option {
 	display: flex;
 	gap: 7px;

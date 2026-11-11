@@ -137,8 +137,9 @@ describe("Independent editor composition", () => {
 			{id: "background:soldier|xphb:tool", selected: ["dice-set|xphb"]},
 			{id: "class:fighter|xphb:equipment", selected: ["fighter-sword-and-shield"]},
 			{id: "class:fighter|xphb:fighting-style", selected: ["defense|xphb"]},
+			{id: "character:languages", selected: ["common"]},
 		]));
-		for (const id of ["character:languages", "class:fighter|xphb:skills", "class:fighter|xphb:weapon-masteries", "background:soldier|xphb:ability-increases"]) {
+		for (const id of ["class:fighter|xphb:skills", "class:fighter|xphb:weapon-masteries", "background:soldier|xphb:ability-increases"]) {
 			expect(autoSelected.build.choices.some(choice => choice.id === id)).toBe(false);
 		}
 		expect(applySingleOptionSelections(autoSelected, getEditorChoiceDescriptors(autoSelected, catalog, context))).toBe(autoSelected);
@@ -147,6 +148,32 @@ describe("Independent editor composition", () => {
 		const fifthSelected = applySingleOptionSelections(fifth, getEditorChoiceDescriptors(fifth, catalog, context));
 		expect(fifthSelected.build.choices.find(choice => choice.id === "class:fighter|xphb:subclass").selected).toEqual(["champion|xphb"]);
 		expect(autoSelected.build.choices.some(choice => choice.id === "class:fighter|xphb:subclass")).toBe(false);
+	});
+
+	it("marks required languages and explains fixed single-option abilities", () => {
+		const warlock = draftFor({species: ref("Tiefling"), characterClass: ref("Warlock"), background: ref("Acolyte")});
+		const choices = getEditorChoiceDescriptors(warlock, catalog, context);
+		const languages = choices.find(descriptor => descriptor.id === "character:languages");
+		expect(languages.required).toEqual(["common"]);
+		expect(languages.help).toMatch(/every 2024 character knows common/i);
+		const speciesAbility = choices.find(descriptor => descriptor.id === "species:tiefling|xphb:spellcasting-ability");
+		expect(speciesAbility.options.map(option => option.id)).toEqual(["cha"]);
+		expect(speciesAbility.help).toMatch(/only spellcasting ability allowed by every selected source/);
+		const size = choices.find(descriptor => descriptor.id === "species:tiefling|xphb:size");
+		expect(size.help).toMatch(/lists Small or Medium/);
+	});
+
+	it("adds required options without replacing saved choices or exceeding the count", () => {
+		const selection = {species: ref("Tiefling"), characterClass: ref("Fighter"), background: ref("Soldier")};
+		const document = draftFor(selection);
+		const languages = updated => updated.build.choices.find(choice => choice.id === "character:languages")?.selected;
+		expect(languages(applySingleOptionSelections(document, getEditorChoiceDescriptors(document, catalog, context)))).toEqual(["common"]);
+
+		const valid = setCharacterChoice(document, "character:languages", ["common", "elvish", "dwarvish"]);
+		expect(languages(applySingleOptionSelections(valid, getEditorChoiceDescriptors(valid, catalog, context)))).toEqual(["common", "elvish", "dwarvish"]);
+
+		const withoutCommon = setCharacterChoice(document, "character:languages", ["elvish", "dwarvish", "gnomish"]);
+		expect(languages(applySingleOptionSelections(withoutCommon, getEditorChoiceDescriptors(withoutCommon, catalog, context)))).toEqual(["elvish", "dwarvish", "gnomish"]);
 	});
 
 	it("keeps saved spellcasting differences visible without offering conflicts", () => {

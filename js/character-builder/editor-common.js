@@ -48,16 +48,23 @@ export function setCharacterChoice (document, id, selected) {
 }
 
 /**
- * Fill every available choice that offers exactly one legal option. Such a
- * choice is not a real decision, so leaving it empty would only keep a legal
- * build incomplete. Saved selections are never replaced, and the same document
- * is returned when nothing changes so callers can detect a stable result.
+ * Fill every selection that is not a real decision: options the reviewed source
+ * requires, and choices that offer exactly one legal option. Saved selections
+ * are never replaced, and the same document is returned when nothing changes so
+ * callers can detect a stable result.
  */
 export function applySingleOptionSelections (document, descriptors) {
 	let next = document;
 	for (const descriptor of descriptors) {
-		if (descriptor.count !== 1 || !descriptor.available || descriptor.selected.length || descriptor.options.length !== 1) continue;
-		next = setCharacterChoice(next, descriptor.id, [descriptor.options[0].id]);
+		if (!descriptor.available) continue;
+		const current = next.build.choices.find(choice => choice.id === descriptor.id)?.selected || [];
+		if (current.length >= descriptor.count) continue;
+		const additions = [
+			...(descriptor.required || []).filter(id => descriptor.options.some(option => option.id === id) && !current.includes(id)),
+			...(descriptor.count === 1 && !current.length && descriptor.options.length === 1 ? [descriptor.options[0].id] : []),
+		];
+		const selected = [...new Set([...current, ...additions])].slice(0, descriptor.count);
+		if (selected.length !== current.length || selected.some((id, index) => id !== current[index])) next = setCharacterChoice(next, descriptor.id, selected);
 	}
 	return next;
 }

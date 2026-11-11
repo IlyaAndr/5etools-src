@@ -70,6 +70,20 @@ export function getIncreaseOptions (allowed, weights, abilityName, selected = []
 	return result;
 }
 
+/**
+ * Parse a saved ability-increase option such as `str-2.con-1` into the
+ * individual ability amounts. Return `null` for an unsupported value so
+ * callers can report an actionable validation message.
+ */
+export function parseIncreaseOption (value) {
+	const parts = `${value ?? ""}`.split(".");
+	if (!parts.length || parts.some(part => !part)) return null;
+	const values = parts.map(part => /^([a-z]{3})-([12])$/.exec(part));
+	if (values.some(match => !match)) return null;
+	const result = values.map(match => ({ability: match[1], amount: Number(match[2])}));
+	return new Set(result.map(entry => entry.ability)).size === result.length ? result : null;
+}
+
 const slug = value => value.toLowerCase().replaceAll(" ", "-");
 
 const SCHOOL_NAMES = Object.freeze({

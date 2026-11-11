@@ -56,6 +56,18 @@ groups with at least eight options include a text filter; it narrows only the
 displayed entries, keeps selected entries visible, and never changes the saved
 decisions. New documents have unique IDs.
 
+Base ability scores show the active method while the player types: the standard
+array lists the values that are left, point buy reports points spent and left
+with its cost table, and manual entry states the supported range, marking entries
+the method cannot accept. Background ability increases are edited inside the
+same block, and the combined scores (base, background, and the level 4 increase)
+are shown beside them. A choice with exactly one legal option, such as a shared
+spellcasting ability, is displayed as a fixed value with the reason instead of a
+selector; imported values that differ remain selectable so they are never
+silently replaced. Common is required for languages, is included automatically,
+and is explained by the rules text; the player chooses two further Standard
+languages. Rare languages are not offered yet.
+
 Species, background, origin-feat, class, and equipment choices are supplied by
 independent providers and composed by shared code. The sheet calculator applies
 the same composition. Each class selects its own starting equipment package, and

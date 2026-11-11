@@ -75,6 +75,15 @@ def upload(page, document, filename='character.json'):
     })
 
 
+def group_text(page, editor, label):
+    return editor.locator('fieldset').filter(
+        has=page.locator(f'legend:text-is("{label}")')).first.inner_text()
+
+
+def final_score(editor, label):
+    return editor.locator('.cb-editor__final-score').filter(has_text=label).first.inner_text()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'scratch/character-builder-preview')
@@ -323,12 +332,15 @@ def main():
             page.set_viewport_size({'width': 1100, 'height': 1300})
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
             # Level-gated choices stay hidden at level 1, and choices with a
-            # single legal option are saved without an extra interaction.
+            # single legal option are shown as fixed values and saved without an
+            # extra interaction.
             assert editor.get_by_label('Subclass', exact=True).count() == 0
             assert editor.get_by_label('Level 4 Feat', exact=True).count() == 0
-            assert editor.get_by_label('Starting Equipment', exact=True).input_value() == 'fighter-sword-and-shield'
-            assert editor.get_by_label('Fighting Style', exact=True).input_value() == 'defense|xphb'
-            assert editor.get_by_label('Background Tool', exact=True).input_value() == 'dice-set|xphb'
+            assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
+            assert 'Only one option is legal' in group_text(page, editor, 'Starting Equipment')
+            assert 'Chain Mail' in group_text(page, editor, 'Starting Equipment')
+            assert 'Defense' in group_text(page, editor, 'Fighting Style')
+            assert 'Dice Set' in group_text(page, editor, 'Background Tool')
             editor.get_by_label('Character name').fill('Created fighter')
             editor.get_by_label('Character name').press('Tab')
             editor.get_by_label('Strength', exact=True).fill('15')
@@ -339,22 +351,31 @@ def main():
             for ability, value in {'Strength': 15, 'Dexterity': 13, 'Constitution': 14, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
                 editor.get_by_label(ability, exact=True).fill(str(value))
                 editor.get_by_label(ability, exact=True).press('Tab')
+            # The selected method explains what is still available, and the
+            # combined scores include the background increases edited beside them.
+            assert 'Standard-array values left: none.' in editor.locator('.cb-editor__score-status').inner_text()
             for label, value in {
                 'Gnomish Lineage': 'forest',
                 'Species Spellcasting Ability': 'int',
                 'Background Ability Increases': 'str-2.con-1',
-                'Background Tool': 'dice-set|xphb',
-                'Starting Equipment': 'fighter-sword-and-shield',
-                'Fighting Style': 'defense|xphb',
             }.items():
                 control = editor.get_by_label(label, exact=True)
                 control.focus()
                 control.select_option(value)
                 assert page.evaluate("document.activeElement.getAttribute('aria-label')") == label
-            for label in ['Common', 'Gnomish', 'Dwarvish', 'Perception', 'Survival', 'Longsword (Sap)', 'Javelin (Slow)', 'Handaxe (Vex)']:
+            assert '17 (+3)' in final_score(editor, 'Strength')
+            assert '15 + 2' in final_score(editor, 'Strength')
+            editor.get_by_label('Method', exact=True).select_option('pointBuy')
+            point_buy_status = editor.locator('.cb-editor__score-status').inner_text()
+            assert '27 of 27 points spent; 0 remaining.' in point_buy_status, point_buy_status
+            assert 'Point buy: 27 points' in group_text(page, editor, 'Base ability scores')
+            editor.get_by_label('Method', exact=True).select_option('standard')
+            for label in ['Gnomish', 'Dwarvish', 'Perception', 'Survival', 'Longsword (Sap)', 'Javelin (Slow)', 'Handaxe (Vex)']:
                 control = editor.get_by_label(label, exact=True)
                 control.check()
                 assert page.evaluate("document.activeElement.type") == 'checkbox'
+            assert editor.get_by_label('Common', exact=True).is_checked()
+            assert editor.get_by_label('Common', exact=True).is_disabled()
             assert editor.get_by_label('Elvish', exact=True).is_disabled()
             assert editor.get_by_label('Flail (Sap)', exact=True).is_disabled()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
@@ -375,11 +396,12 @@ def main():
             editor.get_by_label('Dagger (Nick)', exact=True).uncheck()
             editor.get_by_label('Handaxe (Vex)', exact=True).check()
             editor.get_by_label('Level', exact=True).select_option('3')
-            editor.get_by_label('Subclass', exact=True).select_option('champion|xphb')
+            assert 'Champion' in group_text(page, editor, 'Subclass')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             editor.get_by_label('Level', exact=True).select_option('5')
-            editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
+            assert 'Ability Score Improvement' in group_text(page, editor, 'Level 4 Feat')
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('str-1.con-1')
+            assert '18 (+4)' in final_score(editor, 'Strength')
             editor.get_by_label('Flail (Sap)', exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('tr[data-ability="str"] .cb-number').first.inner_text() == '18'
@@ -501,12 +523,21 @@ def main():
             page.click('#new-warlock')
             editor = page.locator('#fighter-editor')
             assert 'Warlock editor' in editor.inner_text()
-            assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'cha'
-            assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).input_value() == 'cha'
+            # The class fixes Charisma, so every selected source allows exactly
+            # one spellcasting ability; it is shown as a fixed value instead of a
+            # selector.
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
+            assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).count() == 0
+            assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Species Spellcasting Ability')
+            assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate Spellcasting Ability')
+            assert 'Charisma' in group_text(page, editor, 'Species Spellcasting Ability')
             assert editor.get_by_label('Subclass', exact=True).count() == 0
             assert editor.get_by_label('Level 4 Feat', exact=True).count() == 0
+            assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
             assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
-            assert editor.get_by_label('Starting Equipment', exact=True).input_value() == 'warlock-pact-mage'
+            assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
+            assert 'Healing Word' in group_text(page, editor, 'Magic Initiate Level 1 Spell')
+            assert 'Leather Armor' in group_text(page, editor, 'Starting Equipment')
             editor.get_by_label('Character name').fill('Created warlock')
             editor.get_by_label('Character name').press('Tab')
             for ability, value in {'Strength': 8, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 15}.items():
@@ -516,8 +547,6 @@ def main():
                 'Fiendish Legacy': 'infernal',
                 'Size': 'medium',
                 'Background Ability Increases': 'cha-2.wis-1',
-                'Starting Equipment': 'warlock-pact-mage',
-                'Magic Initiate Level 1 Spell': 'spell:healing-word|xphb',
                 'Eldritch Invocations': 'eldritch-mind|xphb',
             }.items():
                 editor.get_by_label(label, exact=True).select_option(value)
@@ -525,12 +554,12 @@ def main():
             # saved decisions; selected entries stay visible, and the query
             # survives an editor redraw.
             assert editor.get_by_label('Filter Prepared Warlock Spells', exact=True).count() == 0
-            language_filter = editor.get_by_label('Filter Languages (Common required)', exact=True)
+            language_filter = editor.get_by_label('Filter Languages', exact=True)
             language_filter.fill('drac')
             assert editor.get_by_label('Draconic', exact=True).is_visible()
             assert editor.get_by_label('Elvish', exact=True).is_hidden()
             editor.get_by_label('Draconic', exact=True).check()
-            language_filter = editor.get_by_label('Filter Languages (Common required)', exact=True)
+            language_filter = editor.get_by_label('Filter Languages', exact=True)
             assert language_filter.input_value() == 'drac'
             language_filter.fill('wish')
             assert editor.get_by_label('Draconic', exact=True).is_visible()
@@ -539,21 +568,26 @@ def main():
             language_filter.fill('')
             assert editor.get_by_label('Elvish', exact=True).is_visible()
             assert editor.locator('.cb-editor__filter-status').filter(has_text='No options match this filter').count() == 0
-            for label in ['Common', 'Draconic', 'Elvish', 'Arcana', 'Intimidation', 'Guidance', 'Light', 'Eldritch Blast', 'Mind Sliver', 'Armor of Agathys', 'Hex']:
+            for label in ['Draconic', 'Elvish', 'Arcana', 'Intimidation', 'Guidance', 'Light', 'Eldritch Blast', 'Mind Sliver', 'Armor of Agathys', 'Hex']:
                 editor.get_by_label(label, exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 0
             assert page.locator('.cb-resource').filter(has_text='Pact Magic').count() == 1
             editor.get_by_label('Level', exact=True).select_option('3')
-            editor.get_by_label('Subclass', exact=True).select_option('fiend|xphb')
+            assert 'Fiend' in group_text(page, editor, 'Subclass')
+            # Invocation-gated cantrip choices appear only after their invocation
+            # is selected.
+            assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
+            assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
             for label in ['Armor of Shadows', 'Agonizing Blast', 'Mirror Image', 'Misty Step']:
                 editor.get_by_label(label, exact=True).check()
-            editor.get_by_label('Agonizing Blast Cantrip', exact=True).select_option('spell:eldritch-blast|xphb')
+            assert 'Eldritch Blast' in group_text(page, editor, 'Agonizing Blast Cantrip')
+            assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 1
             assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 0
             editor.get_by_label('Level', exact=True).select_option('5')
-            editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
+            assert 'Ability Score Improvement' in group_text(page, editor, 'Level 4 Feat')
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
             # Spell lists expose the same filter once they grow, and level and
             # school hints are searchable along with names.
@@ -572,7 +606,7 @@ def main():
             assert editor.get_by_label('Invisibility', exact=True).is_visible()
             for label in ['Mage Hand', 'Counterspell', 'Hunger of Hadar', "Devil's Sight", 'Repelling Blast']:
                 editor.get_by_label(label, exact=True).check()
-            editor.get_by_label('Repelling Blast Cantrip', exact=True).select_option('spell:eldritch-blast|xphb')
+            assert 'Eldritch Blast' in group_text(page, editor, 'Repelling Blast Cantrip')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 1
             assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 1
@@ -621,8 +655,8 @@ def main():
             editor = page.locator('#fighter-editor')
             assert 'Character editor' in editor.inner_text()
             assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == ''
-            assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'cha'
-            assert editor.get_by_label('Background Tool', exact=True).count() == 1
+            assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Species Spellcasting Ability')
+            assert 'Dice Set' in group_text(page, editor, 'Background Tool')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
             assert not errors, errors
         finally:

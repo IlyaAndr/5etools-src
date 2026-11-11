@@ -213,6 +213,17 @@ describe("Reviewed character sheet calculations", () => {
 		expect(after.concentration.modifier - before.concentration.modifier).toBe(1);
 	});
 
+	it("requires Common among the three chosen languages", () => {
+		const document = example();
+		choice(document, "character:languages").selected = ["dwarvish", "elvish", "gnomish"];
+		const model = project(document);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual(expect.objectContaining({
+			id: "character:languages",
+			message: "Common and two other Standard languages are required.",
+		}));
+	});
+
 	it("keeps species, class, and feat casting abilities independent", () => {
 		const document = example("Warlock");
 		choice(document, "species:tiefling|xphb:spellcasting-ability").selected = ["wis"];
