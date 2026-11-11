@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) and Warlock (Fiend), levels 1–5; explicitly selected reference equipment, feats, invocations, and spells. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) and Warlock (Fiend), levels 1–5; any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats, invocations, and spells. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -42,7 +42,14 @@
 				"dice-set|xphb": "Dice Set"
 			},
 			"feat": "Savage Attacker",
+			"featId": "savage-attacker|xphb",
 			"gold": 50,
+			"equipment": {
+				"cost": 0.1,
+				"gear": [
+					"Dice Set (1 SP)"
+				]
+			},
 			"provenance": {
 				"sourceId": "srd-5.2.1",
 				"pages": [
@@ -63,12 +70,51 @@
 			],
 			"tool": "Calligrapher's Supplies",
 			"feat": "Magic Initiate (Cleric)",
+			"featId": "magic-initiate-cleric|xphb",
 			"gold": 50,
+			"equipment": {
+				"cost": 41,
+				"gear": [
+					"Calligrapher's Supplies (10 GP)",
+					"Book: Occult Lore (25 GP)",
+					"Holy Symbol: Amulet (5 GP)",
+					"Robe (1 GP)"
+				]
+			},
 			"provenance": {
 				"sourceId": "srd-5.2.1",
 				"pages": [
 					83
 				]
+			}
+		}
+	},
+	"feats": {
+		"magic-initiate-cleric|xphb": {
+			"name": "Magic Initiate (Cleric)",
+			"record": {
+				"name": "Magic Initiate",
+				"source": "XPHB"
+			},
+			"spellGroup": "Cleric Spells",
+			"abilities": [
+				"int",
+				"wis",
+				"cha"
+			],
+			"cantrips": [
+				"spell:guidance|xphb",
+				"spell:light|xphb"
+			],
+			"spells": [
+				"spell:healing-word|xphb"
+			]
+		},
+		"savage-attacker|xphb": {
+			"name": "Savage Attacker",
+			"record": {
+				"name": "Savage Attacker",
+				"source": "XPHB"
 			}
 		}
 	},
@@ -313,10 +359,9 @@
 		}
 	},
 	"equipment": {
-		"soldier-sword-and-shield": {
+		"fighter-sword-and-shield": {
 			"classId": "fighter|xphb",
-			"backgroundId": "soldier|xphb",
-			"cost": 158.1,
+			"cost": 158,
 			"armor": {
 				"name": "Chain Mail",
 				"base": 16,
@@ -340,7 +385,6 @@
 				"Handaxe (5 GP)",
 				"Flail (10 GP)",
 				"Dungeoneer's Pack (12 GP)",
-				"Dice Set (1 SP)",
 				"Traveler's Clothes (2 GP)",
 				"Component Pouch (25 GP)"
 			],
@@ -358,10 +402,9 @@
 				]
 			}
 		},
-		"acolyte-pact-mage": {
+		"warlock-pact-mage": {
 			"classId": "warlock|xphb",
-			"backgroundId": "acolyte|xphb",
-			"cost": 140,
+			"cost": 99,
 			"armor": {
 				"name": "Leather Armor",
 				"base": 11,
@@ -376,11 +419,7 @@
 				"Leather Armor (10 GP; carried when using Mage Armor)",
 				"2 Daggers (4 GP)",
 				"Arcane Focus: Orb (20 GP)",
-				"Book: Occult Lore (25 GP)",
 				"Scholar's Pack (40 GP)",
-				"Calligrapher's Supplies (10 GP)",
-				"Holy Symbol: Amulet (5 GP)",
-				"Robe (1 GP)",
 				"Component Pouch (25 GP)"
 			],
 			"provenance": {

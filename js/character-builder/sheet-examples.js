@@ -5,7 +5,7 @@ function classChoices (characterClass, level) {
 	const fighter = characterClass === "Fighter";
 	const choices = [
 		{id: `${owner}:skills`, selected: fighter ? ["perception", "survival"] : ["arcana", "intimidation"]},
-		{id: `${owner}:equipment`, selected: [fighter ? "soldier-sword-and-shield" : "acolyte-pact-mage"]},
+		{id: `${owner}:equipment`, selected: [fighter ? "fighter-sword-and-shield" : "warlock-pact-mage"]},
 	];
 	if (level >= 3) choices.push({id: `${owner}:subclass`, selected: [fighter ? "champion|xphb" : "fiend|xphb"]});
 	if (level >= 4) {

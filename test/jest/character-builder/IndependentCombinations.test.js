@@ -122,19 +122,29 @@ describe("Independent class and species contributions", () => {
 		expect(model.className).toBe(name);
 	});
 
-	it("reports an unsupported class/background equipment package rather than producing a complete sheet", () => {
+	it("combines class and background equipment independently", () => {
 		const document = example("Fighter", 1);
 		document.build.background = {name: "Acolyte", source: "XPHB"};
 		document.build.choices = document.build.choices.filter(choice => !choice.id.startsWith("background:soldier|xphb:"));
 		document.build.choices.push(
 			{id: "background:acolyte|xphb:ability-increases", selected: ["wis-2.cha-1"]},
-			{id: "feat:magic-initiate-cleric|xphb:ability", selected: ["cha"]},
+			{id: "feat:magic-initiate-cleric|xphb:ability", selected: ["int"]},
 			{id: "feat:magic-initiate-cleric|xphb:cantrips", selected: ["spell:guidance|xphb", "spell:light|xphb"]},
 			{id: "feat:magic-initiate-cleric|xphb:spell", selected: ["spell:healing-word|xphb"]},
 		);
 		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.gear).toEqual(expect.arrayContaining(["Chain Mail (75 GP)", "Calligrapher's Supplies (10 GP)", "Holy Symbol: Amulet (5 GP)", "Book: Occult Lore (25 GP)", "Robe (1 GP)"]));
+		expect(model.gear).not.toContain("Dice Set (1 SP)");
+	});
+
+	it("keeps an unsupported background incomplete instead of inventing equipment", () => {
+		const document = example("Fighter", 1);
+		document.build.background = {name: "Sage", source: "XPHB"};
+		document.build.choices = document.build.choices.filter(choice => !choice.id.startsWith("background:"));
+		const model = createCharacterSheetModel(document, catalog, context);
 		expect(model.status).toBe("incomplete");
-		expect(model.issues).toEqual(expect.arrayContaining([expect.objectContaining({id: "class:fighter|xphb:equipment"})]));
+		expect(model.issues).toEqual(expect.arrayContaining([expect.objectContaining({id: "background"})]));
 		expect(model.abilities).toHaveLength(0);
 	});
 });

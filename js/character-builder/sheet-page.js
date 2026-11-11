@@ -4,8 +4,7 @@ import {renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createSheetExamples} from "./sheet-examples.js";
 import {createCharacterEditor} from "./character-editor.js";
-import {FIGHTER_EDITOR_PROFILE} from "./fighter-editor-profile.js";
-import {createWarlockDraft, getWarlockChoiceDescriptors, isSupportedWarlockDocument} from "./warlock-choices.js";
+import {createEditorProfiles, getEditorCombinations} from "./editor-profile.js";
 
 const exampleSelect = document.getElementById("example-select");
 const importInput = document.getElementById("character-import");
@@ -16,6 +15,10 @@ const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
 const newFighterButton = document.getElementById("new-fighter");
 const newWarlockButton = document.getElementById("new-warlock");
+const newCharacterButton = document.getElementById("new-character");
+const speciesSelect = document.getElementById("new-species");
+const classSelect = document.getElementById("new-class");
+const backgroundSelect = document.getElementById("new-background");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
@@ -69,6 +72,8 @@ async function loadData () {
 	importInput.disabled = true;
 	newFighterButton.disabled = true;
 	newWarlockButton.disabled = true;
+	newCharacterButton.disabled = true;
+	for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = true;
 	editFighterButton.disabled = true;
 	saveButton.disabled = true;
 	printButton.disabled = true;
@@ -93,19 +98,16 @@ async function loadData () {
 		if (currentRequest !== requestId) return;
 		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
 		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
+		const combinations = getEditorCombinations({catalog, rules: characterSheetRules});
+		const fill = (select, entries) => select.replaceChildren(...entries.map(entry => new Option(entry.name, `${entry.name}|${entry.source}`)));
+		fill(speciesSelect, combinations.species);
+		fill(classSelect, combinations.classes);
+		fill(backgroundSelect, combinations.backgrounds);
 		editor = createCharacterEditor({
 			container: editorContainer,
 			catalog,
 			context: sheetContext,
-			profiles: [FIGHTER_EDITOR_PROFILE, {
-				id: "warlock",
-				title: "Warlock editor",
-				scope: "2024 rules · Tiefling · Acolyte · Warlock · levels 1–5",
-				intro: "This editor supports the listed options only, including the Fiend patron, selected invocations and spells, Magic Initiate (Cleric), Ability Score Improvement, and the displayed equipment package. Hit points use the fixed value. Other choices and classes are not yet available.",
-				createDraft: createWarlockDraft,
-				getChoiceDescriptors: getWarlockChoiceDescriptors,
-				isSupportedDocument: isSupportedWarlockDocument,
-			}],
+			profiles: createEditorProfiles({catalog, ...sheetContext}),
 			onChange: character => {
 				try {
 					const result = showDocument(character);
@@ -128,6 +130,8 @@ async function loadData () {
 		importInput.disabled = false;
 		newFighterButton.disabled = false;
 		newWarlockButton.disabled = false;
+		newCharacterButton.disabled = false;
+		for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = false;
 		status.textContent = "Reference character ready. Choose another example or open a saved character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -192,6 +196,22 @@ newFighterButton.addEventListener("click", () => {
 newWarlockButton.addEventListener("click", () => {
 	++requestId;
 	editor.create("warlock");
+});
+newCharacterButton.addEventListener("click", () => {
+	const readRef = value => {
+		const [name, source] = value.split("|");
+		return {name, source};
+	};
+	++requestId;
+	try {
+		editor.create("character", {
+			species: readRef(speciesSelect.value),
+			characterClass: readRef(classSelect.value),
+			background: readRef(backgroundSelect.value),
+		});
+	} catch (error) {
+		showError(`Could not create this character. ${error.message}`);
+	}
 });
 editFighterButton.addEventListener("click", () => editor.open(currentCharacter));
 saveButton.addEventListener("click", () => {

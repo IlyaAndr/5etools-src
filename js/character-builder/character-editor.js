@@ -1,4 +1,5 @@
 import {ABILITY_SCORE_METHODS, getEditorAbilities, setCharacterChoice} from "./editor-common.js";
+import {getBackgroundEquipment} from "./background-choices.js";
 
 /** A small editor for the subset currently supported by the sheet calculator. */
 export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
@@ -156,6 +157,8 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			for (const option of descriptor.options) {
 				if (context.rules.equipment[option.id]?.gear) group.append(element("p", option.label, "cb-editor__package"));
 			}
+			const backgroundEquipment = getBackgroundEquipment(character.build.background, context.rules);
+			if (descriptor.id.endsWith(":equipment") && backgroundEquipment?.gear?.length) group.append(element("p", `Background equipment: ${backgroundEquipment.gear.join(", ")}`, "cb-editor__package"));
 			if (!descriptor.available && character.build.choices.some(choice => choice.id === descriptor.id)) {
 				const remove = element("button", "Remove saved choice", "cb-button");
 				remove.type = "button";
@@ -190,12 +193,12 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 
 	return {
 		canEdit: document => !!profileFor(document),
-		create (profileId) {
+		create (profileId, selection) {
 			const profile = profiles.find(candidate => candidate.id === profileId);
 			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);
 			const previous = scoreInputs;
 			scoreInputs = {};
-			if (!publish(profile.createDraft(catalog.dataset))) {
+			if (!publish(profile.createDraft(catalog.dataset, selection))) {
 				scoreInputs = previous;
 				if (character) render();
 			}
