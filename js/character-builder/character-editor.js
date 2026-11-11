@@ -2,7 +2,7 @@ import {
 	ABILITY_SCORE_METHODS, MANUAL_SCORE_RANGE, POINT_BUY_BUDGET, POINT_BUY_COSTS, POINT_BUY_RANGE, STANDARD_ARRAY,
 	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, readScoreDraft, scoresForBuild, setCharacterChoice,
 } from "./editor-common.js";
-import {filterOptions, parseIncreaseOption} from "./choice-common.js";
+import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
 import {getBackgroundEquipment} from "./background-choices.js";
 
 /** Show a name filter once a checkbox group grows past a short, scannable list. */
@@ -23,7 +23,13 @@ const isBackgroundIncrease = descriptor => descriptor.id.startsWith("background:
 /** A small editor for the subset currently supported by the sheet calculator. */
 export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
 	const abilities = getEditorAbilities(context.sources);
-	const profileFor = document => document?.build?.level >= 1 && document.build.level <= 5
+	const maxLevelFor = document => {
+		const ref = document?.build?.class;
+		if (!ref || typeof ref.name !== "string" || typeof ref.source !== "string") return 0;
+		const levels = context.rules?.classes?.[refKey(ref)]?.levels;
+		return Array.isArray(levels) ? levels.length : 0;
+	};
+	const profileFor = document => document?.build?.level >= 1 && document.build.level <= maxLevelFor(document)
 		? profiles.find(profile => profile.isSupportedDocument(document))
 		: undefined;
 	const methodGroup = `cb-score-method-${++scoreMethodGroups}`;
@@ -447,7 +453,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			name.setCustomValidity("");
 			publish({...character, name: name.value}, false);
 		});
-		const level = select([1, 2, 3, 4, 5].map(value => ({id: `${value}`, label: `Level ${value}`})), `${character.build.level}`);
+		const level = select(Array.from({length: Math.max(1, maxLevelFor(character))}, (_, index) => ({id: `${index + 1}`, label: `Level ${index + 1}`})), `${character.build.level}`);
 		level.remove(0);
 		level.dataset.cbFocus = "character:level";
 		level.value = `${character.build.level}`;

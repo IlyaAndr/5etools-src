@@ -1,7 +1,7 @@
 export const CHARACTER_DOCUMENT_VERSION = 1;
 
 export const ABILITY_IDS = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
-const ID_PATTERN = /^[a-z0-9][a-z0-9:_./|%-]*$/;
+const ID_PATTERN = /^[a-z0-9][a-z0-9:_./|%'-]*$/;
 
 function fail (path, message) {
 	throw new TypeError(`${path}: ${message}`);
@@ -82,7 +82,7 @@ export function validateCharacterDocument (document) {
 
 	const {build} = document;
 	object(build, "character.build", ["level", "class", "species", "background", "abilities", "choices"]);
-	integer(build.level, "character.build.level", 1, 5);
+	integer(build.level, "character.build.level", 1, 20);
 	entity(build.class, "character.build.class");
 	entity(build.species, "character.build.species");
 	if (build.background !== null) entity(build.background, "character.build.background");

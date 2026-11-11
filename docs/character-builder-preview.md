@@ -41,7 +41,8 @@ imported session.
 
 The editors support every combination of Gnome or Tiefling, Fighter or Warlock,
 and Soldier or Acolyte, including Champion and the Fiend patron, with the
-explicitly listed level 1–5 options. They do not offer every legal class, spell,
+explicitly listed options. The Warlock editor covers levels 1–20 and the Fighter
+editor levels 1–5. They do not offer every legal class, spell,
 feat, equipment, or invocation choice. Choices and their validation use the same
 reviewed catalog; skill associations come from 2024 `data/skills.json`, ability
 names come from the site's existing parser, and class skills, hit dice, saving

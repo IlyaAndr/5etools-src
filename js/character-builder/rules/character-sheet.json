@@ -242,22 +242,184 @@
 					"prepared": 6,
 					"slots": 2,
 					"slotLevel": 3
+				},
+				{
+					"invocations": 5,
+					"cantrips": 3,
+					"prepared": 7,
+					"slots": 2,
+					"slotLevel": 3
+				},
+				{
+					"invocations": 6,
+					"cantrips": 3,
+					"prepared": 8,
+					"slots": 2,
+					"slotLevel": 4
+				},
+				{
+					"invocations": 6,
+					"cantrips": 3,
+					"prepared": 9,
+					"slots": 2,
+					"slotLevel": 4
+				},
+				{
+					"invocations": 7,
+					"cantrips": 3,
+					"prepared": 10,
+					"slots": 2,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 7,
+					"cantrips": 4,
+					"prepared": 10,
+					"slots": 2,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 7,
+					"cantrips": 4,
+					"prepared": 11,
+					"slots": 3,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 8,
+					"cantrips": 4,
+					"prepared": 11,
+					"slots": 3,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 8,
+					"cantrips": 4,
+					"prepared": 12,
+					"slots": 3,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 8,
+					"cantrips": 4,
+					"prepared": 12,
+					"slots": 3,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 9,
+					"cantrips": 4,
+					"prepared": 13,
+					"slots": 3,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 9,
+					"cantrips": 4,
+					"prepared": 13,
+					"slots": 3,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 9,
+					"cantrips": 4,
+					"prepared": 14,
+					"slots": 4,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 10,
+					"cantrips": 4,
+					"prepared": 14,
+					"slots": 4,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 10,
+					"cantrips": 4,
+					"prepared": 15,
+					"slots": 4,
+					"slotLevel": 5
+				},
+				{
+					"invocations": 10,
+					"cantrips": 4,
+					"prepared": 15,
+					"slots": 4,
+					"slotLevel": 5
 				}
 			],
 			"cantripOptions": [
 				"spell:eldritch-blast|xphb",
 				"spell:mind-sliver|xphb",
-				"spell:mage-hand|xphb"
+				"spell:mage-hand|xphb",
+				"spell:blade-ward|xphb",
+				"spell:chill-touch|xphb",
+				"spell:friends|xphb",
+				"spell:minor-illusion|xphb",
+				"spell:poison-spray|xphb",
+				"spell:prestidigitation|xphb",
+				"spell:thunderclap|xphb",
+				"spell:toll-the-dead|xphb",
+				"spell:true-strike|xphb"
 			],
 			"preparedOptions": [
 				"spell:armor-of-agathys|xphb",
-				"spell:hex|xphb",
+				"spell:arms-of-hadar|xphb",
+				"spell:bane|xphb",
 				"spell:charm-person|xphb",
+				"spell:comprehend-languages|xphb",
+				"spell:detect-magic|xphb",
+				"spell:expeditious-retreat|xphb",
+				"spell:hellish-rebuke|xphb",
+				"spell:hex|xphb",
+				"spell:illusory-script|xphb",
+				"spell:protection-from-evil-and-good|xphb",
+				"spell:speak-with-animals|xphb",
+				"spell:tasha's-hideous-laughter|xphb",
+				"spell:unseen-servant|xphb",
+				"spell:witch-bolt|xphb",
+				"spell:cloud-of-daggers|xphb",
+				"spell:crown-of-madness|xphb",
+				"spell:darkness|xphb",
+				"spell:enthrall|xphb",
+				"spell:hold-person|xphb",
+				"spell:invisibility|xphb",
+				"spell:mind-spike|xphb",
 				"spell:mirror-image|xphb",
 				"spell:misty-step|xphb",
-				"spell:invisibility|xphb",
+				"spell:ray-of-enfeeblement|xphb",
+				"spell:spider-climb|xphb",
+				"spell:suggestion|xphb",
 				"spell:counterspell|xphb",
-				"spell:hunger-of-hadar|xphb"
+				"spell:dispel-magic|xphb",
+				"spell:fear|xphb",
+				"spell:fly|xphb",
+				"spell:gaseous-form|xphb",
+				"spell:hunger-of-hadar|xphb",
+				"spell:hypnotic-pattern|xphb",
+				"spell:magic-circle|xphb",
+				"spell:major-image|xphb",
+				"spell:remove-curse|xphb",
+				"spell:summon-fey|xphb",
+				"spell:summon-undead|xphb",
+				"spell:tongues|xphb",
+				"spell:vampiric-touch|xphb",
+				"spell:banishment|xphb",
+				"spell:blight|xphb",
+				"spell:charm-monster|xphb",
+				"spell:dimension-door|xphb",
+				"spell:hallucinatory-terrain|xphb",
+				"spell:summon-aberration|xphb",
+				"spell:contact-other-plane|xphb",
+				"spell:dream|xphb",
+				"spell:hold-monster|xphb",
+				"spell:jallarzi's-storm-of-radiance|xphb",
+				"spell:mislead|xphb",
+				"spell:planar-binding|xphb",
+				"spell:scrying|xphb",
+				"spell:synaptic-static|xphb",
+				"spell:teleportation-circle|xphb"
 			],
 			"subclassSpells": [
 				{

@@ -55,7 +55,10 @@ export function getEditorChoiceDescriptors (document, catalog, context = {}) {
 /** A character is editable when every referenced source has reviewed choices. */
 export function isSupportedEditorDocument (document, {catalog, rules} = {}) {
 	const build = document?.build;
-	if (!build || !Number.isInteger(build.level) || build.level < 1 || build.level > 5) return false;
+	if (!build || !Number.isInteger(build.level) || build.level < 1) return false;
+	if (!build.class || typeof build.class.name !== "string" || typeof build.class.source !== "string") return false;
+	const classRule = rules?.classes?.[refKey(build.class)];
+	if (!classRule || !Array.isArray(classRule.levels) || build.level > classRule.levels.length) return false;
 	if (!findSpeciesRule(catalog, build.species)) return false;
 	if (!CLASS_PROVIDERS[refKey(build.class)]) return false;
 	return !!getBackgroundRule(build.background, rules);
@@ -149,7 +152,7 @@ export function createEditorProfiles (context) {
 		createEditorProfile({
 			id: "warlock",
 			title: "Warlock editor",
-			scope: "2024 rules · Tiefling · Acolyte · Warlock · levels 1–5",
+			scope: "2024 rules · Tiefling · Acolyte · Warlock · levels 1–20",
 			intro: "This editor supports the listed options only: the Fiend patron, selected invocations and spells, Magic Initiate (Cleric), Ability Score Improvement, and the displayed Warlock equipment package. Background equipment is added independently. Hit points use the fixed value. Other choices are not yet available.",
 			context,
 			preset: WARLOCK_PRESET,
@@ -158,7 +161,7 @@ export function createEditorProfiles (context) {
 		createEditorProfile({
 			id: "character",
 			title: "Character editor",
-			scope: "2024 rules · Gnome or Tiefling · Fighter or Warlock · Soldier or Acolyte · levels 1–5",
+			scope: "2024 rules · Gnome or Tiefling · Fighter or Warlock · Soldier or Acolyte · levels 1–5 (Fighter), 1–20 (Warlock)",
 			intro: "Choose a supported species, class, and background before creating a character. Species, background, origin-feat, and class choices are independent, and class and background equipment are selected separately. Options outside the reviewed subset are not offered.",
 			context,
 		}),

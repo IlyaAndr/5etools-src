@@ -40,9 +40,10 @@ function checkRules (rules, document) {
 }
 
 /**
- * Calculate the deliberately limited, reviewed level 1–5 sheet subset.
- * Build decisions live in the v1 document; numerical results never depend on
- * an example ID or name. Unsupported decisions produce an incomplete draft.
+ * Calculate the reviewed sheet for the class levels covered by the sheet rules
+ * (Warlock 1–20, Fighter 1–5). Build decisions live in the v1 document;
+ * numerical results never depend on an example ID or name. Unsupported
+ * decisions produce an incomplete draft.
  */
 export function createCharacterSheetModel (document, catalog, {rules, spells, sources} = {}) {
 	validateCharacterDocument(document);
@@ -92,7 +93,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	model.className = classRule.name;
 	const reviewedLevelRule = classRule.levels[build.level - 1];
-	if (build.level > 5 || !reviewedLevelRule) {
+	if (!reviewedLevelRule) {
 		issue("level", "This class level is outside the reviewed sheet coverage.");
 		return model;
 	}

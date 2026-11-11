@@ -204,7 +204,7 @@ The editor review of the current preview produced the items below. Each item sta
 | Spell and cantrip selection | Should use the site's own search instead of a short static list. | Planned as its own PR: reuse the 5etools spell search and filters, keep the reviewed legality checks, and add the chosen spells to the document. |
 | Invocation-gated cantrips | Agonizing Blast and Repelling Blast cantrip groups appeared without selecting the invocation. | Verified in the current build: a cantrip group is available only while its invocation is selected. Browser assertions cover levels 1–3. |
 | Level-gated choices at level 1 | Subclass, Level 4 Feat, and Level 4 Ability Increases appeared at level 1. | Verified fixed in PR #7a. The browser check asserts that all three groups are absent at level 1. |
-| High-level creation | No guided flow for creating a character above level 1. | Planned: create the character level by level, applying each level's cantrips, prepared spells, invocations, and feats in class-progression order, including the level-up replacements the class allows. |
+| High-level creation | No guided flow for creating a character above level 1. | Decision: no level-up wizard and no decision history. The editor is a single form that edits the final level; legality is checked per choice (counts, list membership, spell level against the Pact Magic slot level, invocation prerequisites), and level-down only recomputes the model and flags surplus choices. The Warlock form now covers levels 1–20. |
 
 ## Checks Throughout Development
 

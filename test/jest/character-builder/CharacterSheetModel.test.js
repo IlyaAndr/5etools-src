@@ -115,7 +115,7 @@ describe("Reviewed character sheet calculations", () => {
 			expect(reviewed.hitDie).toBe(raw.hd.faces);
 			expect(reviewed.saveProficiencies).toEqual(raw.proficiency);
 			expect(reviewed.skillOptions).toEqual(raw.startingProficiencies.skills[0].choose.from.map(skill => skill.replaceAll(" ", "-")));
-			const rows = raw.classTableGroups[0].rows.slice(0, 5);
+			const rows = id === "fighter" ? raw.classTableGroups[0].rows.slice(0, 5) : raw.classTableGroups[0].rows;
 			const expectedRows = reviewed.levels.map(level => id === "fighter" ? [String(level.secondWind), String(level.masteries)] : [level.invocations, level.cantrips, level.prepared, level.slots, level.slotLevel]);
 			expect(expectedRows).toEqual(rows);
 		}
@@ -154,6 +154,21 @@ describe("Reviewed character sheet calculations", () => {
 		const model = createCharacterSheetModel(example("Warlock"), catalog, {...context, sources: {...sources, warlock}});
 		expect(model.status).toBe("complete");
 		expect(model.resources.find(resource => resource.name === "Pact Magic").maxUses).toBe(3);
+	});
+	it("calculates a level 6 Warlock from the extended reviewed progression", () => {
+		const document = JSON.parse(JSON.stringify(example("Warlock")));
+		document.build.level = 6;
+		document.build.choices.find(choice => choice.id === "class:warlock|xphb:prepared-spells").selected.push("spell:fear|xphb");
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.status).toBe("complete");
+		expect(model.proficiencyBonus).toBe(3);
+		expect(model.hitDice).toEqual({count: 6, die: 8, recovery: {long: "all"}});
+		expect(model.resources.find(resource => resource.id === "class:warlock|xphb:pact-magic")).toEqual(expect.objectContaining({
+			name: "Pact Magic", maxUses: 2, slotLevel: 3, recovery: {short: "all", long: "all"}, spent: 0,
+		}));
+		expect(model.spells.find(spell => spell.id === "spell:fear|xphb").sources[0].slotLevel).toBe(3);
+		expect(model.features.map(feature => feature.name)).toEqual(expect.arrayContaining(["Magical Cunning", "Dark One's Own Luck"]));
 	});
 
 	it("calculates Acolyte skill proficiencies from the original background record", () => {

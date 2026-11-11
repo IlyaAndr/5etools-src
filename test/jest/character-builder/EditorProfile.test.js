@@ -187,6 +187,14 @@ describe("Independent editor composition", () => {
 		expect(featAbility.options.map(option => option.id)).toEqual(["wis", "cha"]);
 	});
 
+	it("supports Warlock levels through 20 while keeping the Fighter review at level 5", () => {
+		const warlock = draftFor({species: ref("Tiefling"), characterClass: ref("Warlock"), background: ref("Acolyte")}, 20);
+		expect(isSupportedEditorDocument(warlock, context)).toBe(true);
+		const fighter = draftFor({species: ref("Gnome"), characterClass: ref("Fighter"), background: ref("Soldier")}, 6);
+		expect(isSupportedEditorDocument(fighter, context)).toBe(false);
+		expect(getEditorChoiceDescriptors(fighter, catalog, context)).toEqual([]);
+	});
+
 	it("does not invent choices for unsupported combinations", () => {
 		const document = draftFor({species: ref("Gnome"), characterClass: ref("Fighter"), background: ref("Soldier")});
 		expect(isSupportedEditorDocument(document, context)).toBe(true);

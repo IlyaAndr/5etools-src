@@ -64,10 +64,15 @@ describe("Character builder draft documents", () => {
 		expect(() => serializeCharacterDocument(document)).toThrow("expected an integer");
 	});
 
-	it.each([0, 6, 1.5])("rejects unsupported character level %s", level => {
+	it.each([0, 21, 1.5])("rejects unsupported character level %s", level => {
 		const document = loadFixture("gnome-fighter-draft");
 		document.build.level = level;
 		expect(() => validateCharacterDocument(document)).toThrow("character.build.level");
+	});
+	it("accepts a level 20 Warlock document", () => {
+		const document = loadFixture("tiefling-warlock-draft");
+		document.build.level = 20;
+		expect(validateCharacterDocument(document)).toBe(true);
 	});
 
 	it.each(["sheet", "catalog", "derived"])("rejects saved %s data instead of trusting cached calculations", field => {
