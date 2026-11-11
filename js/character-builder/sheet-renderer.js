@@ -282,12 +282,13 @@ export function renderCharacterSheet (model, catalog) {
 	const defenses = block("Defenses & senses", `<p><strong>AC ${model.armorClass.value}:</strong> ${text(model.armorClass.condition)}.</p>${defenseValues.length ? `<p>${defenseValues.map(escape).join(" · ")}</p>` : ""}${model.armorClass.detail ? `<p>${text(model.armorClass.detail)}</p>` : ""}${model.armorClass.fallback !== undefined && model.armorClass.fallback !== null ? `<p>Without Mage Armor: AC ${model.armorClass.fallback}.</p>` : ""}`);
 	const notes = document.session.notes ? block("Notes", `<div class="cb-notes">${escape(document.session.notes)}</div>`, "cb-notes-block") : "";
 	const main = `<section class="cb-page cb-character-sheet" data-sheet-status="complete">${header(document, subtitle, heading)}${abilityTable(model)}${constants}${strip}${spellcastingDifferences}<div class="cb-columns"><div class="cb-column">${resources(model, hasDifferentCasting)}${features(model)}</div><div class="cb-column">${vitals(model)}${attacks(model)}${defenses}${equipment}${conditions(model)}</div></div>${notes}${footer(document, catalog)}</section>`;
+	const featureNames = new Map(model.features.map(feature => [feature.name.toLowerCase(), feature.name]));
 	const featureCards = model.features.map(feature => {
 		const selection = feature.selection ? `<p class="cb-feature-selection"><strong>${text(feature.selection.label)}: ${text(feature.selection.value)}.</strong> The original description below may include other options.</p>` : "";
 		const prerequisites = (feature.prerequisite || []).map(option => {
 			const details = [];
 			for (const key of Object.keys(option)) {
-				if (!["level", "feature", "spell"].includes(key)) throw new Error(`Unsupported feature prerequisite: ${key}`);
+				if (!["level", "feature", "spell", "optionalfeature"].includes(key)) throw new Error(`Unsupported feature prerequisite: ${key}`);
 			}
 			if (typeof option.level === "number") details.push(`Character level ${option.level}`);
 			else if (option.level) details.push(`${option.level.class?.name || "Character"} level ${option.level.level}`);
@@ -295,6 +296,11 @@ export function renderCharacterSheet (model, catalog) {
 			for (const spell of option.spell || []) {
 				if (!spell.entry) throw new Error("Unsupported feature spell prerequisite.");
 				details.push(sourceText(spell.entry));
+			}
+			for (const uid of option.optionalfeature || []) {
+				if (typeof uid !== "string" || !uid.includes("|")) throw new Error("Unsupported feature optionalfeature prerequisite.");
+				const name = uid.slice(0, uid.indexOf("|"));
+				details.push(featureNames.get(name.toLowerCase()) || title(name));
 			}
 			return details.join(", ");
 		}).filter(Boolean).join(" or ");

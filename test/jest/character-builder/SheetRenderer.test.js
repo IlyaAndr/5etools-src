@@ -83,6 +83,17 @@ describe("Calculated character sheet renderer", () => {
 		expect(html).toContain("Unspent starting gold:");
 	});
 
+	it("shows the Pact Weapon attacks that Thirsting Blade and Devouring Blade grant", () => {
+		const document = character("tiefling");
+		document.build.choices.find(candidate => candidate.id.endsWith(":invocations")).selected = ["eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "pact-of-the-blade|xphb", "thirsting-blade|xphb"];
+		document.build.choices = document.build.choices.filter(saved => saved.id !== "class:warlock|xphb:repelling-blast-cantrip");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const html = render(document);
+		expect(html).toContain("class=\"cb-attack-panel\"><h2>Longsword</h2>");
+		expect(html).toContain("2 attacks · +7");
+		expect(html).toContain("<strong>Prerequisite:</strong> Warlock level 5, Pact of the Blade");
+	});
+
 	it("keeps partial Short Rest resources, separate species uses, and pencil trackers visible", () => {
 		const fighter = render(character());
 		expect(fighter).toContain("data-resource=\"class:fighter|xphb:second-wind\"");

@@ -412,6 +412,7 @@ describe("Reviewed character sheet calculations", () => {
 			[annotation => { annotation.requires = ["missing|xphb"]; }, /unsupported prerequisite/],
 			[annotation => { annotation.minimumLevel = 0; }, /unsupported invocation annotation/],
 			[annotation => { annotation.cantripOptions = ["spell:eldritch-blast|xphb"]; }, /cantrip options without a choice/],
+			[annotation => { annotation.pactWeaponExtraAttacks = 3; }, /unsupported pact weapon extra attacks/],
 		];
 		for (const [mutate, expected] of cases) {
 			const broken = JSON.parse(JSON.stringify(rules));
@@ -478,6 +479,31 @@ describe("Reviewed character sheet calculations", () => {
 		expect(model.status).toBe("complete");
 		expect(model.attacks[0]).toMatchObject({name: "Longsword", range: "5 ft", toHit: 7, damage: "1d8+4 slashing", count: 1, unit: "attacks", mastery: null});
 		expect(model.attacks[0].toHit).toBe(model.proficiencyBonus + model.abilities.find(ability => ability.id === "cha").modifier);
+	});
+
+	it("attacks twice with the Pact Weapon once Thirsting Blade is known", () => {
+		const document = example("Warlock", 5);
+		choice(document, ":invocations").selected = ["eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "pact-of-the-blade|xphb", "thirsting-blade|xphb"];
+		document.build.choices = document.build.choices.filter(saved => saved.id !== "class:warlock|xphb:repelling-blast-cantrip");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		expect(model.attacks[0]).toMatchObject({name: "Longsword", count: 2, unit: "attacks"});
+	});
+
+	it("attacks three times when Devouring Blade replaces Thirsting Blade's extra attack", () => {
+		const document = example("Warlock", 5);
+		document.build.level = 12;
+		choice(document, ":invocations").selected = [
+			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
+			"pact-of-the-blade|xphb", "thirsting-blade|xphb", "devouring-blade|xphb",
+		];
+		choice(document, ":cantrips").selected.push("spell:prestidigitation|xphb");
+		choice(document, ":prepared-spells").selected.push("spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:fear|xphb");
+		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		const model = project(document);
+		expect(model.issues).toEqual([]);
+		expect(model.attacks[0]).toMatchObject({name: "Longsword", count: 3, unit: "attacks"});
 	});
 
 	it("flags a Pact of the Blade without a chosen Pact Weapon", () => {

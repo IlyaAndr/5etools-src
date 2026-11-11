@@ -43,6 +43,8 @@ function checkRules (rules, document) {
 		if (invocation.weaponChoice !== undefined && (typeof invocation.weaponChoice !== "string" || !invocation.weaponChoice.trim()
 			|| !Array.isArray(invocation.weaponOptions) || !invocation.weaponOptions.length || invocation.weaponOptions.some(value => typeof value !== "string" || !rules.pactWeapons[value]))) throw new TypeError(`sheetRules.invocations.${id}: unsupported weapon choice`);
 		if (invocation.weaponChoice === undefined && invocation.weaponOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: weapon options without a choice`);
+		if (invocation.pactWeaponExtraAttacks !== undefined && (!Number.isSafeInteger(invocation.pactWeaponExtraAttacks)
+			|| invocation.pactWeaponExtraAttacks < 1 || invocation.pactWeaponExtraAttacks > 2)) throw new TypeError(`sheetRules.invocations.${id}: unsupported pact weapon extra attacks`);
 	}
 	for (const [id, weapon] of Object.entries(rules.pactWeapons)) {
 		if (!weapon || typeof weapon !== "object" || Array.isArray(weapon)
@@ -246,6 +248,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			pactWeapon = weaponId ? rules.pactWeapons[weaponId] : null;
 		}
 	}
+	// Devouring Blade replaces the extra attack of Thirsting Blade with two
+	// instead of one, so the known invocations contribute their best bonus
+	// rather than a sum.
+	const pactExtraAttacks = invocations.reduce((best, id) => Math.max(best, rules.invocations[id].pactWeaponExtraAttacks || 0), 0);
 	for (const id of decisions.keys()) {
 		if (!consumed.has(id)) issue(id, "This build decision is outside the reviewed sheet subset or unavailable at this level.");
 	}
@@ -515,7 +521,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		model.attacks.unshift({name, action, range, toHit: caster.attack, count: progression.value, unit, damage: `${dice}${bonus ? signed(bonus) : ""} ${damageType}`, provenance: effect.source, annotationId: effect.annotationId});
 	}
 	if (pactWeapon) {
-		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null});
+		model.attacks.unshift({name: pactWeapon.name, action: "Attack", range: pactWeapon.range, toHit: pb + mods.cha, damage: `${pactWeapon.damage}${mods.cha ? signed(mods.cha) : ""} ${pactWeapon.type}`, count: 1 + pactExtraAttacks, unit: "attacks", mastery: null, criticalRange: effectsOf("criticalRange").length ? {min: effectsOf("criticalRange")[0].min, max: effectsOf("criticalRange")[0].max} : null});
 	}
 	for (const state of session.resources) {
 		const definition = model.resources.find(value => value.id === state.id);

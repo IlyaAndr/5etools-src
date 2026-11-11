@@ -136,9 +136,13 @@ rolling attack and damage with Charisma and full proficiency regardless of the
 weapon's normal Strength or Finesse ability. Selecting the invocation without a
 Pact Weapon leaves the sheet incomplete, while deselecting the invocation removes
 the saved Pact Weapon and the choice disappears with it instead of lingering as an
-unavailable group. Thirsting Blade and Devouring Blade (extra attacks), Eldritch
-Smite, and Lifedrinker are not yet calculated and keep their original descriptions
-until their own effect annotations arrive.
+unavailable group. Thirsting Blade adds a second Pact Weapon attack, and
+Devouring Blade replaces that extra attack with two, so the Pact Weapon attack
+shows 2 attacks with Thirsting Blade and 3 once Devouring Blade is selected.
+Both invocations require Pact of the Blade, and the features reference page prints
+that prerequisite under each entry. Eldritch Smite and Lifedrinker are
+not yet calculated and keep their original descriptions until their own effect
+annotations arrive.
 
 The editor changes build decisions and can export a JSON document. Ability scores
 are stored only when all six are entered; partial score entries remain in the
