@@ -142,7 +142,7 @@ shows 2 attacks with Thirsting Blade and 3 once Devouring Blade is selected.
 Eldritch Smite adds its slot-fuelled Force damage to that same attack: the panel
 prints the dice for the character's own Pact Magic slot level, so a level 5
 Warlock with level 3 slots reads 4d8, and it names the Prone option for Huge or
-smaller targets. All three invocations require Pact of the Blade, and the
+smaller targets. All four invocations require Pact of the Blade, and the
 features reference page prints that prerequisite under each entry. Lifedrinker
 adds a once-per-turn rider to the same panel — 1d6 Necrotic, Psychic, or Radiant,
 the damage type left to the player — and the Hit Dice tracker names the Hit
