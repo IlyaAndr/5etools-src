@@ -26,6 +26,11 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) 
 		descriptor(species.lineageChoiceId, species.lineageLabel, 1, species.lineages.map(lineage => option(lineage.id, lineage.name))),
 	];
 	if (species.abilityChoiceId) result.push(descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))));
-	if (species.sizeChoiceId) result.push(descriptor(species.sizeChoiceId, "Size", 1, species.sizes.map(id => option(id, id[0].toUpperCase() + id.slice(1)))));
+	if (species.sizeChoiceId) {
+		result.push({
+			...descriptor(species.sizeChoiceId, "Size", 1, species.sizes.map(id => option(id, id[0].toUpperCase() + id.slice(1)))),
+			help: "This species offers more than one legal size. Choose the size you want at character creation.",
+		});
+	}
 	return result;
 }

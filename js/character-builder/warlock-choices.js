@@ -1,6 +1,6 @@
 import {validateCharacterDocument} from "./character-document.js";
 import {composeChoiceDescriptors} from "./compose-choices.js";
-import {createSpellOptionReader, findClassRecord, getIncreaseOptions, getSpellOptions, option} from "./choice-common.js";
+import {createSpellOptionReader, findClassRecord, getIncreaseOptions, getSpellOptions, option, spellOption} from "./choice-common.js";
 import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
@@ -65,7 +65,7 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	});
 	const rawSpells = spells?.spell || sources?.spells?.spell || spells || sources?.spells;
 	const readSpell = createSpellOptionReader(rawSpells);
-	const preparedOptions = warlock.preparedOptions.map(readSpell).filter(spell => spell.level === null || spell.level <= progression.slotLevel).map(({id, label}) => option(id, label));
+	const preparedOptions = warlock.preparedOptions.map(readSpell).filter(spell => spell.level === null || spell.level <= progression.slotLevel).map(spell => spellOption(spell));
 	const owner = "class:warlock|xphb";
 	const invocationChoices = decisions.get(`${owner}:invocations`) || [];
 	const invocations = Object.entries(rules.invocations).filter(([, value]) => value.minimumLevel <= document.build.level).map(([id, value]) => option(id, value.name));

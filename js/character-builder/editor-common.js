@@ -46,3 +46,18 @@ export function setCharacterChoice (document, id, selected) {
 	validateCharacterDocument(next);
 	return next;
 }
+
+/**
+ * Fill every available choice that offers exactly one legal option. Such a
+ * choice is not a real decision, so leaving it empty would only keep a legal
+ * build incomplete. Saved selections are never replaced, and the same document
+ * is returned when nothing changes so callers can detect a stable result.
+ */
+export function applySingleOptionSelections (document, descriptors) {
+	let next = document;
+	for (const descriptor of descriptors) {
+		if (descriptor.count !== 1 || !descriptor.available || descriptor.selected.length || descriptor.options.length !== 1) continue;
+		next = setCharacterChoice(next, descriptor.id, [descriptor.options[0].id]);
+	}
+	return next;
+}

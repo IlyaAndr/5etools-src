@@ -1,6 +1,6 @@
 import {readFileSync} from "node:fs";
 import "../../../js/parser.js";
-import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
+import {applySingleOptionSelections, setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createEditorDraft, findSharedSpellcastingAbility, getEditorChoiceDescriptors, getEditorCombinations, isSupportedEditorDocument} from "../../../js/character-builder/editor-profile.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
@@ -127,6 +127,26 @@ describe("Independent editor composition", () => {
 		expect(warlock.build.choices).toEqual([{id: "species:gnome|xphb:spellcasting-ability", selected: ["cha"]}]);
 		const fighter = draftFor({species: ref("Tiefling"), characterClass: ref("Fighter"), background: ref("Acolyte")});
 		expect(fighter.build.choices).toEqual([]);
+	});
+
+	it("fills single-option choices without inventing multi-option decisions", () => {
+		const selection = {species: ref("Tiefling"), characterClass: ref("Fighter"), background: ref("Soldier")};
+		const document = draftFor(selection);
+		const autoSelected = applySingleOptionSelections(document, getEditorChoiceDescriptors(document, catalog, context));
+		expect(autoSelected.build.choices).toEqual(expect.arrayContaining([
+			{id: "background:soldier|xphb:tool", selected: ["dice-set|xphb"]},
+			{id: "class:fighter|xphb:equipment", selected: ["fighter-sword-and-shield"]},
+			{id: "class:fighter|xphb:fighting-style", selected: ["defense|xphb"]},
+		]));
+		for (const id of ["character:languages", "class:fighter|xphb:skills", "class:fighter|xphb:weapon-masteries", "background:soldier|xphb:ability-increases"]) {
+			expect(autoSelected.build.choices.some(choice => choice.id === id)).toBe(false);
+		}
+		expect(applySingleOptionSelections(autoSelected, getEditorChoiceDescriptors(autoSelected, catalog, context))).toBe(autoSelected);
+
+		const fifth = draftFor(selection, 5);
+		const fifthSelected = applySingleOptionSelections(fifth, getEditorChoiceDescriptors(fifth, catalog, context));
+		expect(fifthSelected.build.choices.find(choice => choice.id === "class:fighter|xphb:subclass").selected).toEqual(["champion|xphb"]);
+		expect(autoSelected.build.choices.some(choice => choice.id === "class:fighter|xphb:subclass")).toBe(false);
 	});
 
 	it("keeps saved spellcasting differences visible without offering conflicts", () => {
