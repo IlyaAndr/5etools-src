@@ -547,6 +547,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 				for (const grant of grants.prepared.filter(value => value.minimumLevel <= build.level)) {
 					for (const id of grant.spells) addSpell(id, {...classCasting, id: castingId, kind: "subclass", label: subclassRule.name, alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
 				}
+				for (const grant of grants.innate.filter(value => value.minimumLevel <= build.level)) {
+					const metadata = spellIndex.get(grant.spellId);
+					if (!metadata) continue;
+					const resourceId = `${castingId}:${grant.spellId.slice("spell:".length).split("|")[0]}`;
+					addSpell(grant.spellId, {...classCasting, id: castingId, kind: "subclass", label: subclassRule.name, alwaysPrepared: true, canCastWithSlots: true, resourceId, freeLevel: metadata.level, slotLevel: levelRule.slotLevel});
+					resource({id: resourceId, name: metadata.ref?.name || metadata.name, maxUses: grant.uses === "proficiencyBonus" ? pb : grant.uses, recovery: {long: "all"}, spellId: grant.spellId, freeLevel: metadata.level, spellcastingAbility: grant.ability || rawClass.spellcastingAbility});
+				}
 			}
 		}
 	}
