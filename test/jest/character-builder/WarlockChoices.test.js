@@ -114,7 +114,7 @@ describe("Warlock editor choices", () => {
 			};
 			return descriptors(document).find(value => value.id === "class:warlock|xphb:invocations").options.map(option => option.id);
 		};
-		expect(options(1)).toEqual(["armor-of-shadows|xphb", "eldritch-mind|xphb", "pact-of-the-blade|xphb", "pact-of-the-chain|xphb"]);
+		expect(options(1)).toEqual(["armor-of-shadows|xphb", "eldritch-mind|xphb", "pact-of-the-blade|xphb", "pact-of-the-chain|xphb", "pact-of-the-tome|xphb"]);
 		expect(options(2)).toEqual(expect.arrayContaining([
 			"agonizing-blast|xphb", "devils-sight|xphb", "eldritch-spear|xphb", "fiendish-vigor|xphb",
 			"mask-of-many-faces|xphb", "misty-visions|xphb", "otherworldly-leap|xphb", "repelling-blast|xphb",
@@ -178,14 +178,15 @@ describe("Warlock editor choices", () => {
 	it("withholds invocations whose choices are not reviewed yet and says why", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		const invocationChoice = choice(draft, "class:warlock|xphb:invocations");
-		expect(invocationChoice.options.map(option => option.id)).not.toContain("pact-of-the-tome|xphb");
+		expect(invocationChoice.options.map(option => option.id)).toContain("pact-of-the-tome|xphb");
 		expect(invocationChoice.options.map(option => option.id)).not.toContain("lessons-of-the-first-ones|xphb");
-		expect(invocationChoice.help).toContain("Pact of the Tome: The three cantrips and two rituals it grants have no reviewed choice yet.");
+		expect(invocationChoice.help).not.toContain("Pact of the Tome");
 		expect(invocationChoice.help).toContain("Lessons of the First Ones: The Origin feat it grants has no reviewed choice or effect yet.");
-		const saved = setCharacterChoice(draft, "class:warlock|xphb:invocations", ["pact-of-the-tome|xphb"]);
+		const secondLevel = {...draft, build: {...draft.build, level: 2}};
+		const saved = setCharacterChoice(secondLevel, "class:warlock|xphb:invocations", ["lessons-of-the-first-ones|xphb"]);
 		expect(createCharacterSheetModel(saved, catalog, context).issues).toContainEqual(expect.objectContaining({
 			id: "class:warlock|xphb:invocations",
-			message: "Pact of the Tome: The three cantrips and two rituals it grants have no reviewed choice yet.",
+			message: "Lessons of the First Ones: The Origin feat it grants has no reviewed choice or effect yet.",
 		}));
 	});
 

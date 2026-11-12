@@ -249,6 +249,14 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 		const options = value.weaponOptions.map(weaponId => option(weaponId, rules.pactWeapons[weaponId].name));
 		result.push(invocationChoice(id, value.weaponChoice, "Pact Weapon", options, value.minimumLevel));
 	}
+	for (const [id, value] of Object.entries(rules.invocations).filter(([, value]) => value.tomeChoices)) {
+		for (const choice of value.tomeChoices) {
+			result.push({
+				...descriptor(`${owner}:${choice.id}`, choice.label, choice.count, getSpellQueryOptions(spellCatalog, choice.query), value.minimumLevel, invocationChoices.includes(id)),
+				dependsOn: {choice: `${owner}:invocations`, option: id},
+			});
+		}
+	}
 	result.push(
 		descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3),
 		descriptor(`${owner}:level-4-feat`, "Level 4 Feat", 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], 4),
