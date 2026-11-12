@@ -110,7 +110,10 @@ have no lineage and no species spells, so they carry no species spellcasting
 ability: the catalog treats a lineage, its spell group, and the species casting
 ability as optional, allows a species without darkvision, and lets a species add
 fixed damage resistances and a hit-point bonus per level (Dwarven Toughness).
-Their printed traits render as features on the sheet.
+Dragonborn and Goliath choose an ancestry whose lineage has no spell group: the
+Dragonborn picks one of the five damage types and gains that resistance, and the
+Goliath picks one of the six Giant Ancestries, which stays printed trait text.
+Their traits render as features on the sheet.
 Imported characters retain their explicit choices; previously selected different
 abilities remain visible and each source's values are displayed separately.
 Species-only reference fixtures also verify that rules permit independent

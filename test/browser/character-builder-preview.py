@@ -781,6 +781,17 @@ def main():
             assert editor.get_by_label('Gnomish Lineage', exact=True).count() == 0
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             assert editor.get_by_label('Size', exact=True).count() == 0
+            # Dragonborn and Goliath choose an ancestry that grants a resistance or
+            # a trait, without any species spells.
+            page.select_option('#new-species', 'Dragonborn|XPHB')
+            page.click('#new-character')
+            assert editor.get_by_label('Draconic Ancestry', exact=True).count() == 1
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
+            for label in ['Acid', 'Cold', 'Fire', 'Lightning', 'Poison']:
+                assert label in group_text(page, editor, 'Draconic Ancestry')
+            page.select_option('#new-species', 'Goliath|XPHB')
+            page.click('#new-character')
+            assert "Storm's Thunder" in group_text(page, editor, 'Giant Ancestry')
             assert not errors, errors
         finally:
             browser.close()

@@ -21,6 +21,59 @@
 	"species": [
 		{
 			"ref": {
+				"name": "Dragonborn",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					187
+				]
+			},
+			"lineageChoice": "lineage",
+			"lineageLabel": "Draconic Ancestry",
+			"commonSpells": [],
+			"savingThrowAdvantages": [],
+			"lineages": [
+				{
+					"id": "acid",
+					"additionalSpellsName": null,
+					"name": "Acid",
+					"resistance": "acid",
+					"notes": []
+				},
+				{
+					"id": "cold",
+					"additionalSpellsName": null,
+					"name": "Cold",
+					"resistance": "cold",
+					"notes": []
+				},
+				{
+					"id": "fire",
+					"additionalSpellsName": null,
+					"name": "Fire",
+					"resistance": "fire",
+					"notes": []
+				},
+				{
+					"id": "lightning",
+					"additionalSpellsName": null,
+					"name": "Lightning",
+					"resistance": "lightning",
+					"notes": []
+				},
+				{
+					"id": "poison",
+					"additionalSpellsName": null,
+					"name": "Poison",
+					"resistance": "poison",
+					"notes": []
+				}
+			]
+		},
+		{
+			"ref": {
 				"name": "Dwarf",
 				"source": "XPHB"
 			},
@@ -83,6 +136,66 @@
 				{
 					"id": "rock",
 					"additionalSpellsName": "Rock Gnome",
+					"resistance": null,
+					"notes": []
+				}
+			]
+		},
+		{
+			"ref": {
+				"name": "Goliath",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					192
+				]
+			},
+			"lineageChoice": "lineage",
+			"lineageLabel": "Giant Ancestry",
+			"commonSpells": [],
+			"savingThrowAdvantages": [],
+			"lineages": [
+				{
+					"id": "clouds-jaunt",
+					"additionalSpellsName": null,
+					"name": "Cloud's Jaunt",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "fires-burn",
+					"additionalSpellsName": null,
+					"name": "Fire's Burn",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "frosts-chill",
+					"additionalSpellsName": null,
+					"name": "Frost's Chill",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "hills-tumble",
+					"additionalSpellsName": null,
+					"name": "Hill's Tumble",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "stones-endurance",
+					"additionalSpellsName": null,
+					"name": "Stone's Endurance",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "storms-thunder",
+					"additionalSpellsName": null,
+					"name": "Storm's Thunder",
 					"resistance": null,
 					"notes": []
 				}
