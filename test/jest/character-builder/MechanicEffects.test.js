@@ -60,6 +60,17 @@ describe("Declarative character mechanics", () => {
 		expect(resolveMechanicEffects([rule], {...state, level: 5})).toEqual([]);
 	});
 
+	it("keeps an optional resource note for variable effects", () => {
+		const rule = annotation();
+		rule.effects = [{type: "resource", value: {id: "test:dice-pool", name: "Dice Pool", maxUses: {$ref: "characterLevel"}, recovery: {long: "all"}, activation: "bonus", note: "Spend one or more dice; each restores 1d6 HP."}}];
+		expect(resolveMechanicEffects([rule], context())).toEqual([{
+			type: "resource",
+			value: {id: "test:dice-pool", name: "Dice Pool", maxUses: 3, recovery: {long: "all"}, activation: "bonus", note: "Spend one or more dice; each restores 1d6 HP."},
+			source,
+			annotationId: "test:sample-feature",
+		}]);
+	});
+
 	it.each([
 		["level", state => { state.level = 2; }],
 		["class", state => { state.classId = "other|test"; }],
@@ -84,6 +95,7 @@ describe("Declarative character mechanics", () => {
 		["invalid healing modifier", rule => { rule.effects[0].value.healing.modifier = "3"; }],
 		["missing resistance damage type", rule => { rule.effects = [{type: "resistance"}]; }],
 		["invalid resistance condition", rule => { rule.effects = [{type: "resistance", damageType: "fire", condition: 3}]; }],
+		["invalid resource note", rule => { rule.effects[0].value.note = 3; }],
 		["missing source", rule => { delete rule.source; }],
 	])("rejects %s explicitly", (_label, change) => {
 		const input = annotation();

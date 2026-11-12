@@ -57,8 +57,9 @@ function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 	switch (effect.type) {
 		case "resource": {
 			const resource = effect.value;
-			keys(resource, ["id", "name", "maxUses", "recovery", "activation", "healing", "spellId", "freeLevel", "spellcastingAbility", "slotLevel"], "resource mechanic");
+			keys(resource, ["id", "name", "maxUses", "recovery", "activation", "healing", "spellId", "freeLevel", "spellcastingAbility", "slotLevel", "note"], "resource mechanic");
 			if (!nonempty(resource.id) || !nonempty(resource.name) || !validInt(resource.maxUses, 1)) throw new TypeError("Invalid resource mechanic values.");
+			if (resource.note !== undefined && !nonempty(resource.note)) throw new TypeError("Invalid resource note.");
 			keys(resource.recovery, ["short", "long"], "resource recovery");
 			if (!Object.keys(resource.recovery).length || Object.values(resource.recovery).some(value => value !== "all" && !validInt(value, 1, integer(resource.maxUses, 1) ? resource.maxUses : Number.MAX_SAFE_INTEGER))) throw new TypeError("Invalid resource recovery values.");
 			if (resource.activation !== undefined && !["action", "bonus", "reaction"].includes(resource.activation)) throw new TypeError("Invalid resource activation.");
