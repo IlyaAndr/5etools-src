@@ -277,6 +277,7 @@ export function renderCharacterSheet (model, catalog) {
 		if (defense.type === "resistance") return `Resistance: ${title(defense.damageType)}`;
 		if (defense.type === "conditionImmunity") return `Immunity: ${title(defense.condition)}`;
 		if (defense.type === "telepathy") return `Telepathy: ${defense.range} ft`;
+		if (defense.type === "blindsight") return `Blindsight: ${defense.range} ft`;
 		if (defense.type === "vision") return `${defense.name}: ${defense.range} ft · ${defense.lighting.join(" / ")} · ${defense.magical && defense.nonmagical ? "magical / nonmagical" : ""}`;
 		if (defense.type === "swim") return `${defense.name}: Swim ${defense.feet} ft${defense.breatheUnderwater ? " · breathe underwater" : ""}`;
 		if (defense.type === "truesight") return `Truesight: ${defense.range} ft`;

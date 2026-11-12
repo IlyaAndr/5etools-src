@@ -64,6 +64,41 @@ export function meetsFeatPrerequisites (featRecord, {level, scores, spellcasting
 	});
 }
 
+const ARMOR_TRAINING = Object.freeze({light: "Light armor", medium: "Medium armor", heavy: "Heavy armor", shield: "Shields"});
+const WEAPON_TRAINING = Object.freeze({martial: "Martial weapons", simple: "Simple weapons"});
+
+/** Read the armor and weapon training a feat grants as display labels. */
+export function getFeatTraining (featRecord) {
+	const training = [];
+	const collect = (entries, labels, field) => {
+		if (entries === undefined) return;
+		if (!Array.isArray(entries)) throw new TypeError(`Unsupported ${featRecord.name} ${field}.`);
+		for (const entry of entries) {
+			if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} ${field}.`);
+			for (const [key, value] of Object.entries(entry)) {
+				if (value !== true || !labels[key]) throw new TypeError(`Unsupported ${featRecord.name} ${field} ${key}.`);
+				if (!training.includes(labels[key])) training.push(labels[key]);
+			}
+		}
+	};
+	collect(featRecord.armorProficiencies, ARMOR_TRAINING, "armor training");
+	collect(featRecord.weaponProficiencies, WEAPON_TRAINING, "weapon training");
+	return training;
+}
+
+/** Read the senses (currently blindsight) a feat grants. */
+export function getFeatSenses (featRecord) {
+	const senses = featRecord?.senses;
+	if (senses === undefined) return [];
+	if (!Array.isArray(senses) || !senses.length) throw new TypeError(`Unsupported ${featRecord.name} senses.`);
+	return senses.map(entry => {
+		if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} sense.`);
+		const [[type, range]] = Object.entries(entry);
+		if (type !== "blindsight" || !Number.isSafeInteger(range) || range < 1) throw new TypeError(`Unsupported ${featRecord.name} sense.`);
+		return {type: "blindsight", range};
+	});
+}
+
 /** Read one spell choice entry, rejecting shapes this subset cannot review. */
 function readSpellEntry (entry, path) {
 	if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`${path}: expected a spell choice entry`);

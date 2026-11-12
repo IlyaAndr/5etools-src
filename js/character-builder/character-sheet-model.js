@@ -10,7 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, meetsFeatPrerequisites} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -256,6 +256,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	const classRecords = classRule.name === "Warlock" ? sources?.warlock?.class : sources?.fighter?.class;
 	const hasSpellcasting = Boolean((classRecords || []).find(candidate => candidate.name === build.class.name && candidate.source === build.class.source)?.spellcastingAbility);
+	const featTraining = [];
+	const featSenses = [];
 	for (const featLevel of classRule.featLevels || []) {
 		if (build.level < featLevel) continue;
 		const featOptions = ["ability-score-improvement|xphb", ...(classRule.generalFeats || [])];
@@ -267,6 +269,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 				issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the feat's prerequisites are not met.`);
 				continue;
 			}
+			featTraining.push(...getFeatTraining(featData));
+			featSenses.push(...getFeatSenses(featData).map(sense => ({...sense, label: featRule.name})));
 			const ability = getFeatAbilityChoice(featData);
 			if (!ability) continue;
 			if (ability.fixed) {
@@ -442,7 +446,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const skillIndex = new Map(model.abilities.flatMap(ability => ability.skills).map(skill => [skill.id, skill]));
 	model.passives = Object.fromEntries(["perception", "insight", "investigation"].map(id => [id, 10 + skillIndex.get(id).modifier]));
 	model.languages = languages.map(id => rules.standardLanguages[id]);
-	model.training = [...classRule.training, backgroundTool];
+	model.training = [...new Set([...classRule.training, backgroundTool, ...featTraining].filter(Boolean))];
 	model.gear = [...equipment.gear];
 	model.gold = Math.round((classRule.gold + background.gold - equipment.cost) * 100) / 100;
 	model.gear.push(`Unspent starting gold: ${model.gold} GP`);
@@ -587,6 +591,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const effect of effectsOf("resistance")) model.defenses.push({type: "resistance", damageType: effect.damageType, ...(effect.condition ? {condition: effect.condition} : {}), provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("conditionImmunity")) model.defenses.push({type: "conditionImmunity", condition: effect.condition, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("telepathy")) model.defenses.push({type: "telepathy", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});
+	for (const sense of featSenses) model.defenses.push({type: sense.type, range: sense.range, provenance: sense.label});
 	for (const effect of effectsOf("vision")) model.defenses.push({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("swimSpeed")) model.defenses.push({type: "swim", name: effect.value.name, feet: model.speed, breatheUnderwater: effect.value.breatheUnderwater, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("truesight")) model.defenses.push({type: "truesight", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});
