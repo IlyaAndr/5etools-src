@@ -4,7 +4,7 @@ import {createSpeciesCatalog} from "../../../js/character-builder/species-catalo
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
-import {getFeatAbilityChoice} from "../../../js/character-builder/feat-choices.js";
+import {getFeatAbilityChoice, getFeatSenses, getFeatTraining} from "../../../js/character-builder/feat-choices.js";
 import {getWarlockChoiceDescriptors} from "../../../js/character-builder/warlock-choices.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -49,8 +49,9 @@ describe("Reviewed general feats", () => {
 		expect(feat.options.map(option => option.id)).toEqual([
 			"ability-score-improvement|xphb", "actor|xphb", "athlete|xphb", "charger|xphb", "crossbow-expert|xphb", "crusher|xphb",
 			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "grappler|xphb", "great-weapon-master|xphb",
-			"inspiring-leader|xphb", "mage-slayer|xphb", "mounted-combatant|xphb", "piercer|xphb", "polearm-master|xphb", "sentinel|xphb",
-			"sharpshooter|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
+			"heavily-armored|xphb", "inspiring-leader|xphb", "lightly-armored|xphb", "mage-slayer|xphb", "martial-weapon-training|xphb",
+			"moderately-armored|xphb", "mounted-combatant|xphb", "piercer|xphb", "polearm-master|xphb", "sentinel|xphb", "sharpshooter|xphb",
+			"skulker|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -94,5 +95,26 @@ describe("Reviewed general feats", () => {
 		expect(model.status).toBe("complete");
 		expect(score(model, "con")).toBe(14);
 		expect(model.features.some(feature => feature.name === "Durable")).toBe(true);
+	});
+
+	it("reads the training and senses a feat grants", () => {
+		expect(getFeatTraining(featRecord("Lightly Armored"))).toEqual(["Light armor", "Shields"]);
+		expect(getFeatTraining(featRecord("Martial Weapon Training"))).toEqual(["Martial weapons"]);
+		expect(getFeatTraining(featRecord("Crusher"))).toEqual([]);
+		expect(getFeatSenses(featRecord("Skulker"))).toEqual([{type: "blindsight", range: 10}]);
+		expect(getFeatSenses(featRecord("Crusher"))).toEqual([]);
+	});
+
+	it("applies armor training from a feat", () => {
+		const model = createCharacterSheetModel(withFeat("lightly-armored|xphb", "dex"), catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.training).toEqual(expect.arrayContaining(["Light armor", "Shields"]));
+		expect(model.features.some(feature => feature.name === "Lightly Armored")).toBe(true);
+	});
+
+	it("applies a feat's blindsight sense", () => {
+		const model = createCharacterSheetModel(withFeat("skulker|xphb"), catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "blindsight", range: 10, provenance: "Skulker"}));
 	});
 });
