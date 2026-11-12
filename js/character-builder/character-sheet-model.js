@@ -38,6 +38,10 @@ function checkRules (rules, document) {
 		if (record.generalFeats !== undefined && (!Array.isArray(record.generalFeats) || !record.generalFeats.length
 			|| record.generalFeats.some(id => typeof id !== "string" || !rules.feats[id])
 			|| new Set(record.generalFeats).size !== record.generalFeats.length)) throw new TypeError("sheetRules.classes: unsupported general feats");
+		if (record.epicBoons !== undefined && (!Array.isArray(record.epicBoons) || !record.epicBoons.length
+			|| record.epicBoons.some(id => typeof id !== "string" || !rules.feats[id])
+			|| new Set(record.epicBoons).size !== record.epicBoons.length
+			|| record.epicBoonLevel === undefined)) throw new TypeError("sheetRules.classes: unsupported epic boons");
 	}
 	for (const [id, feat] of Object.entries(rules.feats)) {
 		if (!feat || typeof feat !== "object" || Array.isArray(feat) || typeof feat.name !== "string"
@@ -262,15 +266,33 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const proficiencies = {armor: new Set(classArmor)};
 	const featTraining = [];
 	const featSenses = [];
-	for (const featLevel of classRule.featLevels || []) {
-		if (build.level < featLevel) continue;
-		const featOptions = ["ability-score-improvement|xphb", ...(classRule.generalFeats || [])];
-		const [featId] = select(`${classOwner}:level-${featLevel}-feat`, featOptions, 1, `Level ${featLevel} feat`);
+	const featSlots = (classRule.featLevels || [])
+		.filter(level => build.level >= level)
+		.map(level => ({
+			choiceId: `${classOwner}:level-${level}-feat`,
+			abilityId: `${classOwner}:level-${level}-feat-ability`,
+			label: `Level ${level} feat`,
+			level,
+			options: ["ability-score-improvement|xphb", ...(classRule.generalFeats || [])],
+			asi: true,
+		}));
+	if (classRule.epicBoonLevel !== undefined && build.level >= classRule.epicBoonLevel) {
+		featSlots.push({
+			choiceId: `${classOwner}:epic-boon`,
+			abilityId: `${classOwner}:epic-boon-ability`,
+			label: "Epic Boon",
+			level: classRule.epicBoonLevel,
+			options: [...(classRule.epicBoons || []), ...(classRule.generalFeats || [])],
+			asi: false,
+		});
+	}
+	for (const slot of featSlots) {
+		const [featId] = select(slot.choiceId, slot.options, 1, slot.label);
 		if (featId && featId !== "ability-score-improvement|xphb") {
 			const featRule = rules.feats[featId];
 			const featData = findFeatRecord(sources, featRule);
 			if (!meetsFeatPrerequisites(featData, {level: build.level, scores, spellcasting: hasSpellcasting, proficiencies})) {
-				issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the feat's prerequisites are not met.`);
+				issue(slot.choiceId, `${featRule.name}: the feat's prerequisites are not met.`);
 				continue;
 			}
 			const grants = getFeatProficiencyGrants(featData);
@@ -280,18 +302,17 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			const ability = getFeatAbilityChoice(featData);
 			if (!ability) continue;
 			if (ability.fixed) {
-				if (scores[ability.fixed] + ability.amount > 20) issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the ability score cannot exceed 20.`);
+				if (scores[ability.fixed] + ability.amount > ability.max) issue(slot.choiceId, `${featRule.name}: the ability score cannot exceed ${ability.max}.`);
 				else scores[ability.fixed] += ability.amount;
 			} else {
-				const choiceId = `${classOwner}:level-${featLevel}-feat-ability`;
-				const [abilityId] = select(choiceId, ability.options, 1, `${featRule.name} ability`);
+				const [abilityId] = select(slot.abilityId, ability.options, 1, `${featRule.name} ability`);
 				if (!abilityId) continue;
-				if (scores[abilityId] + ability.amount > 20) issue(choiceId, `${featRule.name}: the ability score cannot exceed 20.`);
+				if (scores[abilityId] + ability.amount > ability.max) issue(slot.abilityId, `${featRule.name}: the ability score cannot exceed ${ability.max}.`);
 				else scores[abilityId] += ability.amount;
 			}
 			continue;
 		}
-		increases(`${classOwner}:level-${featLevel}-ability-increases`, ABILITY_IDS, scores, false);
+		if (slot.asi) increases(`${classOwner}:level-${slot.level}-ability-increases`, ABILITY_IDS, scores, false);
 	}
 	const equipmentIds = Object.entries(rules.equipment).filter(([, value]) => value.classId === classId).map(([id]) => id);
 	if (!equipmentIds.length) issue(`${classOwner}:equipment`, "No reviewed starting equipment is available for this class.");
@@ -563,6 +584,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const featId = (decisions.get(`${classOwner}:level-${featLevel}-feat`) || [])[0];
 		const featRule = featId && featId !== "ability-score-improvement|xphb" ? rules.feats[featId] : null;
 		feature(record(sources.feats.feat, featRule ? featRule.record.name : "Ability Score Improvement", "feat"), "Feat", "feat");
+	}
+	if (classRule.epicBoonLevel !== undefined && build.level >= classRule.epicBoonLevel) {
+		const boonId = (decisions.get(`${classOwner}:epic-boon`) || [])[0];
+		const boonRule = boonId ? rules.feats[boonId] : null;
+		if (boonRule) feature(record(sources.feats.feat, boonRule.record.name, "feat"), "Epic Boon", "feat");
 	}
 	function resource (definition) {
 		model.resources.push({...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0});

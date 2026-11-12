@@ -284,6 +284,19 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 			}
 		}
 	}
+	if (warlock.epicBoonLevel !== undefined) {
+		const boonOptions = [...(warlock.epicBoons || []), ...(warlock.generalFeats || [])].map(id => option(id, rules.feats[id].name));
+		const boonId = decisions.get(`${owner}:epic-boon`)?.[0];
+		const boonRule = boonId ? rules.feats[boonId] : null;
+		result.push(descriptor(`${owner}:epic-boon`, "Epic Boon", 1, boonOptions, warlock.epicBoonLevel));
+		const ability = boonRule ? getFeatAbilityChoice(findFeatRecord(sources, boonRule)) : null;
+		if (boonRule && ability?.options) {
+			result.push({
+				...descriptor(`${owner}:epic-boon-ability`, `${boonRule.name} Ability`, 1, ability.options.map(id => option(id, abilityName(id))), warlock.epicBoonLevel),
+				dependsOn: {choice: `${owner}:epic-boon`, option: boonId},
+			});
+		}
+	}
 	return result;
 }
 

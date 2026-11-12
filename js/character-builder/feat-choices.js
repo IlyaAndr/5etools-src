@@ -15,22 +15,31 @@ export function getFeatRule (background, rules) {
 
 /**
  * Read a general feat's Ability Score Increase from its source record: either a
- * single fixed ability or a choice among a small set, always +1.
+ * single fixed ability or a choice among a small set, always +1. Epic Boons
+ * raise the ability maximum to 30 instead of 20.
  */
 export function getFeatAbilityChoice (featRecord) {
 	if (!Array.isArray(featRecord?.ability) || featRecord.ability.length !== 1) return null;
 	const entry = featRecord.ability[0];
 	if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} ability increase.`);
+	const max = readAbilityMax(featRecord, entry);
 	if (entry.choose !== undefined) {
 		const choose = entry.choose;
 		if (!choose || typeof choose !== "object" || !Array.isArray(choose.from) || !choose.from.length
 			|| (choose.amount !== undefined && choose.amount !== 1)
 			|| choose.from.some(ability => !ABILITY_IDS.includes(ability))) throw new TypeError(`Unsupported ${featRecord.name} ability choice.`);
-		return {options: [...choose.from], amount: 1};
+		return {options: [...choose.from], amount: 1, max};
 	}
 	const abilities = ABILITY_IDS.filter(ability => entry[ability] !== undefined);
-	if (abilities.length !== 1 || entry[abilities[0]] !== 1 || Object.keys(entry).some(key => !ABILITY_IDS.includes(key))) throw new TypeError(`Unsupported ${featRecord.name} ability increase.`);
-	return {fixed: abilities[0], amount: 1};
+	if (abilities.length !== 1 || entry[abilities[0]] !== 1 || Object.keys(entry).some(key => !ABILITY_IDS.includes(key) && key !== "max")) throw new TypeError(`Unsupported ${featRecord.name} ability increase.`);
+	return {fixed: abilities[0], amount: 1, max};
+}
+
+/** Read the ability maximum a reviewed feat raises, defaulting to the usual 20. */
+function readAbilityMax (featRecord, entry) {
+	if (entry.max === undefined) return 20;
+	if (!Number.isSafeInteger(entry.max) || entry.max <= 20 || entry.max > 30) throw new TypeError(`Unsupported ${featRecord.name} ability maximum.`);
+	return entry.max;
 }
 
 /** Find the original record behind a reviewed feat annotation. */
@@ -115,7 +124,7 @@ export function getFeatTraining (featRecord) {
 	];
 }
 
-/** Read the senses (currently blindsight) a feat grants. */
+/** Read the senses (blindsight or truesight) a feat grants. */
 export function getFeatSenses (featRecord) {
 	const senses = featRecord?.senses;
 	if (senses === undefined) return [];
@@ -123,8 +132,8 @@ export function getFeatSenses (featRecord) {
 	return senses.map(entry => {
 		if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} sense.`);
 		const [[type, range]] = Object.entries(entry);
-		if (type !== "blindsight" || !Number.isSafeInteger(range) || range < 1) throw new TypeError(`Unsupported ${featRecord.name} sense.`);
-		return {type: "blindsight", range};
+		if ((type !== "blindsight" && type !== "truesight") || !Number.isSafeInteger(range) || range < 1) throw new TypeError(`Unsupported ${featRecord.name} sense.`);
+		return {type, range};
 	});
 }
 

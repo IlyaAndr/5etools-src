@@ -709,6 +709,15 @@ def main():
             editor.get_by_label('Level 8 Ability Increases', exact=True).select_option('')
             editor.get_by_label('Level 8 Feat', exact=True).select_option('')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            # The Epic Boon slot appears at level 19 with the reviewed boons and
+            # hides again below that level.
+            editor.get_by_label('Level', exact=True).select_option('19')
+            assert 'Boon of Combat Prowess' in group_text(page, editor, 'Epic Boon')
+            editor.get_by_label('Epic Boon', exact=True).select_option('boon-of-truesight|xphb')
+            assert editor.get_by_label('Boon of Truesight Ability', exact=True).count() == 1
+            editor.get_by_label('Epic Boon', exact=True).select_option('')
+            editor.get_by_label('Level', exact=True).select_option('5')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             warlock_pdf = output / 'created-warlock.pdf'
             export_pdf(page, warlock_pdf)
             pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(warlock_pdf), '-'], text=True))

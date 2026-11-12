@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld until Origin feats are modelled. Ability Score Improvement at levels 4/8/12/16 is joined by 31 reviewed general feats whose ability increases, armor/weapon training, and blindsight are applied and whose level, ability, spellcasting, and armor-proficiency prerequisites are enforced against the class's armor training plus the training granted by earlier feats; general feats that also grant skill or tool proficiencies, saving throws, or spells, and the level-19 Epic Boon, are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld until Origin feats are modelled. Ability Score Improvement at levels 4/8/12/16 is joined by 31 reviewed general feats whose ability increases, armor/weapon training, and blindsight are applied and whose level, ability, spellcasting, and armor-proficiency prerequisites are enforced against the class's armor training plus the training granted by earlier feats, and by the level-19 Epic Boon slot with all 12 reviewed XPHB boons (plus the general feats), whose ability increase may raise a score to 30 and whose truesight is applied; other boon effects stay narrative. General feats that also grant skill or tool proficiencies, saving throws, or spells are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -329,6 +329,90 @@
 				"name": "Shield Master",
 				"source": "XPHB"
 			}
+		},
+		"boon-of-combat-prowess|xphb": {
+			"name": "Boon of Combat Prowess",
+			"record": {
+				"name": "Boon of Combat Prowess",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-dimensional-travel|xphb": {
+			"name": "Boon of Dimensional Travel",
+			"record": {
+				"name": "Boon of Dimensional Travel",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-energy-resistance|xphb": {
+			"name": "Boon of Energy Resistance",
+			"record": {
+				"name": "Boon of Energy Resistance",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-fate|xphb": {
+			"name": "Boon of Fate",
+			"record": {
+				"name": "Boon of Fate",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-fortitude|xphb": {
+			"name": "Boon of Fortitude",
+			"record": {
+				"name": "Boon of Fortitude",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-irresistible-offense|xphb": {
+			"name": "Boon of Irresistible Offense",
+			"record": {
+				"name": "Boon of Irresistible Offense",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-recovery|xphb": {
+			"name": "Boon of Recovery",
+			"record": {
+				"name": "Boon of Recovery",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-skill|xphb": {
+			"name": "Boon of Skill",
+			"record": {
+				"name": "Boon of Skill",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-speed|xphb": {
+			"name": "Boon of Speed",
+			"record": {
+				"name": "Boon of Speed",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-spell-recall|xphb": {
+			"name": "Boon of Spell Recall",
+			"record": {
+				"name": "Boon of Spell Recall",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-the-night-spirit|xphb": {
+			"name": "Boon of the Night Spirit",
+			"record": {
+				"name": "Boon of the Night Spirit",
+				"source": "XPHB"
+			}
+		},
+		"boon-of-truesight|xphb": {
+			"name": "Boon of Truesight",
+			"record": {
+				"name": "Boon of Truesight",
+				"source": "XPHB"
+			}
 		}
 	},
 	"classes": {
@@ -460,6 +544,21 @@
 				"spell-sniper|xphb",
 				"war-caster|xphb",
 				"weapon-master|xphb"
+			],
+			"epicBoonLevel": 19,
+			"epicBoons": [
+				"boon-of-combat-prowess|xphb",
+				"boon-of-dimensional-travel|xphb",
+				"boon-of-energy-resistance|xphb",
+				"boon-of-fate|xphb",
+				"boon-of-fortitude|xphb",
+				"boon-of-irresistible-offense|xphb",
+				"boon-of-recovery|xphb",
+				"boon-of-skill|xphb",
+				"boon-of-speed|xphb",
+				"boon-of-spell-recall|xphb",
+				"boon-of-the-night-spirit|xphb",
+				"boon-of-truesight|xphb"
 			],
 			"subclasses": [
 				{
