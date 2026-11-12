@@ -141,7 +141,7 @@ describe("Independent class and species contributions", () => {
 
 	it("keeps an unsupported background incomplete instead of inventing equipment", () => {
 		const document = example("Fighter", 1);
-		document.build.background = {name: "Sage", source: "XPHB"};
+		document.build.background = {name: "Haunted One", source: "VRGTR"};
 		document.build.choices = document.build.choices.filter(choice => !choice.id.startsWith("background:"));
 		const model = createCharacterSheetModel(document, catalog, context);
 		expect(model.status).toBe("incomplete");

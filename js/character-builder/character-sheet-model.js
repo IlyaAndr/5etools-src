@@ -20,7 +20,7 @@ const signed = value => `${value >= 0 ? "+" : ""}${value}`;
 function checkRules (rules, document) {
 	if (rules.schemaVersion !== 1 || rules.ruleset !== document.ruleset) throw new TypeError("sheetRules: unsupported version or ruleset");
 	if (["id", "version", "revision"].some(field => rules.dataset?.[field] !== document.dataset[field])) throw new TypeError("sheetRules.dataset: does not match the character's pinned dataset");
-	for (const field of ["classes", "backgrounds", "feats", "weapons", "equipment", "invocations", "pactWeapons", "standardLanguages"]) {
+	for (const field of ["classes", "backgrounds", "feats", "tools", "weapons", "equipment", "invocations", "pactWeapons", "standardLanguages"]) {
 		if (!rules[field] || typeof rules[field] !== "object" || Array.isArray(rules[field])) throw new TypeError(`sheetRules.${field}: missing reviewed records`);
 	}
 	for (const record of Object.values(rules.classes)) {
@@ -47,6 +47,17 @@ function checkRules (rules, document) {
 		if (!feat || typeof feat !== "object" || Array.isArray(feat) || typeof feat.name !== "string"
 			|| !feat.record || typeof feat.record.name !== "string" || typeof feat.record.source !== "string") throw new TypeError(`sheetRules.feats.${id}: unsupported feat annotation`);
 		if (feat.spellGroup !== undefined && (typeof feat.spellGroup !== "string" || !Array.isArray(feat.abilities) || !Array.isArray(feat.spells) || !feat.spells.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choices`);
+		if (feat.proficiencyChoice !== undefined) {
+			const choice = feat.proficiencyChoice;
+			if (!choice || typeof choice !== "object" || Array.isArray(choice)
+				|| !Number.isSafeInteger(choice.count) || choice.count < 1 || choice.count > 5
+				|| (choice.skills !== undefined && typeof choice.skills !== "boolean")
+				|| (choice.tools !== undefined && (!Array.isArray(choice.tools) || choice.tools.some(tool => typeof tool !== "string" || !rules.tools[tool])))
+				|| (!choice.skills && !choice.tools?.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported proficiency choice`);
+		}
+	}
+	for (const [id, tool] of Object.entries(rules.tools)) {
+		if (typeof tool !== "string" || !tool.trim()) throw new TypeError(`sheetRules.tools.${id}: unsupported tool annotation`);
 	}
 	for (const [id, invocation] of Object.entries(rules.invocations)) {
 		if (!invocation || typeof invocation !== "object" || Array.isArray(invocation) || typeof invocation.name !== "string" || !invocation.name.trim()
@@ -244,7 +255,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const backgroundSkills = backgroundSourceChoices?.backgroundSkills || background.skills;
 	const classSkills = select(`${classOwner}:skills`, classSourceChoices?.classSkills || classRule.skillOptions, classSourceChoices?.classSkillCount || 2, "Class skills");
 	if (classSkills.some(skill => backgroundSkills.includes(skill))) issue(`${classOwner}:skills`, "Choose class skills distinct from the background proficiencies; replacement choices are outside this subset.");
-	const skillProficiencies = new Set([...backgroundSkills, ...classSkills]);
+	const featProficiencies = featRule.proficiencyChoice ? select(`${featOwner}:proficiencies`, null, null, `${featRule.name} proficiencies`) : [];
+	const featSkills = featProficiencies.filter(value => value.startsWith("skill:")).map(value => value.slice("skill:".length));
+	const featTools = featProficiencies.filter(value => value.startsWith("tool:")).map(value => rules.tools[value.slice("tool:".length)]);
+	const skillProficiencies = new Set([...backgroundSkills, ...classSkills, ...featSkills]);
+	for (const skill of featSkills) if (backgroundSkills.includes(skill) || classSkills.includes(skill)) issue(`${featOwner}:proficiencies`, `${featRule.name}: that skill is already granted; replacement choices are outside this subset.`);
 	const languages = select("character:languages", Object.keys(rules.standardLanguages), 3, "Languages");
 	if (!languages.includes("common")) issue("character:languages", "Common and two other Standard languages are required.");
 	let backgroundTool = background.tool;
@@ -318,7 +333,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	if (!equipmentIds.length) issue(`${classOwner}:equipment`, "No reviewed starting equipment is available for this class.");
 	const [equipmentId] = select(`${classOwner}:equipment`, equipmentIds, 1, "Equipment purchase");
 	const equipment = equipmentId ? resolveStartingEquipment(document, rules, equipmentId) : null;
-	if (equipment && equipment.cost > classRule.gold + background.gold) issue(`${classOwner}:equipment`, "The selected equipment exceeds the starting gold budget.");
+	if (equipment && equipment.classCost > classRule.gold + background.gold) issue(`${classOwner}:equipment`, "The selected equipment exceeds the starting gold budget.");
 	let masteries = [];
 	let invocations = [];
 	let cantrips = [];
@@ -473,9 +488,9 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const skillIndex = new Map(model.abilities.flatMap(ability => ability.skills).map(skill => [skill.id, skill]));
 	model.passives = Object.fromEntries(["perception", "insight", "investigation"].map(id => [id, 10 + skillIndex.get(id).modifier]));
 	model.languages = languages.map(id => rules.standardLanguages[id]);
-	model.training = [...new Set([...classRule.training, backgroundTool, ...featTraining].filter(Boolean))];
+	model.training = [...new Set([...classRule.training, backgroundTool, ...featTools, ...featTraining].filter(Boolean))];
 	model.gear = [...equipment.gear];
-	model.gold = Math.round((classRule.gold + background.gold - equipment.cost) * 100) / 100;
+	model.gold = Math.round((classRule.gold + background.gold - equipment.classCost) * 100) / 100;
 	model.gear.push(`Unspent starting gold: ${model.gold} GP`);
 	const armor = equipment.armor;
 	const armorValue = armor.base + (armor.dexterity ? mods.dex : 0) + armor.shield + effectsOf("armorBonus").reduce((sum, effect) => sum + effect.amount, 0);

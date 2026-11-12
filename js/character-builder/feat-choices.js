@@ -207,27 +207,45 @@ export function getFeatSourceChoices (sources, featRule) {
 	return {record: matches[0], abilities: [...abilities], spellChoices: readSpellChoices(group, featRule.rule.name)};
 }
 
+/** Build the skill and tool options for a feat's reviewed proficiency choice. */
+export function getFeatProficiencyOptions (annotation, rules, skillGroups) {
+	const choice = annotation?.proficiencyChoice;
+	if (!choice) return null;
+	const options = [];
+	if (choice.skills) for (const group of skillGroups) for (const skill of group.skills) options.push({id: `skill:${skill.id}`, label: skill.name});
+	for (const toolId of choice.tools || []) options.push({id: `tool:${toolId}`, label: rules.tools[toolId]});
+	if (options.length < choice.count) throw new TypeError(`${annotation.name}: not enough reviewed proficiencies.`);
+	return {count: choice.count, options};
+}
+
 /** Return origin-feat choices independently of the species or class. */
 export function getFeatChoiceDescriptors (document, {rules, sources, spells, spellCatalog: preparedSpellCatalog} = {}) {
 	validateCharacterDocument(document);
 	const feat = getFeatRule(document.build.background, rules);
-	if (!feat?.rule.spellGroup) return [];
+	if (!feat) return [];
+	const descriptor = describeChoices(document);
+	const label = feat.rule.record.name;
+	const result = [];
+	if (feat.rule.proficiencyChoice) {
+		const choice = getFeatProficiencyOptions(feat.rule, rules, createSkillCatalog(sources?.skills, sources?.abilityNames));
+		result.push(descriptor(`${feat.owner}:proficiencies`, `${label} Proficiencies`, choice.count, choice.options));
+	}
+	if (!feat.rule.spellGroup) return result;
 	const sourceChoices = getFeatSourceChoices(sources, feat);
 	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
 	const abilityName = id => abilities.find(ability => ability.id === id)?.name || id;
 	const rawSpells = spells?.spell || sources?.spells?.spell || spells || sources?.spells;
 	const spellCatalog = resolveSpellCatalog({spellCatalog: preparedSpellCatalog, spells: rawSpells, sources});
 	if (!spellCatalog) throw new TypeError("Missing spell list data.");
-	const descriptor = describeChoices(document);
-	const label = feat.rule.record.name;
 	const cantripChoice = sourceChoices.spellChoices.find(choice => choice.id === "cantrips");
 	if (!cantripChoice) throw new TypeError(`${label}: no cantrip choices`);
 	return [
-		descriptor(`${feat.owner}:ability`, `${label} Spellcasting Ability`, 1, sourceChoices.abilities.map(id => ({id, label: abilityName(id)}))),
-		descriptor(`${feat.owner}:cantrips`, `${label} ${cantripChoice.label}`, cantripChoice.count, getSpellQueryOptions(spellCatalog, cantripChoice.query)),
+		...result,
+		descriptor(`${feat.owner}:ability`, `${feat.rule.name} Spellcasting Ability`, 1, sourceChoices.abilities.map(id => ({id, label: abilityName(id)}))),
+		descriptor(`${feat.owner}:cantrips`, `${feat.rule.name} ${cantripChoice.label}`, cantripChoice.count, getSpellQueryOptions(spellCatalog, cantripChoice.query)),
 		// The level-1 spell carries the feat's free-use mechanic, including the
 		// reviewed Healing Word healing rider, so its reviewed spell stays an
 		// annotation instead of widening to every class spell.
-		descriptor(`${feat.owner}:spell`, `${label} Level 1 Spell`, feat.rule.spells.length, getSpellOptions(rawSpells, feat.rule.spells)),
+		descriptor(`${feat.owner}:spell`, `${feat.rule.name} Level 1 Spell`, feat.rule.spells.length, getSpellOptions(rawSpells, feat.rule.spells)),
 	];
 }

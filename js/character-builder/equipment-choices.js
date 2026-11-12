@@ -33,6 +33,9 @@ export function resolveStartingEquipment (document, rules, equipmentId) {
 	return {
 		id: equipmentId,
 		cost: classPackage.cost + background.cost,
+		// Background gear is granted with the background, so it never draws on
+		// the class starting-gold budget.
+		classCost: classPackage.cost,
 		armor: classPackage.armor,
 		weapons: classPackage.weapons,
 		gear: [...classPackage.gear, ...background.gear],
