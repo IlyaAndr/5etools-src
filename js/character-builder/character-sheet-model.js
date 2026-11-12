@@ -527,6 +527,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const resistance of species.resistances) model.defenses.push({type: "resistance", damageType: resistance});
 	for (const effect of effectsOf("resource")) resource({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("resistance")) model.defenses.push({type: "resistance", damageType: effect.damageType, ...(effect.condition ? {condition: effect.condition} : {}), provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("conditionImmunity")) model.defenses.push({type: "conditionImmunity", condition: effect.condition, provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("telepathy")) model.defenses.push({type: "telepathy", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("vision")) model.defenses.push({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("swimSpeed")) model.defenses.push({type: "swim", name: effect.value.name, feet: model.speed, breatheUnderwater: effect.value.breatheUnderwater, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("truesight")) model.defenses.push({type: "truesight", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});

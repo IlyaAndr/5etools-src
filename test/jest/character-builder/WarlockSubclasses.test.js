@@ -168,4 +168,37 @@ describe("XPHB Warlock patrons", () => {
 		const fiend = createCharacterSheetModel(levelSix("fiend|xphb"), catalog, context);
 		expect(fiend.resources.find(resource => resource.name === "Dark One's Own Luck").maxUses).toBeGreaterThanOrEqual(1);
 	});
+
+	it("declares the patron immunity and sense against unique source features", () => {
+		const fields = ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"];
+		const records = sources.warlock.subclassFeature;
+		for (const [id, patron, level, effect] of [
+			["archfey-beguiling-defenses", "archfey|xphb", 10, {type: "conditionImmunity", condition: "charmed"}],
+			["great-old-one-awakened-mind", "great-old-one|xphb", 3, {type: "telepathy", range: 30}],
+		]) {
+			const annotation = context.rules.mechanics.find(entry => entry.id === id);
+			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
+			expect(annotation.effects).toEqual([effect]);
+			const matches = records.filter(candidate => fields.every(field => annotation.source[field] === undefined || annotation.source[field] === candidate[field]));
+			expect(matches).toHaveLength(1);
+		}
+	});
+
+	it("grants the Great Old One telepathy at level 3", () => {
+		const model = createCharacterSheetModel(setCharacterChoice(levelThree(), subclassId, ["great-old-one|xphb"]), catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "telepathy", range: 30, annotationId: "great-old-one-awakened-mind"}));
+	});
+
+	it("applies a subclass condition immunity to the defenses", () => {
+		const rules = clone(context.rules);
+		rules.mechanics.push({
+			id: "test:archfey-immunity",
+			source: {type: "subclassFeature", name: "Archfey Patron", source: "XPHB", className: "Warlock", classSource: "XPHB", subclassShortName: "Archfey", subclassSource: "XPHB", level: 3},
+			when: {subclassId: "archfey|xphb"},
+			effects: [{type: "conditionImmunity", condition: "charmed"}],
+		});
+		const model = createCharacterSheetModel(setCharacterChoice(levelThree(), subclassId, ["archfey|xphb"]), catalog, {...context, rules});
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "conditionImmunity", condition: "charmed", annotationId: "test:archfey-immunity"}));
+	});
 });

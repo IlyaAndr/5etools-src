@@ -71,6 +71,15 @@ describe("Declarative character mechanics", () => {
 		}]);
 	});
 
+	it("applies condition immunity and telepathy effects", () => {
+		const rule = annotation();
+		rule.effects = [{type: "conditionImmunity", condition: "charmed"}, {type: "telepathy", range: 30}];
+		expect(resolveMechanicEffects([rule], context())).toEqual([
+			{type: "conditionImmunity", condition: "charmed", source, annotationId: "test:sample-feature"},
+			{type: "telepathy", range: 30, source, annotationId: "test:sample-feature"},
+		]);
+	});
+
 	it.each([
 		["level", state => { state.level = 2; }],
 		["class", state => { state.classId = "other|test"; }],
@@ -96,6 +105,8 @@ describe("Declarative character mechanics", () => {
 		["missing resistance damage type", rule => { rule.effects = [{type: "resistance"}]; }],
 		["invalid resistance condition", rule => { rule.effects = [{type: "resistance", damageType: "fire", condition: 3}]; }],
 		["invalid resource note", rule => { rule.effects[0].value.note = 3; }],
+		["missing condition immunity", rule => { rule.effects = [{type: "conditionImmunity"}]; }],
+		["non-numeric telepathy range", rule => { rule.effects = [{type: "telepathy", range: "30"}]; }],
 		["missing source", rule => { delete rule.source; }],
 	])("rejects %s explicitly", (_label, change) => {
 		const input = annotation();

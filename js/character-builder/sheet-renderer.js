@@ -275,6 +275,8 @@ export function renderCharacterSheet (model, catalog) {
 	const equipment = block("Equipment & training", `<p>${model.gear.map(gearLabel).map(text).join(" · ")}</p><p><strong>Training:</strong> ${model.training.map(text).join(" · ")}</p><p><strong>Languages:</strong> ${model.languages.map(text).join(", ")}</p>`);
 	const defenseValues = model.defenses.map(defense => {
 		if (defense.type === "resistance") return `Resistance: ${title(defense.damageType)}`;
+		if (defense.type === "conditionImmunity") return `Immunity: ${title(defense.condition)}`;
+		if (defense.type === "telepathy") return `Telepathy: ${defense.range} ft`;
 		if (defense.type === "vision") return `${defense.name}: ${defense.range} ft · ${defense.lighting.join(" / ")} · ${defense.magical && defense.nonmagical ? "magical / nonmagical" : ""}`;
 		if (defense.type === "swim") return `${defense.name}: Swim ${defense.feet} ft${defense.breatheUnderwater ? " · breathe underwater" : ""}`;
 		if (defense.type === "truesight") return `Truesight: ${defense.range} ft`;

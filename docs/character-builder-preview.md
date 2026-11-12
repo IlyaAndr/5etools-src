@@ -52,7 +52,7 @@ background ability choices come from the original class and background records.
 Warlock spell and invocation progression also uses those records, and each
 patron's expanded spell list is derived from its subclass record, patron innate
 free casts and limited-use pools are tracked as resources, and patron damage
-resistances apply.
+resistances, condition immunities, and senses apply.
 Equipment and
 invocation choice lists use reviewed annotations; Warlock spell lists and Magic
 Initiate cantrips come from the same 5etools filter expressions the site uses,

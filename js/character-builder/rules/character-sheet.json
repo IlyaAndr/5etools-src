@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, and Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, and Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -1798,6 +1798,54 @@
 						},
 						"note": "When you hit a creature, banish it; it takes 8d10 Psychic damage when it returns."
 					}
+				}
+			]
+		},
+		{
+			"id": "archfey-beguiling-defenses",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Beguiling Defenses",
+				"source": "XPHB",
+				"page": 159,
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"subclassShortName": "Archfey",
+				"subclassSource": "XPHB",
+				"level": 10
+			},
+			"when": {
+				"subclassId": "archfey|xphb",
+				"minimumLevel": 10
+			},
+			"effects": [
+				{
+					"type": "conditionImmunity",
+					"condition": "charmed"
+				}
+			]
+		},
+		{
+			"id": "great-old-one-awakened-mind",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Awakened Mind",
+				"source": "XPHB",
+				"page": 162,
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"subclassShortName": "Great Old One",
+				"subclassSource": "XPHB",
+				"level": 3
+			},
+			"when": {
+				"subclassId": "great-old-one|xphb",
+				"minimumLevel": 3
+			},
+			"effects": [
+				{
+					"type": "telepathy",
+					"range": 30
 				}
 			]
 		}
