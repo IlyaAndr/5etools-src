@@ -86,7 +86,15 @@ and is explained by the rules text; the player chooses two further Standard
 languages. Rare languages are not offered yet.
 
 Species, background, origin-feat, class, and equipment choices are supplied by
-independent providers and composed by shared code. The sheet calculator applies
+independent providers and composed by shared code. All 16 XPHB backgrounds are
+reviewed: each brings its source ability list, two fixed skills, its tool (fixed,
+or one of every reviewed artisan's tool, musical instrument, or gaming set), its
+Origin feat, 50 GP, and its granted gear, and that gear never draws on the class
+starting-gold budget. The ten XPHB Origin feats are annotated too; Magic Initiate
+(Druid) and (Wizard) carry their own reviewed level-1 spell and free cast, and a
+feat may declare a `proficiencyChoice` so Skilled, Crafter, and Musician offer
+their skills and tools from the reviewed `rules.tools` catalog. The sheet
+calculator applies
 the same composition. Each class selects its own starting equipment package, and
 the selected background adds its fixed gear independently, so changing a
 background never changes the class package or its armor and weapons. Background

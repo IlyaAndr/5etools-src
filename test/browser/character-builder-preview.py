@@ -555,16 +555,16 @@ def main():
             # one spellcasting ability; it is shown as a fixed value instead of a
             # selector.
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
-            assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).count() == 0
+            assert editor.get_by_label('Magic Initiate (Cleric) Spellcasting Ability', exact=True).count() == 0
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Species Spellcasting Ability')
-            assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate Spellcasting Ability')
+            assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Cleric) Spellcasting Ability')
             assert 'Charisma' in group_text(page, editor, 'Species Spellcasting Ability')
             assert editor.get_by_label('Subclass', exact=True).count() == 0
             assert editor.get_by_label('Level 4 Feat', exact=True).count() == 0
             assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
             assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
             assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
-            assert 'Healing Word' in group_text(page, editor, 'Magic Initiate Level 1 Spell')
+            assert 'Healing Word' in group_text(page, editor, 'Magic Initiate (Cleric) Level 1 Spell')
             assert 'Leather Armor' in group_text(page, editor, 'Starting Equipment')
             editor.get_by_label('Character name').fill('Created warlock')
             editor.get_by_label('Character name').press('Tab')
@@ -748,7 +748,7 @@ def main():
             page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Imported mixed warlock'")
             page.click('#edit-fighter')
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'int'
-            assert editor.get_by_label('Magic Initiate Spellcasting Ability', exact=True).input_value() == 'wis'
+            assert editor.get_by_label('Magic Initiate (Cleric) Spellcasting Ability', exact=True).input_value() == 'wis'
             with page.expect_download() as download_info:
                 page.click('#save-character')
             retained_warlock = json.loads(Path(download_info.value.path()).read_text())
@@ -766,6 +766,13 @@ def main():
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Species Spellcasting Ability')
             assert 'Dice Set' in group_text(page, editor, 'Background Tool')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
+            # Every 2024 background is reviewed; Sage brings its own origin feat,
+            # a fixed tool instead of a category choice, and the Wizard spell list.
+            page.select_option('#new-background', 'Sage|XPHB')
+            page.click('#new-character')
+            assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Wizard) Spellcasting Ability')
+            assert 'Shield' in group_text(page, editor, 'Magic Initiate (Wizard) Level 1 Spell')
+            assert editor.get_by_label('Background Tool', exact=True).count() == 0
             assert not errors, errors
         finally:
             browser.close()

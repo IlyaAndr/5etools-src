@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld until Origin feats are modelled. Ability Score Improvement at levels 4/8/12/16 is joined by 31 reviewed general feats whose ability increases, armor/weapon training, and blindsight are applied and whose level, ability, spellcasting, and armor-proficiency prerequisites are enforced against the class's armor training plus the training granted by earlier feats, and by the level-19 Epic Boon slot with all 12 reviewed XPHB boons (plus the general feats), whose ability increase may raise a score to 30 and whose truesight is applied; other boon effects stay narrative. General feats that also grant skill or tool proficiencies, saving throws, or spells are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, all 16 XPHB backgrounds, and the class's own equipment package plus the background's granted gear; all 10 XPHB Origin feats with their spell, skill, and tool choices; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld because it grants a free choice of any Origin feat, which needs its own reviewed choice. Ability Score Improvement at levels 4/8/12/16 is joined by 31 reviewed general feats whose ability increases, armor/weapon training, and blindsight are applied and whose level, ability, spellcasting, and armor-proficiency prerequisites are enforced against the class's armor training plus the training granted by earlier feats, and by the level-19 Epic Boon slot with all 12 reviewed XPHB boons (plus the general feats), whose ability increase may raise a score to 30 and whose truesight is applied; other boon effects stay narrative. General feats that also grant skill or tool proficiencies, saving throws, or spells are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -27,6 +27,413 @@
 		"orc": "Orc"
 	},
 	"backgrounds": {
+		"acolyte|xphb": {
+			"name": "Acolyte",
+			"abilities": [
+				"int",
+				"wis",
+				"cha"
+			],
+			"skills": [
+				"insight",
+				"religion"
+			],
+			"tool": "Calligrapher's Supplies",
+			"feat": "Magic Initiate (Cleric)",
+			"featId": "magic-initiate-cleric|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 41,
+				"gear": [
+					"Calligrapher's Supplies (10 GP)",
+					"Book: Occult Lore (25 GP)",
+					"Holy Symbol: Amulet (5 GP)",
+					"Robe (1 GP)"
+				]
+			},
+			"provenance": {
+				"sourceId": "srd-5.2.1",
+				"pages": [
+					83
+				]
+			}
+		},
+		"artisan|xphb": {
+			"name": "Artisan",
+			"abilities": [
+				"str",
+				"dex",
+				"int"
+			],
+			"skills": [
+				"investigation",
+				"persuasion"
+			],
+			"toolOptions": {
+				"alchemists-supplies|xphb": "Alchemist's Supplies",
+				"brewers-supplies|xphb": "Brewer's Supplies",
+				"calligraphers-supplies|xphb": "Calligrapher's Supplies",
+				"carpenters-tools|xphb": "Carpenter's Tools",
+				"cartographers-tools|xphb": "Cartographer's Tools",
+				"cobblers-tools|xphb": "Cobbler's Tools",
+				"cooks-utensils|xphb": "Cook's Utensils",
+				"glassblowers-tools|xphb": "Glassblower's Tools",
+				"jewelers-tools|xphb": "Jeweler's Tools",
+				"leatherworkers-tools|xphb": "Leatherworker's Tools",
+				"masons-tools|xphb": "Mason's Tools",
+				"painters-supplies|xphb": "Painter's Supplies",
+				"potters-tools|xphb": "Potter's Tools",
+				"smiths-tools|xphb": "Smith's Tools",
+				"tinkers-tools|xphb": "Tinker's Tools",
+				"weavers-tools|xphb": "Weaver's Tools",
+				"woodcarvers-tools|xphb": "Woodcarver's Tools"
+			},
+			"feat": "Crafter",
+			"featId": "crafter|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 22.5,
+				"gear": [
+					"Smith's Tools (20 GP)",
+					"Pouch (5 SP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"charlatan|xphb": {
+			"name": "Charlatan",
+			"abilities": [
+				"dex",
+				"con",
+				"cha"
+			],
+			"skills": [
+				"deception",
+				"sleight-of-hand"
+			],
+			"tool": "Forgery Kit",
+			"feat": "Skilled",
+			"featId": "skilled|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 35,
+				"gear": [
+					"Forgery Kit (15 GP)",
+					"Costume (5 GP)",
+					"Fine Clothes (15 GP)"
+				]
+			}
+		},
+		"criminal|xphb": {
+			"name": "Criminal",
+			"abilities": [
+				"dex",
+				"con",
+				"int"
+			],
+			"skills": [
+				"sleight-of-hand",
+				"stealth"
+			],
+			"tool": "Thieves' Tools",
+			"feat": "Alert",
+			"featId": "alert|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 31.5,
+				"gear": [
+					"Dagger (2 GP)",
+					"Thieves' Tools (25 GP)",
+					"Crowbar (2 GP)",
+					"Pouch (5 SP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"entertainer|xphb": {
+			"name": "Entertainer",
+			"abilities": [
+				"str",
+				"dex",
+				"cha"
+			],
+			"skills": [
+				"acrobatics",
+				"performance"
+			],
+			"toolOptions": {
+				"bagpipes|xphb": "Bagpipes",
+				"drum|xphb": "Drum",
+				"dulcimer|xphb": "Dulcimer",
+				"flute|xphb": "Flute",
+				"horn|xphb": "Horn",
+				"lute|xphb": "Lute",
+				"lyre|xphb": "Lyre",
+				"pan-flute|xphb": "Pan Flute",
+				"shawm|xphb": "Shawm",
+				"viol|xphb": "Viol"
+			},
+			"feat": "Musician",
+			"featId": "musician|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 52,
+				"gear": [
+					"Lute (35 GP)",
+					"Costume (5 GP)",
+					"Mirror (5 GP)",
+					"Perfume (5 GP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"farmer|xphb": {
+			"name": "Farmer",
+			"abilities": [
+				"str",
+				"con",
+				"wis"
+			],
+			"skills": [
+				"animal-handling",
+				"nature"
+			],
+			"tool": "Carpenter's Tools",
+			"feat": "Tough",
+			"featId": "tough|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 20,
+				"gear": [
+					"Sickle (1 GP)",
+					"Carpenter's Tools (8 GP)",
+					"Healer's Kit (5 GP)",
+					"Iron Pot (2 GP)",
+					"Shovel (2 GP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"guard|xphb": {
+			"name": "Guard",
+			"abilities": [
+				"str",
+				"int",
+				"wis"
+			],
+			"skills": [
+				"athletics",
+				"perception"
+			],
+			"toolOptions": {
+				"dice-set|xphb": "Dice Set",
+				"dragonchess-set|xphb": "Dragonchess Set",
+				"playing-cards|xphb": "Playing Cards",
+				"three-dragon-ante-set|xphb": "Three-Dragon Ante Set"
+			},
+			"feat": "Alert",
+			"featId": "alert|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 37.1,
+				"gear": [
+					"Spear (1 GP)",
+					"Light Crossbow (25 GP)",
+					"Bolts (20) (1 GP)",
+					"Dice Set (1 SP)",
+					"Hooded Lantern (5 GP)",
+					"Manacles (2 GP)",
+					"Quiver (1 GP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"guide|xphb": {
+			"name": "Guide",
+			"abilities": [
+				"dex",
+				"con",
+				"wis"
+			],
+			"skills": [
+				"stealth",
+				"survival"
+			],
+			"tool": "Cartographer's Tools",
+			"feat": "Magic Initiate (Druid)",
+			"featId": "magic-initiate-druid|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 47,
+				"gear": [
+					"Shortbow (25 GP)",
+					"Arrows (20) (1 GP)",
+					"Cartographer's Tools (15 GP)",
+					"Bedroll (1 GP)",
+					"Quiver (1 GP)",
+					"Tent (2 GP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"hermit|xphb": {
+			"name": "Hermit",
+			"abilities": [
+				"con",
+				"wis",
+				"cha"
+			],
+			"skills": [
+				"medicine",
+				"religion"
+			],
+			"tool": "Herbalism Kit",
+			"feat": "Healer",
+			"featId": "healer|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 33.8,
+				"gear": [
+					"Quarterstaff (2 SP)",
+					"Herbalism Kit (5 GP)",
+					"Bedroll (1 GP)",
+					"Book (25 GP)",
+					"Lamp (5 SP)",
+					"Oil (1 SP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"merchant|xphb": {
+			"name": "Merchant",
+			"abilities": [
+				"con",
+				"int",
+				"cha"
+			],
+			"skills": [
+				"animal-handling",
+				"persuasion"
+			],
+			"tool": "Navigator's Tools",
+			"feat": "Lucky",
+			"featId": "lucky|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 27.5,
+				"gear": [
+					"Navigator's Tools (25 GP)",
+					"Pouch (5 SP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"noble|xphb": {
+			"name": "Noble",
+			"abilities": [
+				"str",
+				"int",
+				"cha"
+			],
+			"skills": [
+				"history",
+				"persuasion"
+			],
+			"toolOptions": {
+				"dice-set|xphb": "Dice Set",
+				"dragonchess-set|xphb": "Dragonchess Set",
+				"playing-cards|xphb": "Playing Cards",
+				"three-dragon-ante-set|xphb": "Three-Dragon Ante Set"
+			},
+			"feat": "Skilled",
+			"featId": "skilled|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 20.1,
+				"gear": [
+					"Dice Set (1 SP)",
+					"Fine Clothes (15 GP)",
+					"Perfume (5 GP)"
+				]
+			}
+		},
+		"sage|xphb": {
+			"name": "Sage",
+			"abilities": [
+				"con",
+				"int",
+				"wis"
+			],
+			"skills": [
+				"arcana",
+				"history"
+			],
+			"tool": "Calligrapher's Supplies",
+			"feat": "Magic Initiate (Wizard)",
+			"featId": "magic-initiate-wizard|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 36.3,
+				"gear": [
+					"Quarterstaff (2 SP)",
+					"Calligrapher's Supplies (10 GP)",
+					"Book (25 GP)",
+					"Parchment (1 SP)",
+					"Robe (1 GP)"
+				]
+			}
+		},
+		"sailor|xphb": {
+			"name": "Sailor",
+			"abilities": [
+				"str",
+				"dex",
+				"wis"
+			],
+			"skills": [
+				"acrobatics",
+				"perception"
+			],
+			"tool": "Navigator's Tools",
+			"feat": "Tavern Brawler",
+			"featId": "tavern-brawler|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 30,
+				"gear": [
+					"Dagger (2 GP)",
+					"Navigator's Tools (25 GP)",
+					"Rope (1 GP)",
+					"Traveler's Clothes (2 GP)"
+				]
+			}
+		},
+		"scribe|xphb": {
+			"name": "Scribe",
+			"abilities": [
+				"dex",
+				"int",
+				"wis"
+			],
+			"skills": [
+				"investigation",
+				"perception"
+			],
+			"tool": "Calligrapher's Supplies",
+			"feat": "Skilled",
+			"featId": "skilled|xphb",
+			"gold": 50,
+			"equipment": {
+				"cost": 25.7,
+				"gear": [
+					"Calligrapher's Supplies (10 GP)",
+					"Fine Clothes (15 GP)",
+					"Lamp (5 SP)",
+					"Oil (1 SP)",
+					"Parchment (1 SP)"
+				]
+			}
+		},
 		"soldier|xphb": {
 			"name": "Soldier",
 			"abilities": [
@@ -57,34 +464,30 @@
 				]
 			}
 		},
-		"acolyte|xphb": {
-			"name": "Acolyte",
+		"wayfarer|xphb": {
+			"name": "Wayfarer",
 			"abilities": [
-				"int",
+				"dex",
 				"wis",
 				"cha"
 			],
 			"skills": [
 				"insight",
-				"religion"
+				"stealth"
 			],
-			"tool": "Calligrapher's Supplies",
-			"feat": "Magic Initiate (Cleric)",
-			"featId": "magic-initiate-cleric|xphb",
+			"tool": "Thieves' Tools",
+			"feat": "Lucky",
+			"featId": "lucky|xphb",
 			"gold": 50,
 			"equipment": {
-				"cost": 41,
+				"cost": 30.6,
 				"gear": [
-					"Calligrapher's Supplies (10 GP)",
-					"Book: Occult Lore (25 GP)",
-					"Holy Symbol: Amulet (5 GP)",
-					"Robe (1 GP)"
-				]
-			},
-			"provenance": {
-				"sourceId": "srd-5.2.1",
-				"pages": [
-					83
+					"Dagger (2 GP)",
+					"Thieves' Tools (25 GP)",
+					"Dice Set (1 SP)",
+					"Bedroll (1 GP)",
+					"Pouch (5 SP)",
+					"Traveler's Clothes (2 GP)"
 				]
 			}
 		}
@@ -413,7 +816,205 @@
 				"name": "Boon of Truesight",
 				"source": "XPHB"
 			}
+		},
+		"alert|xphb": {
+			"name": "Alert",
+			"record": {
+				"name": "Alert",
+				"source": "XPHB"
+			}
+		},
+		"crafter|xphb": {
+			"name": "Crafter",
+			"record": {
+				"name": "Crafter",
+				"source": "XPHB"
+			},
+			"proficiencyChoice": {
+				"count": 3,
+				"tools": [
+					"carpenters-tools|xphb",
+					"leatherworkers-tools|xphb",
+					"masons-tools|xphb",
+					"potters-tools|xphb",
+					"smiths-tools|xphb",
+					"tinkers-tools|xphb",
+					"weavers-tools|xphb",
+					"woodcarvers-tools|xphb"
+				]
+			}
+		},
+		"healer|xphb": {
+			"name": "Healer",
+			"record": {
+				"name": "Healer",
+				"source": "XPHB"
+			}
+		},
+		"lucky|xphb": {
+			"name": "Lucky",
+			"record": {
+				"name": "Lucky",
+				"source": "XPHB"
+			}
+		},
+		"musician|xphb": {
+			"name": "Musician",
+			"record": {
+				"name": "Musician",
+				"source": "XPHB"
+			},
+			"proficiencyChoice": {
+				"count": 3,
+				"tools": [
+					"bagpipes|xphb",
+					"drum|xphb",
+					"dulcimer|xphb",
+					"flute|xphb",
+					"horn|xphb",
+					"lute|xphb",
+					"lyre|xphb",
+					"pan-flute|xphb",
+					"shawm|xphb",
+					"viol|xphb"
+				]
+			}
+		},
+		"skilled|xphb": {
+			"name": "Skilled",
+			"record": {
+				"name": "Skilled",
+				"source": "XPHB"
+			},
+			"proficiencyChoice": {
+				"count": 3,
+				"skills": true,
+				"tools": [
+					"alchemists-supplies|xphb",
+					"bagpipes|xphb",
+					"brewers-supplies|xphb",
+					"calligraphers-supplies|xphb",
+					"carpenters-tools|xphb",
+					"cartographers-tools|xphb",
+					"cobblers-tools|xphb",
+					"cooks-utensils|xphb",
+					"dice-set|xphb",
+					"disguise-kit|xphb",
+					"dragonchess-set|xphb",
+					"drum|xphb",
+					"dulcimer|xphb",
+					"flute|xphb",
+					"forgery-kit|xphb",
+					"glassblowers-tools|xphb",
+					"herbalism-kit|xphb",
+					"horn|xphb",
+					"jewelers-tools|xphb",
+					"leatherworkers-tools|xphb",
+					"lute|xphb",
+					"lyre|xphb",
+					"masons-tools|xphb",
+					"navigators-tools|xphb",
+					"painters-supplies|xphb",
+					"pan-flute|xphb",
+					"playing-cards|xphb",
+					"poisoners-kit|xphb",
+					"potters-tools|xphb",
+					"shawm|xphb",
+					"smiths-tools|xphb",
+					"thieves-tools|xphb",
+					"three-dragon-ante-set|xphb",
+					"tinkers-tools|xphb",
+					"viol|xphb",
+					"weavers-tools|xphb",
+					"woodcarvers-tools|xphb"
+				]
+			}
+		},
+		"tavern-brawler|xphb": {
+			"name": "Tavern Brawler",
+			"record": {
+				"name": "Tavern Brawler",
+				"source": "XPHB"
+			}
+		},
+		"tough|xphb": {
+			"name": "Tough",
+			"record": {
+				"name": "Tough",
+				"source": "XPHB"
+			}
+		},
+		"magic-initiate-druid|xphb": {
+			"name": "Magic Initiate (Druid)",
+			"record": {
+				"name": "Magic Initiate",
+				"source": "XPHB"
+			},
+			"spellGroup": "Druid Spells",
+			"abilities": [
+				"int",
+				"wis",
+				"cha"
+			],
+			"spells": [
+				"spell:cure-wounds|xphb"
+			]
+		},
+		"magic-initiate-wizard|xphb": {
+			"name": "Magic Initiate (Wizard)",
+			"record": {
+				"name": "Magic Initiate",
+				"source": "XPHB"
+			},
+			"spellGroup": "Wizard Spells",
+			"abilities": [
+				"int",
+				"wis",
+				"cha"
+			],
+			"spells": [
+				"spell:shield|xphb"
+			]
 		}
+	},
+	"tools": {
+		"alchemists-supplies|xphb": "Alchemist's Supplies",
+		"bagpipes|xphb": "Bagpipes",
+		"brewers-supplies|xphb": "Brewer's Supplies",
+		"calligraphers-supplies|xphb": "Calligrapher's Supplies",
+		"carpenters-tools|xphb": "Carpenter's Tools",
+		"cartographers-tools|xphb": "Cartographer's Tools",
+		"cobblers-tools|xphb": "Cobbler's Tools",
+		"cooks-utensils|xphb": "Cook's Utensils",
+		"dice-set|xphb": "Dice Set",
+		"disguise-kit|xphb": "Disguise Kit",
+		"dragonchess-set|xphb": "Dragonchess Set",
+		"drum|xphb": "Drum",
+		"dulcimer|xphb": "Dulcimer",
+		"flute|xphb": "Flute",
+		"forgery-kit|xphb": "Forgery Kit",
+		"glassblowers-tools|xphb": "Glassblower's Tools",
+		"herbalism-kit|xphb": "Herbalism Kit",
+		"horn|xphb": "Horn",
+		"jewelers-tools|xphb": "Jeweler's Tools",
+		"leatherworkers-tools|xphb": "Leatherworker's Tools",
+		"lute|xphb": "Lute",
+		"lyre|xphb": "Lyre",
+		"masons-tools|xphb": "Mason's Tools",
+		"navigators-tools|xphb": "Navigator's Tools",
+		"painters-supplies|xphb": "Painter's Supplies",
+		"pan-flute|xphb": "Pan Flute",
+		"playing-cards|xphb": "Playing Cards",
+		"poisoners-kit|xphb": "Poisoner's Kit",
+		"potters-tools|xphb": "Potter's Tools",
+		"shawm|xphb": "Shawm",
+		"smiths-tools|xphb": "Smith's Tools",
+		"thieves-tools|xphb": "Thieves' Tools",
+		"three-dragon-ante-set|xphb": "Three-Dragon Ante Set",
+		"tinkers-tools|xphb": "Tinker's Tools",
+		"viol|xphb": "Viol",
+		"weavers-tools|xphb": "Weaver's Tools",
+		"woodcarvers-tools|xphb": "Woodcarver's Tools"
 	},
 	"classes": {
 		"fighter|xphb": {
@@ -1568,6 +2169,76 @@
 							"modifier": {
 								"$ref": "initiateModifier"
 							}
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "feat-magic-initiate-druid-healing",
+			"source": {
+				"type": "feat",
+				"name": "Magic Initiate",
+				"source": "XPHB",
+				"page": 201
+			},
+			"when": {
+				"backgroundId": "guide|xphb"
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "feat:magic-initiate-druid|xphb:cure-wounds",
+						"name": "Cure Wounds",
+						"maxUses": 1,
+						"recovery": {
+							"long": "all"
+						},
+						"spellId": {
+							"$ref": "initiateSpell"
+						},
+						"freeLevel": 1,
+						"spellcastingAbility": {
+							"$ref": "initiateAbility"
+						},
+						"healing": {
+							"dice": "2d8",
+							"modifier": {
+								"$ref": "initiateModifier"
+							}
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "feat-magic-initiate-wizard",
+			"source": {
+				"type": "feat",
+				"name": "Magic Initiate",
+				"source": "XPHB",
+				"page": 201
+			},
+			"when": {
+				"backgroundId": "sage|xphb"
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "feat:magic-initiate-wizard|xphb:shield",
+						"name": "Shield",
+						"maxUses": 1,
+						"recovery": {
+							"long": "all"
+						},
+						"spellId": {
+							"$ref": "initiateSpell"
+						},
+						"freeLevel": 1,
+						"spellcastingAbility": {
+							"$ref": "initiateAbility"
 						}
 					}
 				}

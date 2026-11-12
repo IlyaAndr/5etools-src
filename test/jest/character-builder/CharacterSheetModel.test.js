@@ -227,13 +227,22 @@ describe("Reviewed character sheet calculations", () => {
 		expect(skills.find(skill => skill.id === "religion").proficient).toBe(false);
 	});
 
-	it("keeps the reviewed backgrounds aligned with their ability options, skills, and gold", () => {
+	it("keeps the reviewed backgrounds aligned with their ability options, skills, tools, feat, and gold", () => {
 		const backgrounds = readJson("../../../data/backgrounds.json").background;
+		const feats = readJson("../../../data/feats.json").feat;
+		expect(Object.keys(rules.backgrounds)).toHaveLength(16);
 		for (const reviewed of Object.values(rules.backgrounds)) {
 			const raw = backgrounds.find(record => record.name === reviewed.name && record.source === "XPHB");
 			expect(reviewed.abilities).toEqual(raw.ability[0].choose.weighted.from);
-			expect(reviewed.skills).toEqual(Object.keys(raw.skillProficiencies[0]));
+			const skills = Object.keys(raw.skillProficiencies[0]).map(skill => skill.toLowerCase().replaceAll(" ", "-"));
+			expect(reviewed.skills).toEqual(skills);
 			expect(reviewed.gold * 100).toBe(raw.startingEquipment[0].B[0].value);
+			if (reviewed.tool !== undefined) expect(Object.keys(raw.toolProficiencies[0])).toEqual([reviewed.tool.toLowerCase()]);
+			else expect(Object.keys(raw.toolProficiencies[0])[0]).toMatch(/^any/);
+			const featKey = Object.keys(raw.feats[0])[0];
+			const featId = `${featKey.replace(/\|.*$/, "").toLowerCase().replaceAll(";", "").replaceAll(" ", "-")}|xphb`;
+			expect(reviewed.featId).toBe(featId);
+			expect(feats.some(feat => feat.name === rules.feats[reviewed.featId].record.name && feat.source === "XPHB")).toBe(true);
 		}
 	});
 

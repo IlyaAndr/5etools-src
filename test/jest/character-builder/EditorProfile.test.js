@@ -67,7 +67,10 @@ describe("Independent editor composition", () => {
 		const available = getEditorCombinations({catalog, rules: context.rules});
 		expect(available.species).toEqual([ref("Gnome"), ref("Tiefling")]);
 		expect(available.classes).toEqual([ref("Fighter"), ref("Warlock")]);
-		expect(available.backgrounds).toEqual([ref("Soldier"), ref("Acolyte")]);
+		expect(available.backgrounds).toEqual([
+			ref("Acolyte"), ref("Artisan"), ref("Charlatan"), ref("Criminal"), ref("Entertainer"), ref("Farmer"), ref("Guard"), ref("Guide"),
+			ref("Hermit"), ref("Merchant"), ref("Noble"), ref("Sage"), ref("Sailor"), ref("Scribe"), ref("Soldier"), ref("Wayfarer"),
+		]);
 	});
 
 	it.each(combinations)("composes $label choices at levels 1, 3, and 5", ({species, characterClass, background}) => {
