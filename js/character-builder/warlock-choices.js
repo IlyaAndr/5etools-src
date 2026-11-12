@@ -257,11 +257,13 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 			});
 		}
 	}
-	result.push(
-		descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3),
-		descriptor(`${owner}:level-4-feat`, "Level 4 Feat", 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], 4),
-		descriptor(`${owner}:level-4-ability-increases`, "Level 4 Ability Increases", 1, getIncreaseOptions(levelFourAbilities, levelFourWeights, abilityName, decisions.get(`${owner}:level-4-ability-increases`)), 4),
-	);
+	result.push(descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3));
+	for (const featLevel of warlock.featLevels || []) {
+		result.push(
+			descriptor(`${owner}:level-${featLevel}-feat`, `Level ${featLevel} Feat`, 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], featLevel),
+			descriptor(`${owner}:level-${featLevel}-ability-increases`, `Level ${featLevel} Ability Increases`, 1, getIncreaseOptions(levelFourAbilities, levelFourWeights, abilityName, decisions.get(`${owner}:level-${featLevel}-ability-increases`)), featLevel),
+		);
+	}
 	return result;
 }
 

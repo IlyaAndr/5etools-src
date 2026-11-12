@@ -683,6 +683,9 @@ def main():
             # and fills the seven invocation and ten prepared-spell slots the
             # sheet needs before it renders a calculated page again.
             editor.get_by_label('Level', exact=True).select_option('9')
+            # Levels 4/8/12/16 grant an Ability Score Improvement (or, later, a
+            # feat); the level-8 increase is a real choice at level 9.
+            editor.get_by_label('Level 8 Ability Increases', exact=True).select_option('str-1.int-1')
             editor.get_by_label('Pact of the Blade', exact=True).check()
             editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
             editor.get_by_label('Lifedrinker', exact=True).check()
@@ -696,6 +699,10 @@ def main():
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
                 editor.get_by_label(label, exact=True).uncheck()
             editor.get_by_label('Level', exact=True).select_option('5')
+            # The level-8 slot no longer exists at level 5, so its saved choices
+            # stay visible as surplus decisions until they are cleared.
+            editor.get_by_label('Level 8 Ability Increases', exact=True).select_option('')
+            editor.get_by_label('Level 8 Feat', exact=True).select_option('')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             warlock_pdf = output / 'created-warlock.pdf'
             export_pdf(page, warlock_pdf)

@@ -4,6 +4,7 @@ import {createSpeciesCatalog} from "../../../js/character-builder/species-catalo
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {renderCharacterSheet, renderSpeciesSheet} from "../../../js/character-builder/sheet-renderer.js";
+import {addFeatChoices} from "./test-documents.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const rawSpells = readJson("../../../data/spells/spells-xphb.json");
@@ -107,6 +108,7 @@ describe("Calculated character sheet renderer", () => {
 	it("shows Lifedrinker's rider beside Eldritch Smite and the Hit Point Die recovery it offers", () => {
 		const document = character("tiefling");
 		document.build.level = 12;
+		addFeatChoices(document, "class:warlock|xphb", 12);
 		document.build.choices.find(candidate => candidate.id.endsWith(":invocations")).selected = [
 			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
 			"pact-of-the-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb",

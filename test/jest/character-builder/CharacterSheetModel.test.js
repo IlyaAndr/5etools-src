@@ -4,6 +4,7 @@ import {createCharacterSheetModel} from "../../../js/character-builder/character
 import {parseCharacterDocument, serializeCharacterDocument} from "../../../js/character-builder/character-document.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
+import {addFeatChoices} from "./test-documents.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const rawSpells = readJson("../../../data/spells/spells-xphb.json");
@@ -201,6 +202,7 @@ describe("Reviewed character sheet calculations", () => {
 	it("grants higher-level invocation spells without spending Pact Magic slots", () => {
 		const document = example("Warlock");
 		document.build.level = 9;
+		addFeatChoices(document, "class:warlock|xphb", 9);
 		document.build.choices = document.build.choices.filter(saved => !saved.id.endsWith("-cantrip"));
 		choice(document, ":invocations").selected = [
 			"whispers-of-the-grave|xphb", "visions-of-distant-realms|xphb", "devils-sight|xphb", "armor-of-shadows|xphb",
@@ -510,6 +512,7 @@ describe("Reviewed character sheet calculations", () => {
 	it("attacks three times when Devouring Blade replaces Thirsting Blade's extra attack", () => {
 		const document = example("Warlock", 5);
 		document.build.level = 12;
+		addFeatChoices(document, "class:warlock|xphb", 12);
 		choice(document, ":invocations").selected = [
 			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
 			"pact-of-the-blade|xphb", "thirsting-blade|xphb", "devouring-blade|xphb",
@@ -540,6 +543,7 @@ describe("Reviewed character sheet calculations", () => {
 	it("adds Lifedrinker's Pact Weapon rider and names the Hit Point Die recovery", () => {
 		const document = example("Warlock", 5);
 		document.build.level = 9;
+		addFeatChoices(document, "class:warlock|xphb", 9);
 		choice(document, ":invocations").selected = [
 			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
 			"pact-of-the-blade|xphb", "lifedrinker|xphb",

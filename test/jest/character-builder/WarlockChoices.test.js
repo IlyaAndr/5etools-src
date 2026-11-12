@@ -7,6 +7,7 @@ import {createSheetExamples} from "../../../js/character-builder/sheet-examples.
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "../../../js/character-builder/warlock-choices.js";
 import {getBackgroundSourceChoices} from "../../../js/character-builder/source-choices.js";
+import {addFeatChoices} from "./test-documents.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
@@ -227,6 +228,7 @@ describe("Warlock editor choices", () => {
 		const document = JSON.parse(JSON.stringify(source));
 		const owner = "class:warlock|xphb";
 		document.build.level = 20;
+		addFeatChoices(document, owner, 20);
 		const saved = id => document.build.choices.find(value => value.id === `${owner}:${id}`).selected;
 		saved("invocations").splice(
 			0,
