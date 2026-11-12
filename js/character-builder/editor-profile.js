@@ -34,13 +34,13 @@ function requireContext (context) {
 }
 
 /** Read the class record behind a registered class choice provider. */
-export function getClassContribution (document, {rules, sources, spells} = {}) {
+export function getClassContribution (document, {rules, sources, spells, spellCatalog} = {}) {
 	const classId = refKey(document.build.class);
 	const provider = CLASS_PROVIDERS[classId];
 	if (!provider) return {classDescriptors: [], spellcastingAbility: null};
 	const record = findClassRecord(sources, provider.sourcesKey, document.build.class);
 	return {
-		classDescriptors: provider.getDescriptors(document, {rules, sources, spells}),
+		classDescriptors: provider.getDescriptors(document, {rules, sources, spells, spellCatalog}),
 		spellcastingAbility: record?.spellcastingAbility || null,
 	};
 }
@@ -153,7 +153,7 @@ export function createEditorProfiles (context) {
 			id: "warlock",
 			title: "Warlock editor",
 			scope: "2024 rules · Tiefling · Acolyte · Warlock · levels 1–20",
-			intro: "This editor supports the listed options only: the Fiend patron, selected invocations and spells (including Pact of the Blade with a chosen Pact Weapon), Magic Initiate (Cleric), Ability Score Improvement, and the displayed Warlock equipment package. Background equipment is added independently. Hit points use the fixed value. Other choices are not yet available.",
+			intro: "This editor supports the listed options only: all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One) with their derived expanded spell lists, selected invocations and spells (including Pact of the Blade with a chosen Pact Weapon), Magic Initiate (Cleric), Ability Score Improvement, and the displayed Warlock equipment package. Background equipment is added independently. Patron innate free casts and other numeric subclass features are not modelled yet. Hit points use the fixed value. Other choices are not yet available.",
 			context,
 			preset: WARLOCK_PRESET,
 			supports: document => sameRef(document.build.class, WARLOCK_PRESET.characterClass) && sameRef(document.build.species, WARLOCK_PRESET.species) && sameRef(document.build.background, WARLOCK_PRESET.background),

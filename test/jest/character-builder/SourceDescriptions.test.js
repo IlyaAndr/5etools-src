@@ -6,6 +6,8 @@ import {createSpeciesCatalog} from "../../../js/character-builder/species-catalo
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {renderCharacterSheet} from "../../../js/character-builder/sheet-renderer.js";
+import {createSpellCatalog} from "../../../js/character-builder/spell-catalog.js";
+import {getWarlockSubclasses, getSubclassSpellGrants} from "../../../js/character-builder/warlock-choices.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
@@ -19,8 +21,14 @@ const sources = {
 	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 	feats: readJson("../../../data/feats.json"),
 	itemMasteries: readJson("../../../data/items-base.json"),
+	spellLookup: readJson("../../../data/generated/gendata-spell-source-lookup.json"),
 };
 const catalog = createSpeciesCatalog({races: sources.races, spells, rules: readJson("../../../js/character-builder/rules/species.json")});
+const spellCatalog = createSpellCatalog({spells, lookup: sources.spellLookup});
+const subclassSpellIds = getWarlockSubclasses(sources).flatMap(subclass => {
+	const grants = getSubclassSpellGrants(subclass, spellCatalog);
+	return [...grants.known, ...grants.prepared.flatMap(grant => grant.spells)];
+});
 const context = {rules: readJson("../../../js/character-builder/rules/character-sheet.json"), spells, sources};
 const examples = createSheetExamples(catalog.dataset).flatMap(example => {
 	const isGnome = example.document.build.species.name === "Gnome";
@@ -84,11 +92,8 @@ describe("Original character-sheet descriptions", () => {
 
 describe("Supported spell source descriptions", () => {
 	it("preserves all spell options, including those not selected in the example builds", () => {
-		const rules = context.rules.classes["warlock|xphb"];
 		const ids = new Set([
-			...rules.cantripOptions,
-			...rules.preparedOptions,
-			...rules.subclassSpells.flatMap(grant => grant.spells),
+			...subclassSpellIds,
 			...catalog.spells.map(spell => spell.id),
 			"spell:guidance|xphb", "spell:light|xphb", "spell:healing-word|xphb", "spell:mage-armor|xphb",
 		]);

@@ -51,7 +51,7 @@ function restrictToSharedSpellcastingAbility (document, descriptors, {catalog, r
  * skills are removed from the class list, and the species and feat casting
  * abilities are limited to a shared ability when one exists.
  */
-export function composeChoiceDescriptors (document, catalog, {rules, sources, spells} = {}, {classDescriptors = [], spellcastingAbility = null} = {}) {
+export function composeChoiceDescriptors (document, catalog, {rules, sources, spells, spellCatalog} = {}, {classDescriptors = [], spellcastingAbility = null} = {}) {
 	validateCharacterDocument(document);
 	const descriptor = describeChoices(document);
 	const classId = refKey(document.build.class);
@@ -74,7 +74,7 @@ export function composeChoiceDescriptors (document, catalog, {rules, sources, sp
 		...(languages ? [languages] : []),
 		...(distinctClassSkills ? [distinctClassSkills] : []),
 		...getEquipmentChoiceDescriptors(document, {rules}),
-		...getFeatChoiceDescriptors(document, {rules, sources, spells}),
+		...getFeatChoiceDescriptors(document, {rules, sources, spells, spellCatalog}),
 		...classDescriptors.filter(entry => entry !== classSkills),
 	];
 	return restrictToSharedSpellcastingAbility(document, descriptors, {catalog, rules, spellcastingAbility});

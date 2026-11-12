@@ -86,7 +86,7 @@ export function parseIncreaseOption (value) {
 
 const slug = value => value.toLowerCase().replaceAll(" ", "-");
 
-const SCHOOL_NAMES = Object.freeze({
+export const SCHOOL_NAMES = Object.freeze({
 	A: "Abjuration",
 	C: "Conjuration",
 	D: "Divination",

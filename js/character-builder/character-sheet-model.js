@@ -5,10 +5,11 @@ import {resolveMechanicEffects} from "./rules/effects.js";
 import {planSpellcastingChoices} from "./spellcasting-choice.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getFighterSourceChoices} from "./fighter-choices.js";
-import {getWarlockSourceChoices, getAvailableInvocations} from "./warlock-choices.js";
+import {getWarlockSourceChoices, getAvailableInvocations, getWarlockSubclasses, getSubclassSpellGrants} from "./warlock-choices.js";
 import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
+import {resolveSpellCatalog} from "./spell-catalog.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -23,12 +24,17 @@ function checkRules (rules, document) {
 	}
 	for (const record of Object.values(rules.classes)) {
 		if (!Array.isArray(record.levels) || !record.levels.length || record.levels.length > 20 || !Number.isSafeInteger(record.hitDie) || record.hitDie < 2 || record.hitDie > 100 || record.hitDie % 2) throw new TypeError("sheetRules.classes: unsupported class progression");
+		if (record.subclasses !== undefined) {
+			if (record.subclass !== undefined || !Array.isArray(record.subclasses) || !record.subclasses.length
+				|| record.subclasses.some(entry => !entry || typeof entry !== "object" || Array.isArray(entry)
+					|| typeof entry.id !== "string" || !entry.id.trim() || typeof entry.name !== "string" || !entry.name.trim())
+				|| new Set(record.subclasses.map(entry => entry.id)).size !== record.subclasses.length) throw new TypeError("sheetRules.classes: unsupported subclass list");
+		}
 	}
 	for (const [id, feat] of Object.entries(rules.feats)) {
 		if (!feat || typeof feat !== "object" || Array.isArray(feat) || typeof feat.name !== "string"
 			|| !feat.record || typeof feat.record.name !== "string" || typeof feat.record.source !== "string") throw new TypeError(`sheetRules.feats.${id}: unsupported feat annotation`);
-		if (feat.spellGroup !== undefined && (typeof feat.spellGroup !== "string"
-			|| !Array.isArray(feat.abilities) || !Array.isArray(feat.cantrips) || !Array.isArray(feat.spells))) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choices`);
+		if (feat.spellGroup !== undefined && (typeof feat.spellGroup !== "string" || !Array.isArray(feat.abilities) || !Array.isArray(feat.spells) || !feat.spells.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choices`);
 	}
 	for (const [id, invocation] of Object.entries(rules.invocations)) {
 		if (!invocation || typeof invocation !== "object" || Array.isArray(invocation) || typeof invocation.name !== "string" || !invocation.name.trim()
@@ -164,7 +170,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		return model;
 	}
 	const levelRule = warlockSourceChoices ? {...reviewedLevelRule, ...warlockSourceChoices.progression(build.level)} : reviewedLevelRule;
-	const descriptors = hasChoiceCatalog ? getEditorChoiceDescriptors(document, catalog, {rules, sources, spells: spells || []}) : [];
+	const rawSpells = spells?.spell || sources?.spells?.spell || spells || sources?.spells || [];
+	if (!Array.isArray(rawSpells)) throw new TypeError("spells: expected the parsed spell data or an array");
+	const spellCatalog = rawSpells.length ? resolveSpellCatalog({spells: rawSpells, sources}) : null;
+	if (hasChoiceCatalog && !spellCatalog) issue("spell-list", "Spell list data is unavailable. Reload the spell data.");
+	const descriptors = hasChoiceCatalog && spellCatalog ? getEditorChoiceDescriptors(document, catalog, {catalog, rules, sources, spells: spells || [], spellCatalog}) : [];
 	const sharedChoices = new Map(descriptors.map(descriptor => [descriptor.id, descriptor]));
 	function select (id, options, count, label) {
 		consumed.add(id);
@@ -173,10 +183,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const allowed = descriptor ? descriptor.options.map(option => option.id) : options;
 		const expectedCount = descriptor ? descriptor.count : count;
 		const requiredIds = descriptor?.required || [];
-		if (selected.length !== expectedCount || selected.some(value => !allowed.includes(value)) || requiredIds.some(value => !selected.includes(value))) {
+		if (allowed && (selected.length !== expectedCount || selected.some(value => !allowed.includes(value)) || requiredIds.some(value => !selected.includes(value)))) {
 			issue(id, `${label}: choose ${expectedCount} supported ${expectedCount === 1 ? "option" : "options"}.`);
 		}
-		return selected.filter(value => allowed.includes(value));
+		return allowed ? selected.filter(value => allowed.includes(value)) : selected;
 	}
 	function increases (id, allowed, scores, isBackground) {
 		consumed.add(id);
@@ -220,8 +230,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		backgroundTool = background.toolOptions[tool];
 	}
 	if (build.level >= 3) {
-		const [subclass] = select(`${classOwner}:subclass`, [classRule.subclass.id], 1, "Subclass");
-		if (subclass) model.subclassName = classRule.subclass.name;
+		const subclassIds = classRule.subclasses ? classRule.subclasses.map(value => value.id) : [classRule.subclass.id];
+		const [subclass] = select(`${classOwner}:subclass`, subclassIds, 1, "Subclass");
+		const subclassEntry = classRule.subclasses ? classRule.subclasses.find(value => value.id === subclass) : classRule.subclass;
+		if (subclassEntry) model.subclassName = subclassEntry.name;
 	}
 	if (build.level >= 4) {
 		select(`${classOwner}:level-4-feat`, ["ability-score-improvement|xphb"], 1, "Level 4 feat");
@@ -243,15 +255,15 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	let pactWeapon = null;
 	if (featRule.spellGroup) {
 		[initiateAbility] = select(`${featOwner}:ability`, featOptions || featRule.abilities, 1, "Magic Initiate ability");
-		initiateCantrips = select(`${featOwner}:cantrips`, featRule.cantrips, featRule.cantrips.length, "Magic Initiate cantrips");
+		initiateCantrips = select(`${featOwner}:cantrips`, null, null, "Magic Initiate cantrips");
 		[initiateSpell] = select(`${featOwner}:spell`, featRule.spells, 1, "Magic Initiate level 1 spell");
 	}
 	if (classRule.name === "Fighter") {
 		select(`${classOwner}:fighting-style`, ["defense|xphb"], 1, "Fighting Style");
 		masteries = select(`${classOwner}:weapon-masteries`, Object.keys(rules.weapons), fighterSourceChoices?.masteries(build.level) || levelRule.masteries, "Weapon Mastery");
 	} else {
-		cantrips = select(`${classOwner}:cantrips`, classRule.cantripOptions, levelRule.cantrips, "Warlock cantrips");
-		prepared = select(`${classOwner}:prepared-spells`, classRule.preparedOptions, levelRule.prepared, "Prepared Warlock spells");
+		cantrips = select(`${classOwner}:cantrips`, null, null, "Warlock cantrips");
+		prepared = select(`${classOwner}:prepared-spells`, null, null, "Prepared Warlock spells");
 		const selectedInvocations = decisions.get(`${classOwner}:invocations`) || [];
 		invocations = select(`${classOwner}:invocations`, getAvailableInvocations(rules, build.level, selectedInvocations).map(([id]) => id), levelRule.invocations, "Eldritch Invocations");
 		for (const id of selectedInvocations) {
@@ -290,8 +302,6 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const id of decisions.keys()) {
 		if (!consumed.has(id)) issue(id, "This build decision is outside the reviewed sheet subset or unavailable at this level.");
 	}
-	const rawSpells = spells?.spell || spells || [];
-	if (!Array.isArray(rawSpells)) throw new TypeError("spells: expected the parsed spell data or an array");
 	const spellIndex = new Map(catalog.spells.map(spell => [spell.id, spell]));
 	for (const spell of rawSpells) {
 		const id = `spell:${key(spell)}`;
@@ -527,8 +537,17 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	} else if (classRule.name === "Warlock") {
 		for (const id of invocations) feature(record(sources.optionalFeatures.optionalfeature, rules.invocations[id].name, "invocation"), "Invocation", "optionalfeature");
 		for (const id of [...cantrips, ...prepared]) addSpell(id, {...classCasting, kind: "class", label: classRule.name, prepared: prepared.includes(id), canCastWithSlots: prepared.includes(id), slotLevel: prepared.includes(id) ? levelRule.slotLevel : null});
-		for (const grant of classRule.subclassSpells.filter(value => value.minimumLevel <= build.level)) {
-			for (const id of grant.spells) addSpell(id, {...classCasting, id: `${classOwner}:${classRule.subclass.id.split("|")[0]}`, kind: "subclass", label: classRule.subclass.name, alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
+		if (classRule.subclasses && spellCatalog) {
+			const subclassRule = classRule.subclasses.find(value => value.name === model.subclassName);
+			const subclass = subclassRule ? getWarlockSubclasses(sources).find(value => value.name === subclassRule.name) : null;
+			if (subclass) {
+				const grants = getSubclassSpellGrants(subclass, spellCatalog);
+				const castingId = `${classOwner}:${subclassRule.id.split("|")[0]}`;
+				for (const id of grants.known) addSpell(id, {...classCasting, id: castingId, kind: "subclass", label: subclassRule.name, alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
+				for (const grant of grants.prepared.filter(value => value.minimumLevel <= build.level)) {
+					for (const id of grant.spells) addSpell(id, {...classCasting, id: castingId, kind: "subclass", label: subclassRule.name, alwaysPrepared: true, canCastWithSlots: true, slotLevel: levelRule.slotLevel});
+				}
+			}
 		}
 	}
 	for (const effect of effectsOf("spellGrant")) {
@@ -539,8 +558,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	if (initiateCasting) {
 		for (const id of initiateCantrips) addSpell(id, {...initiateCasting, kind: "feat", label: "Magic Initiate"});
-		const resourceId = `${featOwner}:healing-word`;
-		addSpell(initiateSpell, {...initiateCasting, kind: "feat", label: "Magic Initiate", resourceId, alwaysPrepared: true, canCastWithSlots: true, freeLevel: 1, slotLevel: classCasting ? levelRule.slotLevel : null});
+		if (initiateSpell) {
+			const resourceId = `${featOwner}:healing-word`;
+			addSpell(initiateSpell, {...initiateCasting, kind: "feat", label: "Magic Initiate", resourceId, alwaysPrepared: true, canCastWithSlots: true, freeLevel: 1, slotLevel: classCasting ? levelRule.slotLevel : null});
+		}
 	}
 	model.spells = [...collected.values()].sort((a, b) => a.level - b.level || a.ref.name.localeCompare(b.ref.name));
 	const weaponAbility = weapon => weapon.finesse ? (mods.dex >= mods.str ? "dex" : "str") : "str";

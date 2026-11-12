@@ -18,6 +18,7 @@ const sources = {
 	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 	feats: readJson("../../../data/feats.json"),
 	itemMasteries: readJson("../../../data/items-base.json"),
+	spellLookup: readJson("../../../data/generated/gendata-spell-source-lookup.json"),
 };
 const catalog = createSpeciesCatalog({
 	races: readJson("../../../data/races.json"),
@@ -420,6 +421,19 @@ describe("Reviewed character sheet calculations", () => {
 			const broken = JSON.parse(JSON.stringify(rules));
 			mutate(broken.invocations["eldritch-smite|xphb"]);
 			expect(() => createCharacterSheetModel(example("Warlock"), catalog, {...context, rules: broken})).toThrow(expected);
+		}
+	});
+
+	it("rejects a malformed subclass list instead of guessing", () => {
+		for (const mutate of [
+			broken => { broken.classes["warlock|xphb"].subclasses = []; },
+			broken => { broken.classes["warlock|xphb"].subclasses = [{id: "fiend|xphb"}]; },
+			broken => { broken.classes["warlock|xphb"].subclasses = [{id: "fiend|xphb", name: "Fiend"}, {id: "fiend|xphb", name: "Other"}]; },
+			broken => { broken.classes["warlock|xphb"].subclass = {id: "fiend|xphb", name: "Fiend"}; },
+		]) {
+			const broken = JSON.parse(JSON.stringify(rules));
+			mutate(broken);
+			expect(() => createCharacterSheetModel(example("Warlock", 3), catalog, {...context, rules: broken})).toThrow(/unsupported subclass list/);
 		}
 	});
 

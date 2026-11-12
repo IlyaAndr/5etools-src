@@ -25,6 +25,7 @@ const context = {
 		optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 		feats: readJson("../../../data/feats.json"),
 		itemMasteries: readJson("../../../data/items-base.json"),
+		spellLookup: readJson("../../../data/generated/gendata-spell-source-lookup.json"),
 	},
 };
 const descriptors = document => getFighterChoiceDescriptors(document, catalog, context);
