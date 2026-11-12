@@ -237,6 +237,8 @@ describe("Warlock editor choices", () => {
 			"pact-of-the-blade|xphb", "thirsting-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb", "devouring-blade|xphb",
 		);
 		document.build.choices.push({id: `${owner}:pact-weapon`, selected: ["longsword|xphb"]});
+		document.build.choices.push({id: `${owner}:epic-boon`, selected: ["boon-of-combat-prowess|xphb"]});
+		document.build.choices.push({id: `${owner}:epic-boon-ability`, selected: ["cha"]});
 		saved("cantrips").push("spell:chill-touch|xphb");
 		saved("prepared-spells").push(
 			"spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:expeditious-retreat|xphb",

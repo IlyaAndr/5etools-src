@@ -116,6 +116,18 @@ is not a universal D&D rules engine. Class and option validation remain limited
 to the reviewed coverage, and the effect annotations themselves are curated data
 rather than automatically extracted rule text.
 
+Ability Score Improvement slots at levels 4, 8, 12, and 16 also offer 31 reviewed
+general feats. A feat's ability increase, armor and weapon training, and
+blindsight or truesight are read from the pinned source record and applied; its
+level, ability, spellcasting, and armor-proficiency prerequisites are enforced,
+with the armor check starting from the class's training and adding the training
+granted by earlier feats in the same build. At level 19 the slot becomes an Epic
+Boon: the 12 XPHB boons and the general feats are offered, a boon's ability
+increase may raise a score to 30, and its truesight reaches the sheet. Boon
+effects that need conditional choices or rest-time state stay narrative text, and
+feats that grant skill or tool proficiencies, saving throws, or spells are not
+offered yet.
+
 All 28 Eldritch Invocations of the pinned data are reviewed in
 `rules/character-sheet.json` with their minimum Warlock level and, where the
 source requires one, the prerequisite invocation. The editor and the sheet use

@@ -41,11 +41,32 @@ const levelNine = () => {
 	addFeatChoices(document, owner, 9);
 	return document;
 };
+const levelNineteen = () => {
+	const document = levelFive();
+	document.build.level = 19;
+	addFeatChoices(document, owner, 19);
+	const saved = id => document.build.choices.find(value => value.id === `${owner}:${id}`).selected;
+	saved("invocations").splice(
+		0,
+		saved("invocations").length,
+		"eldritch-mind|xphb", "armor-of-shadows|xphb", "agonizing-blast|xphb", "devils-sight|xphb", "repelling-blast|xphb",
+		"pact-of-the-blade|xphb", "thirsting-blade|xphb", "eldritch-smite|xphb", "lifedrinker|xphb", "devouring-blade|xphb",
+	);
+	document.build.choices.push({id: `${owner}:pact-weapon`, selected: ["longsword|xphb"]});
+	saved("cantrips").push("spell:chill-touch|xphb");
+	saved("prepared-spells").push(
+		"spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:expeditious-retreat|xphb",
+		"spell:hellish-rebuke|xphb", "spell:illusory-script|xphb", "spell:speak-with-animals|xphb", "spell:witch-bolt|xphb",
+	);
+	return document;
+};
 
 describe("Reviewed general feats", () => {
 	it("reads a fixed or chosen ability increase from the source record", () => {
-		expect(getFeatAbilityChoice(featRecord("Durable"))).toEqual({fixed: "con", amount: 1});
-		expect(getFeatAbilityChoice(featRecord("Crusher"))).toEqual({options: ["str", "con"], amount: 1});
+		expect(getFeatAbilityChoice(featRecord("Durable"))).toEqual({fixed: "con", amount: 1, max: 20});
+		expect(getFeatAbilityChoice(featRecord("Crusher"))).toEqual({options: ["str", "con"], amount: 1, max: 20});
+		expect(getFeatAbilityChoice(featRecord("Boon of Combat Prowess"))).toEqual({options: ["str", "dex", "con", "int", "wis", "cha"], amount: 1, max: 30});
+		expect(getFeatAbilityChoice(featRecord("Boon of Irresistible Offense"))).toEqual({options: ["str", "dex"], amount: 1, max: 30});
 		expect(getFeatAbilityChoice({name: "Broken", ability: "str"})).toBeNull();
 		expect(() => getFeatAbilityChoice({name: "Broken", ability: [{str: 2}]})).toThrow(/Unsupported Broken ability increase/);
 	});
@@ -172,5 +193,58 @@ describe("Reviewed general feats", () => {
 		expect(model.issues).toEqual([]);
 		expect(model.training).toEqual(expect.arrayContaining(["Medium armor", "Heavy armor"]));
 		expect(model.features.some(feature => feature.name === "Heavily Armored")).toBe(true);
+	});
+});
+
+describe("Epic Boons", () => {
+	const boons = [
+		"boon-of-combat-prowess|xphb", "boon-of-dimensional-travel|xphb", "boon-of-energy-resistance|xphb", "boon-of-fate|xphb",
+		"boon-of-fortitude|xphb", "boon-of-irresistible-offense|xphb", "boon-of-recovery|xphb", "boon-of-skill|xphb",
+		"boon-of-speed|xphb", "boon-of-spell-recall|xphb", "boon-of-the-night-spirit|xphb", "boon-of-truesight|xphb",
+	];
+
+	it("offers the reviewed Epic Boons only at level 19", () => {
+		const atFive = getWarlockChoiceDescriptors(levelFive(), catalog, context).find(entry => entry.id === `${owner}:epic-boon`);
+		expect(atFive).toMatchObject({available: false, minimumLevel: 19});
+		const atNineteen = getWarlockChoiceDescriptors(levelNineteen(), catalog, context);
+		const boon = atNineteen.find(entry => entry.id === `${owner}:epic-boon`);
+		expect(boon.available).toBe(true);
+		expect(boon.options.slice(0, boons.length).map(option => option.id)).toEqual(boons);
+		expect(boon.options).toHaveLength(boons.length + context.rules.classes["warlock|xphb"].generalFeats.length);
+		expect(atNineteen.find(entry => entry.id === `${owner}:epic-boon-ability`)).toBeUndefined();
+	});
+
+	it("offers the chosen boon's ability options", () => {
+		const document = setCharacterChoice(levelNineteen(), `${owner}:epic-boon`, ["boon-of-truesight|xphb"]);
+		const ability = getWarlockChoiceDescriptors(document, catalog, context).find(entry => entry.id === `${owner}:epic-boon-ability`);
+		expect(ability.options.map(option => option.id)).toEqual(["str", "dex", "con", "int", "wis", "cha"]);
+	});
+
+	it("reads a boon's truesight sense beside a general feat's blindsight", () => {
+		expect(getFeatSenses(featRecord("Boon of Truesight"))).toEqual([{type: "truesight", range: 60}]);
+		expect(getFeatSenses(featRecord("Skulker"))).toEqual([{type: "blindsight", range: 10}]);
+		expect(() => getFeatSenses({name: "Broken", senses: [{darkvision: 60}]})).toThrow(/Unsupported Broken sense/);
+	});
+
+	it("raises an ability above 20 up to the boon's maximum", () => {
+		let document = levelNineteen();
+		document = setCharacterChoice(document, `${owner}:level-4-ability-increases`, ["cha-2"]);
+		document = setCharacterChoice(document, `${owner}:level-8-ability-increases`, ["cha-1.wis-1"]);
+		document = setCharacterChoice(document, `${owner}:epic-boon`, ["boon-of-combat-prowess|xphb"]);
+		document = setCharacterChoice(document, `${owner}:epic-boon-ability`, ["cha"]);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(score(model, "cha")).toBe(21);
+		expect(model.features.some(feature => feature.name === "Boon of Combat Prowess")).toBe(true);
+	});
+
+	it("applies a boon's truesight to the sheet", () => {
+		let document = levelNineteen();
+		document = setCharacterChoice(document, `${owner}:epic-boon`, ["boon-of-truesight|xphb"]);
+		document = setCharacterChoice(document, `${owner}:epic-boon-ability`, ["wis"]);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "truesight", range: 60, provenance: "Boon of Truesight"}));
+		expect(model.features.some(feature => feature.name === "Boon of Truesight")).toBe(true);
 	});
 });
