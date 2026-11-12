@@ -50,8 +50,9 @@ names come from the site's existing parser, and class skills, hit dice, saving
 throws, Weapon Mastery progression, Second Wind uses, background skills, and
 background ability choices come from the original class and background records.
 Warlock spell and invocation progression also uses those records, and each
-patron's expanded spell list is derived from its subclass record, and patron
-innate free casts are tracked as resources. Equipment and
+patron's expanded spell list is derived from its subclass record, patron innate
+free casts are tracked as resources, and patron damage resistances apply.
+Equipment and
 invocation choice lists use reviewed annotations; Warlock spell lists and Magic
 Initiate cantrips come from the same 5etools filter expressions the site uses,
 evaluated against the pinned spell files, and single spell selects offer the

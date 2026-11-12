@@ -45,6 +45,21 @@ describe("Declarative character mechanics", () => {
 		expect(input.effects[0].value.healing.modifier).toEqual({$ref: "characterLevel"});
 	});
 
+	it("grants a subclass resistance only for the matching patron at its level", () => {
+		const rule = {
+			id: "test:patron-resistance",
+			source: {...source},
+			when: {subclassId: "fiend|xphb", minimumLevel: 6},
+			effects: [{type: "resistance", damageType: "fire"}],
+		};
+		const state = {...context(), subclassId: "fiend|xphb", level: 6};
+		expect(resolveMechanicEffects([rule], state)).toEqual([
+			{type: "resistance", damageType: "fire", source, annotationId: "test:patron-resistance"},
+		]);
+		expect(resolveMechanicEffects([rule], {...state, subclassId: "celestial|xphb"})).toEqual([]);
+		expect(resolveMechanicEffects([rule], {...state, level: 5})).toEqual([]);
+	});
+
 	it.each([
 		["level", state => { state.level = 2; }],
 		["class", state => { state.classId = "other|test"; }],
@@ -67,6 +82,8 @@ describe("Declarative character mechanics", () => {
 		["non-numeric resource count", rule => { rule.effects[0].value.maxUses = "2"; }],
 		["invalid recovery", rule => { rule.effects[0].value.recovery.short = 3; }],
 		["invalid healing modifier", rule => { rule.effects[0].value.healing.modifier = "3"; }],
+		["missing resistance damage type", rule => { rule.effects = [{type: "resistance"}]; }],
+		["invalid resistance condition", rule => { rule.effects = [{type: "resistance", damageType: "fire", condition: 3}]; }],
 		["missing source", rule => { delete rule.source; }],
 	])("rejects %s explicitly", (_label, change) => {
 		const input = annotation();

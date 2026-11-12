@@ -26,6 +26,7 @@ const spellCatalog = createSpellCatalog({spells, lookup: sources.spellLookup});
 const context = {rules: readJson("../../../js/character-builder/rules/character-sheet.json"), spells, sources};
 const clone = value => JSON.parse(JSON.stringify(value));
 const levelThree = () => clone(createSheetExamples(catalog.dataset).find(example => example.id === "infernal-tiefling-warlock-level-3").document);
+const levelFive = () => clone(createSheetExamples(catalog.dataset).find(example => example.id === "infernal-tiefling-warlock-level-5").document);
 const subclassId = "class:warlock|xphb:subclass";
 const subclass = name => getWarlockSubclasses(sources).find(entry => entry.name === name);
 
@@ -108,5 +109,29 @@ describe("XPHB Warlock patrons", () => {
 		const spell = model.spells.find(candidate => candidate.id === spellId);
 		expect(spell).toBeDefined();
 		expect(spell.sources.some(source => source.kind === "subclass" && source.label === name && source.alwaysPrepared)).toBe(true);
+	});
+
+	it("declares each patron resistance against a unique source feature", () => {
+		const fields = ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"];
+		const records = sources.warlock.subclassFeature;
+		for (const [id, patron, damageType, level] of [
+			["celestial-radiant-soul", "celestial|xphb", "radiant", 6],
+			["great-old-one-thought-shield", "great-old-one|xphb", "psychic", 10],
+		]) {
+			const annotation = context.rules.mechanics.find(entry => entry.id === id);
+			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
+			expect(annotation.effects).toEqual([{type: "resistance", damageType}]);
+			const matches = records.filter(candidate => fields.every(field => annotation.source[field] === undefined || annotation.source[field] === candidate[field]));
+			expect(matches).toHaveLength(1);
+		}
+	});
+
+	it("grants the Celestial radiant resistance from level 6", () => {
+		const document = setCharacterChoice(levelFive(), subclassId, ["celestial|xphb"]);
+		document.build.level = 6;
+		document.build.choices.find(choice => choice.id.endsWith(":prepared-spells")).selected.push("spell:charm-person|xphb");
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "resistance", damageType: "radiant", annotationId: "celestial-radiant-soul"}));
 	});
 });
