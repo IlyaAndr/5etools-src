@@ -3,7 +3,7 @@ import {ABILITY_IDS} from "../character-document.js";
 /** Evaluate reviewed, declarative mechanics without inspecting rule descriptions. */
 const EFFECT_TYPES = new Set([
 	"resource", "savingThrowAdvantage", "skillAdvantage", "initiativeAdvantage",
-	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus",
+	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus", "resistance",
 ]);
 const CONDITION_KEYS = new Set(["classId", "backgroundId", "subclassId", "minimumLevel", "invocation", "knownSpell", "choice", "wearingArmor"]);
 
@@ -38,6 +38,7 @@ const EFFECT_FIELDS = {
 	spellGrant: ["type", "spellId", "casterId", "value"],
 	spellAttack: ["type", "spellId", "casterId", "value"],
 	spellDamageBonus: ["type", "spellId", "casterId", "amount"],
+	resistance: ["type", "damageType", "condition"],
 };
 const nonempty = value => typeof value === "string" && !!value.trim();
 const integer = (value, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(value) && value >= min && value <= max;
@@ -110,6 +111,7 @@ function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 			break;
 		}
 		case "spellDamageBonus": if (!validText(effect.spellId) || !validText(effect.casterId) || !validInt(effect.amount, -100, 100)) throw new TypeError("Invalid spell damage bonus mechanic."); break;
+		case "resistance": if (!nonempty(effect.damageType) || (effect.condition != null && !nonempty(effect.condition))) throw new TypeError("Invalid resistance mechanic."); break;
 		default: throw new TypeError(`Unsupported mechanics effect: ${effect.type}.`);
 	}
 }
