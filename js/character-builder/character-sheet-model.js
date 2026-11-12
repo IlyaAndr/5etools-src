@@ -10,7 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, meetsFeatPrerequisites} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -254,13 +254,20 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const subclassEntry = classRule.subclasses ? classRule.subclasses.find(value => value.id === subclass) : classRule.subclass;
 		if (subclassEntry) model.subclassName = subclassEntry.name;
 	}
+	const classRecords = classRule.name === "Warlock" ? sources?.warlock?.class : sources?.fighter?.class;
+	const hasSpellcasting = Boolean((classRecords || []).find(candidate => candidate.name === build.class.name && candidate.source === build.class.source)?.spellcastingAbility);
 	for (const featLevel of classRule.featLevels || []) {
 		if (build.level < featLevel) continue;
 		const featOptions = ["ability-score-improvement|xphb", ...(classRule.generalFeats || [])];
 		const [featId] = select(`${classOwner}:level-${featLevel}-feat`, featOptions, 1, `Level ${featLevel} feat`);
 		if (featId && featId !== "ability-score-improvement|xphb") {
 			const featRule = rules.feats[featId];
-			const ability = getFeatAbilityChoice(findFeatRecord(sources, featRule));
+			const featData = findFeatRecord(sources, featRule);
+			if (!meetsFeatPrerequisites(featData, {level: build.level, scores, spellcasting: hasSpellcasting})) {
+				issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the feat's prerequisites are not met.`);
+				continue;
+			}
+			const ability = getFeatAbilityChoice(featData);
 			if (!ability) continue;
 			if (ability.fixed) {
 				if (scores[ability.fixed] + ability.amount > 20) issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the ability score cannot exceed 20.`);
