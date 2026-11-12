@@ -418,7 +418,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const classData = classRule.name === "Fighter" ? sources?.fighter : sources?.warlock;
 	const rawClass = classData?.class?.find(candidate => candidate.name === build.class.name && candidate.source === build.class.source);
 	const catalogSpecies = catalog.species.find(candidate => candidate.id === species.speciesId);
-	const lineageId = catalogSpecies && (decisions.get(catalogSpecies.lineageChoiceId) || [])[0];
+	const lineageId = catalogSpecies?.lineageChoiceId ? (decisions.get(catalogSpecies.lineageChoiceId) || [])[0] : null;
 	const selectedLineage = catalogSpecies?.lineages.find(candidate => candidate.id === lineageId);
 	if (selectedLineage && rawClass && (!featRule.spellGroup || Array.isArray(featOptions))) {
 		const castingChoices = [{id: species.speciesId, allowed: [...selectedLineage.abilityOptions], selected: species.spellcastingAbility}];
@@ -511,7 +511,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		model.defenses.push({type: "speed-penalty", amount: 10, armor: armor.name, minimumStrength: armor.strength});
 	}
 	model.initiative = {value: mods.dex, advantage: effectsOf("initiativeAdvantage").length > 0};
-	model.hp = {maximum: Math.max(1, classHitDie + mods.con) + (build.level - 1) * Math.max(1, classHitDie / 2 + 1 + mods.con), current: session.hp.current, temporary: session.hp.temporary};
+	model.hp = {maximum: Math.max(1, classHitDie + mods.con + species.hpPerLevel) + (build.level - 1) * Math.max(1, classHitDie / 2 + 1 + mods.con + species.hpPerLevel), current: session.hp.current, temporary: session.hp.temporary};
 	if (session.hp.current !== null && session.hp.current > model.hp.maximum) issue("current-hit-points", "Current HP exceeds the calculated maximum for this build.");
 	model.hitDice = {count: build.level, die: classHitDie, recovery: {long: "all"}};
 	const lifedrinkerHealing = pactLifedrinkerRule?.pactWeaponLifedrinker.hitPointDieHealing;
@@ -564,8 +564,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		return matches[0];
 	}
 	const rawSpecies = record(sources.races.race, build.species.name, "species");
-	if (!selectedLineage) throw new TypeError("Missing selected species lineage.");
-	model.speciesLineage = {id: selectedLineage.id, name: selectedLineage.name};
+	if (catalogSpecies?.lineages.length && !selectedLineage) throw new TypeError("Missing selected species lineage.");
+	if (selectedLineage) model.speciesLineage = {id: selectedLineage.id, name: selectedLineage.name};
 	if (!rawClass) throw new TypeError("Missing original class spellcasting metadata.");
 	if (featRule.spellGroup && !Array.isArray(featOptions)) throw new TypeError("Missing original Magic Initiate ability options.");
 	for (const entry of rawSpecies.entries || []) {
@@ -613,7 +613,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		model.spellcasting.push(value);
 		return value;
 	}
-	const speciesCasting = casting(species.speciesId, "Species", species.spellcastingAbility);
+	const speciesCasting = species.spells.length || species.resources.length ? casting(species.speciesId, "Species", species.spellcastingAbility) : null;
 	const classCasting = rawClass.spellcastingAbility ? casting(classOwner, classRule.name, rawClass.spellcastingAbility) : null;
 	const initiateCasting = initiateAbility ? casting(featOwner, featRule.record.name, initiateAbility) : null;
 	const collected = new Map();

@@ -10,12 +10,13 @@ export function projectSpecies (document, catalog) {
 	if (matches.length !== 1) throw new TypeError("character.build.species: unsupported or ambiguous species reference");
 	const species = matches[0];
 	const choices = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));
-	const permittedIds = [species.lineageChoiceId, species.abilityChoiceId, species.sizeChoiceId];
+	const permittedIds = [species.lineageChoiceId, species.abilityChoiceId, species.sizeChoiceId].filter(Boolean);
 	for (const id of choices.keys()) {
 		if (id.startsWith(`${species.id}:`) && !permittedIds.includes(id)) throw new TypeError(`character.build.choices: unknown species choice ${id}`);
 	}
 	const unresolvedChoices = [];
 	function select (id, options) {
+		if (!id) return null;
 		const selected = choices.get(id) || [];
 		if (selected.length > 1 || selected.some(value => !options.includes(value))) throw new TypeError(`character.build.choices: invalid selection for ${id}`);
 		if (!selected.length) {
@@ -55,7 +56,8 @@ export function projectSpecies (document, catalog) {
 		darkvision: species.darkvision,
 		creatureTypes: [...species.creatureTypes],
 		savingThrowAdvantages: species.savingThrowAdvantages.map(advantage => ({...advantage})),
-		resistances: [...(lineage?.resistances || [])],
+		resistances: [...new Set([...species.resistances, ...(lineage?.resistances || [])])],
+		hpPerLevel: species.hpPerLevel,
 		spellcastingAbility: ability,
 		spells,
 		resources: grants.filter(grant => grant.resource).map(grant => ({

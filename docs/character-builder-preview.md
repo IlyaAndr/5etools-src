@@ -105,6 +105,12 @@ options.
 
 A new Warlock chooses **Charisma** for class, species, and feat spells because all
 three sources allow it, whichever reviewed species and background are selected.
+Dwarf, Gnome, Halfling, Orc, and Tiefling are reviewed. Dwarf, Halfling, and Orc
+have no lineage and no species spells, so they carry no species spellcasting
+ability: the catalog treats a lineage, its spell group, and the species casting
+ability as optional, allows a species without darkvision, and lets a species add
+fixed damage resistances and a hit-point bonus per level (Dwarven Toughness).
+Their printed traits render as features on the sheet.
 Imported characters retain their explicit choices; previously selected different
 abilities remain visible and each source's values are displayed separately.
 Species-only reference fixtures also verify that rules permit independent

@@ -73,7 +73,7 @@ export function findSharedSpellcastingAbility ({characterClass, species, backgro
 	requireContext(context);
 	const speciesRule = findSpeciesRule(context.catalog, species);
 	const abilitySets = [];
-	if (speciesRule) abilitySets.push([...new Set(speciesRule.lineages.flatMap(lineage => lineage.abilityOptions))]);
+	if (speciesRule?.abilityChoiceId) abilitySets.push([...new Set(speciesRule.lineages.flatMap(lineage => lineage.abilityOptions))]);
 	const provider = CLASS_PROVIDERS[refKey(characterClass)];
 	const classRecord = provider ? findClassRecord(context.sources, provider.sourcesKey, characterClass) : null;
 	if (classRecord?.spellcastingAbility) abilitySets.push([classRecord.spellcastingAbility]);

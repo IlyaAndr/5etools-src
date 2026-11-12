@@ -11,9 +11,32 @@
 			"id": "srd-5.2.1",
 			"title": "System Reference Document 5.2.1",
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+		},
+		{
+			"id": "xphb",
+			"title": "Player's Handbook (2024)",
+			"url": "https://dnd.wizards.com/products/players-handbook"
 		}
 	],
 	"species": [
+		{
+			"ref": {
+				"name": "Dwarf",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					188
+				]
+			},
+			"commonSpells": [],
+			"savingThrowAdvantages": [],
+			"resistances": [
+				"poison"
+			],
+			"hpPerLevel": 1
+		},
 		{
 			"ref": {
 				"name": "Gnome",
@@ -64,6 +87,34 @@
 					"notes": []
 				}
 			]
+		},
+		{
+			"ref": {
+				"name": "Halfling",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					193
+				]
+			},
+			"commonSpells": [],
+			"savingThrowAdvantages": []
+		},
+		{
+			"ref": {
+				"name": "Orc",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					195
+				]
+			},
+			"commonSpells": [],
+			"savingThrowAdvantages": []
 		},
 		{
 			"ref": {

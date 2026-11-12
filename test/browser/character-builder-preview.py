@@ -773,6 +773,14 @@ def main():
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Wizard) Spellcasting Ability')
             assert 'Shield' in group_text(page, editor, 'Magic Initiate (Wizard) Level 1 Spell')
             assert editor.get_by_label('Background Tool', exact=True).count() == 0
+            # Dwarf and Halfling have no lineages and no species spells, so no
+            # species spellcasting-ability group appears for them.
+            page.select_option('#new-species', 'Dwarf|XPHB')
+            page.select_option('#new-background', 'Soldier|XPHB')
+            page.click('#new-character')
+            assert editor.get_by_label('Gnomish Lineage', exact=True).count() == 0
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
+            assert editor.get_by_label('Size', exact=True).count() == 0
             assert not errors, errors
         finally:
             browser.close()
