@@ -617,6 +617,9 @@ def main():
             assert page.locator('.cb-resource').filter(has_text='Darkness').count() == 0
             editor.get_by_label('Level', exact=True).select_option('5')
             assert 'Ability Score Improvement' in group_text(page, editor, 'Level 4 Feat')
+            # Feats whose armor prerequisite the class meets stay offered; the
+            # check reads the class's armor training.
+            assert 'Moderately Armored' in group_text(page, editor, 'Level 4 Feat')
             # Invocations appear only when their annotated prerequisite is
             # selected, and the ones whose choices are not reviewed yet are
             # withheld with the reason beside the group.

@@ -40,18 +40,24 @@ export function findFeatRecord (sources, featRule) {
 	return matches[0];
 }
 
+const ARMOR_KEYS = Object.freeze(["light", "medium", "heavy", "shield"]);
+const WEAPON_KEYS = Object.freeze(["martial", "simple"]);
+const ARMOR_TRAINING = Object.freeze({light: "Light armor", medium: "Medium armor", heavy: "Heavy armor", shield: "Shields"});
+const WEAPON_TRAINING = Object.freeze({martial: "Martial weapons", simple: "Simple weapons"});
+
 /**
  * Evaluate a feat's reviewed prerequisites: its character level, one of its
- * ability requirements, and spellcasting. Proficiency prerequisites are not
- * supported yet, so feats that use them stay out of the reviewed list.
+ * ability requirements, spellcasting, and armor proficiency. Entries in a
+ * feat's prerequisite list are alternatives; every key inside one entry must
+ * hold. Weapon and skill/tool proficiency prerequisites stay unsupported.
  */
-export function meetsFeatPrerequisites (featRecord, {level, scores, spellcasting}) {
+export function meetsFeatPrerequisites (featRecord, {level, scores, spellcasting, proficiencies}) {
 	const prerequisites = featRecord?.prerequisite;
 	if (prerequisites === undefined) return true;
 	if (!Array.isArray(prerequisites) || !prerequisites.length) throw new TypeError(`Unsupported ${featRecord.name} prerequisites.`);
 	return prerequisites.some(entry => {
 		if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} prerequisite.`);
-		for (const key of Object.keys(entry)) if (!["level", "ability", "spellcasting2020"].includes(key)) throw new TypeError(`Unsupported ${featRecord.name} prerequisite ${key}.`);
+		for (const key of Object.keys(entry)) if (!["level", "ability", "spellcasting2020", "proficiency"].includes(key)) throw new TypeError(`Unsupported ${featRecord.name} prerequisite ${key}.`);
 		if (entry.level !== undefined && (!Number.isSafeInteger(entry.level) || level < entry.level)) return false;
 		if (entry.ability !== undefined) {
 			if (!Array.isArray(entry.ability) || !entry.ability.length) throw new TypeError(`Unsupported ${featRecord.name} ability prerequisite.`);
@@ -60,30 +66,53 @@ export function meetsFeatPrerequisites (featRecord, {level, scores, spellcasting
 			if (!met) return false;
 		}
 		if (entry.spellcasting2020 !== undefined && (typeof entry.spellcasting2020 !== "boolean" || (entry.spellcasting2020 && !spellcasting))) return false;
+		if (entry.proficiency !== undefined && !meetsProficiencyPrerequisite(featRecord, entry.proficiency, proficiencies)) return false;
 		return true;
 	});
 }
 
-const ARMOR_TRAINING = Object.freeze({light: "Light armor", medium: "Medium armor", heavy: "Heavy armor", shield: "Shields"});
-const WEAPON_TRAINING = Object.freeze({martial: "Martial weapons", simple: "Simple weapons"});
+/** Match an armor-proficiency prerequisite against the character's training. */
+function meetsProficiencyPrerequisite (featRecord, requirement, proficiencies) {
+	if (!Array.isArray(requirement) || !requirement.length) throw new TypeError(`Unsupported ${featRecord.name} proficiency prerequisite.`);
+	if (!proficiencies?.armor) throw new TypeError(`${featRecord.name}: missing the character's armor proficiencies.`);
+	return requirement.some(group => {
+		if (!group || typeof group !== "object" || Array.isArray(group)) throw new TypeError(`Unsupported ${featRecord.name} proficiency prerequisite.`);
+		return Object.entries(group).every(([kind, value]) => {
+			if (kind !== "armor" || !ARMOR_KEYS.includes(value)) throw new TypeError(`Unsupported ${featRecord.name} proficiency prerequisite ${kind}.`);
+			return proficiencies.armor.has(value);
+		});
+	});
+}
+
+function readGrants (featRecord, entries, allowed, field) {
+	const grants = [];
+	if (entries === undefined) return grants;
+	if (!Array.isArray(entries)) throw new TypeError(`Unsupported ${featRecord.name} ${field}.`);
+	for (const entry of entries) {
+		if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} ${field}.`);
+		for (const [key, value] of Object.entries(entry)) {
+			if (value !== true || !allowed.includes(key)) throw new TypeError(`Unsupported ${featRecord.name} ${field} ${key}.`);
+			if (!grants.includes(key)) grants.push(key);
+		}
+	}
+	return grants;
+}
+
+/** Read the armor and weapon proficiencies a feat grants, as raw training keys. */
+export function getFeatProficiencyGrants (featRecord) {
+	return {
+		armor: readGrants(featRecord, featRecord.armorProficiencies, ARMOR_KEYS, "armor training"),
+		weapons: readGrants(featRecord, featRecord.weaponProficiencies, WEAPON_KEYS, "weapon training"),
+	};
+}
 
 /** Read the armor and weapon training a feat grants as display labels. */
 export function getFeatTraining (featRecord) {
-	const training = [];
-	const collect = (entries, labels, field) => {
-		if (entries === undefined) return;
-		if (!Array.isArray(entries)) throw new TypeError(`Unsupported ${featRecord.name} ${field}.`);
-		for (const entry of entries) {
-			if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} ${field}.`);
-			for (const [key, value] of Object.entries(entry)) {
-				if (value !== true || !labels[key]) throw new TypeError(`Unsupported ${featRecord.name} ${field} ${key}.`);
-				if (!training.includes(labels[key])) training.push(labels[key]);
-			}
-		}
-	};
-	collect(featRecord.armorProficiencies, ARMOR_TRAINING, "armor training");
-	collect(featRecord.weaponProficiencies, WEAPON_TRAINING, "weapon training");
-	return training;
+	const grants = getFeatProficiencyGrants(featRecord);
+	return [
+		...grants.armor.map(key => ARMOR_TRAINING[key]),
+		...grants.weapons.map(key => WEAPON_TRAINING[key]),
+	];
 }
 
 /** Read the senses (currently blindsight) a feat grants. */

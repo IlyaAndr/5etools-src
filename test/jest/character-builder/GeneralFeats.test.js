@@ -4,7 +4,8 @@ import {createSpeciesCatalog} from "../../../js/character-builder/species-catalo
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
 import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
-import {getFeatAbilityChoice, getFeatSenses, getFeatTraining} from "../../../js/character-builder/feat-choices.js";
+import {getFeatAbilityChoice, getFeatProficiencyGrants, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "../../../js/character-builder/feat-choices.js";
+import {addFeatChoices} from "./test-documents.js";
 import {getWarlockChoiceDescriptors} from "../../../js/character-builder/warlock-choices.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -34,6 +35,12 @@ const withFeat = (featId, ability) => {
 	return document;
 };
 const score = (model, ability) => model.abilities.find(entry => entry.id === ability).score;
+const levelNine = () => {
+	const document = levelFive();
+	document.build.level = 9;
+	addFeatChoices(document, owner, 9);
+	return document;
+};
 
 describe("Reviewed general feats", () => {
 	it("reads a fixed or chosen ability increase from the source record", () => {
@@ -49,9 +56,10 @@ describe("Reviewed general feats", () => {
 		expect(feat.options.map(option => option.id)).toEqual([
 			"ability-score-improvement|xphb", "actor|xphb", "athlete|xphb", "charger|xphb", "crossbow-expert|xphb", "crusher|xphb",
 			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "grappler|xphb", "great-weapon-master|xphb",
-			"heavily-armored|xphb", "inspiring-leader|xphb", "lightly-armored|xphb", "mage-slayer|xphb", "martial-weapon-training|xphb",
-			"moderately-armored|xphb", "mounted-combatant|xphb", "piercer|xphb", "polearm-master|xphb", "sentinel|xphb", "sharpshooter|xphb",
-			"skulker|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
+			"heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "lightly-armored|xphb", "mage-slayer|xphb",
+			"martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "piercer|xphb",
+			"polearm-master|xphb", "sentinel|xphb", "sharpshooter|xphb", "shield-master|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb",
+			"spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -116,5 +124,53 @@ describe("Reviewed general feats", () => {
 		const model = createCharacterSheetModel(withFeat("skulker|xphb"), catalog, context);
 		expect(model.status).toBe("complete");
 		expect(model.defenses).toContainEqual(expect.objectContaining({type: "blindsight", range: 10, provenance: "Skulker"}));
+	});
+
+	it("checks an armor-proficiency prerequisite against the character's training", () => {
+		const heavy = featRecord("Heavy Armor Master");
+		expect(meetsFeatPrerequisites(heavy, {level: 4, scores: {}, proficiencies: {armor: new Set(["heavy"])}})).toBe(true);
+		expect(meetsFeatPrerequisites(heavy, {level: 4, scores: {}, proficiencies: {armor: new Set(["light", "shield"])}})).toBe(false);
+		expect(() => meetsFeatPrerequisites(heavy, {level: 4, scores: {}})).toThrow(/armor proficiencies/);
+		expect(() => meetsFeatPrerequisites({name: "Broken", prerequisite: [{level: 4, proficiency: [{weapon: "martial"}]}]}, {level: 4, scores: {}, proficiencies: {armor: new Set(["heavy"])}}))
+			.toThrow(/Unsupported Broken proficiency prerequisite weapon/);
+	});
+
+	it("reads the armor proficiency a feat grants", () => {
+		expect(getFeatProficiencyGrants(featRecord("Lightly Armored"))).toEqual({armor: ["light", "shield"], weapons: []});
+		expect(getFeatProficiencyGrants(featRecord("Moderately Armored"))).toEqual({armor: ["medium"], weapons: []});
+		expect(getFeatProficiencyGrants(featRecord("Martial Weapon Training"))).toEqual({armor: [], weapons: ["martial"]});
+	});
+
+	it("accepts a feat whose armor prerequisite the class already meets", () => {
+		const model = createCharacterSheetModel(withFeat("moderately-armored|xphb", "dex"), catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.training).toContain("Medium armor");
+	});
+
+	it("rejects a feat whose armor prerequisite the class misses", () => {
+		const model = createCharacterSheetModel(withFeat("heavily-armored|xphb", "con"), catalog, context);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual(expect.objectContaining({id: `${owner}:level-4-feat`, message: "Heavily Armored: the feat's prerequisites are not met."}));
+		expect(model.features.some(feature => feature.name === "Heavily Armored")).toBe(false);
+	});
+
+	it("carries a feat's armor training into a later feat's prerequisite", () => {
+		let document = levelNine();
+		document.build.choices.find(saved => saved.id === `${owner}:invocations`).selected = [
+			"eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb",
+			"pact-of-the-blade|xphb", "lifedrinker|xphb",
+		];
+		document.build.choices.push({id: `${owner}:pact-weapon`, selected: ["longsword|xphb"]});
+		document.build.choices.find(saved => saved.id === `${owner}:prepared-spells`).selected.push("spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb");
+		document = setCharacterChoice(document, `${owner}:level-4-feat`, ["moderately-armored|xphb"]);
+		document = setCharacterChoice(document, `${owner}:level-4-feat-ability`, ["dex"]);
+		document = setCharacterChoice(document, `${owner}:level-4-ability-increases`, []);
+		document = setCharacterChoice(document, `${owner}:level-8-feat`, ["heavily-armored|xphb"]);
+		document = setCharacterChoice(document, `${owner}:level-8-feat-ability`, ["con"]);
+		document = setCharacterChoice(document, `${owner}:level-8-ability-increases`, []);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.training).toEqual(expect.arrayContaining(["Medium armor", "Heavy armor"]));
+		expect(model.features.some(feature => feature.name === "Heavily Armored")).toBe(true);
 	});
 });
