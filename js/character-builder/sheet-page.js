@@ -82,9 +82,10 @@ async function loadData () {
 	status.textContent = "Loading character data…";
 	clearError();
 	try {
-		const [races, spells, speciesRules, characterSheetRules, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds] = await Promise.all([
+		const [races, spells, spellLookup, speciesRules, characterSheetRules, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds] = await Promise.all([
 			fetchJson("../../data/races.json"),
 			fetchJson("../../data/spells/spells-xphb.json"),
+			fetchJson("../../data/generated/gendata-spell-source-lookup.json"),
 			fetchJson("./rules/species.json"),
 			fetchJson("./rules/character-sheet.json"),
 			fetchJson("../../data/class/class-fighter.json"),
@@ -97,7 +98,7 @@ async function loadData () {
 		]);
 		if (currentRequest !== requestId) return;
 		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
-		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
+		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, spellLookup, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
 		const combinations = getEditorCombinations({catalog, rules: characterSheetRules});
 		const fill = (select, entries) => select.replaceChildren(...entries.map(entry => new Option(entry.name, `${entry.name}|${entry.source}`)));
 		fill(speciesSelect, combinations.species);

@@ -602,6 +602,8 @@ def main():
             assert page.locator('.cb-resource').filter(has_text='Pact Magic').count() == 1
             editor.get_by_label('Level', exact=True).select_option('3')
             assert 'Fiend' in group_text(page, editor, 'Subclass')
+            # The patron is a real choice now, so the build selects one.
+            editor.get_by_label('Subclass', exact=True).select_option('fiend|xphb')
             # Invocation-gated cantrip choices appear only after their invocation
             # is selected.
             assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0

@@ -24,6 +24,7 @@ const context = {
 		optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 		feats: readJson("../../../data/feats.json"),
 		itemMasteries: readJson("../../../data/items-base.json"),
+		spellLookup: readJson("../../../data/generated/gendata-spell-source-lookup.json"),
 	},
 };
 const ref = (name, source = "XPHB") => ({name, source});
@@ -45,12 +46,16 @@ function draftFor ({species, characterClass, background}, level = 1) {
 // Fill every available choice with its first legal options, recomputing dependent
 // descriptors (such as invocation cantrips) after each decision.
 function completeDocument (document) {
+	// An invocation's reviewed cantrip must also be a known Warlock cantrip, so
+	// prefer those when a choice has more options than it needs.
+	const invocationCantrips = new Set(Object.values(context.rules.invocations).flatMap(invocation => invocation.cantripOptions || []));
+	const order = descriptor => [...descriptor.options].sort((left, right) => Number(invocationCantrips.has(right.id)) - Number(invocationCantrips.has(left.id)));
 	let current = document;
 	for (let pass = 0; pass < 100; pass++) {
 		const descriptors = getEditorChoiceDescriptors(current, catalog, context);
 		const pending = descriptors.find(descriptor => descriptor.available && descriptor.selected.length !== descriptor.count);
 		if (!pending) return current;
-		const selected = pending.options.slice(0, pending.count).map(option => option.id);
+		const selected = order(pending).slice(0, pending.count).map(option => option.id);
 		if (selected.length !== pending.count) throw new TypeError(`Cannot complete ${pending.id}: not enough options.`);
 		current = setCharacterChoice(current, pending.id, selected);
 	}

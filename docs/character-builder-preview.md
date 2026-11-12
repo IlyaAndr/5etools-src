@@ -40,16 +40,21 @@ All 18 skills are shown. Known current and temporary HP are displayed from the
 imported session.
 
 The editors support every combination of Gnome or Tiefling, Fighter or Warlock,
-and Soldier or Acolyte, including Champion and the Fiend patron, with the
-explicitly listed options. The Warlock editor covers levels 1–20 and the Fighter
-editor levels 1–5. They do not offer every legal class, spell,
+and Soldier or Acolyte, including Champion and all four XPHB Warlock patrons
+(Archfey, Celestial, Fiend, Great Old One), with the explicitly listed options.
+The Warlock editor covers levels 1–20 and the Fighter editor levels 1–5. They do
+not offer every legal class, spell,
 feat, equipment, or invocation choice. Choices and their validation use the same
 reviewed catalog; skill associations come from 2024 `data/skills.json`, ability
 names come from the site's existing parser, and class skills, hit dice, saving
 throws, Weapon Mastery progression, Second Wind uses, background skills, and
 background ability choices come from the original class and background records.
-Warlock spell and invocation progression also uses those records. Equipment,
-spell, invocation, and origin-feat choice lists use reviewed annotations. An
+Warlock spell and invocation progression also uses those records, and each
+patron's expanded spell list is derived from its subclass record. Equipment and
+invocation choice lists use reviewed annotations; Warlock spell lists and Magic
+Initiate cantrips come from the same 5etools filter expressions the site uses,
+evaluated against the pinned spell files, and single spell selects offer the
+site's filter search (`level=1 ritual`). An
 imported build with missing or unsupported choices produces an incomplete draft
 summary rather than invented statistics. Selections no longer available after a
 level change remain visible until the player explicitly removes them. Choice

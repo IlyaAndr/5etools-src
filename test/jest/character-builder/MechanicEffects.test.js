@@ -167,6 +167,7 @@ const sources = {
 	optionalFeatures: readJson("../../../data/optionalfeatures.json"),
 	feats: readJson("../../../data/feats.json"),
 	itemMasteries: readJson("../../../data/items-base.json"),
+	spellLookup: readJson("../../../data/generated/gendata-spell-source-lookup.json"),
 };
 const catalog = createSpeciesCatalog({races: sources.races, spells, rules: readJson("../../../js/character-builder/rules/species.json")});
 const sheetRules = readJson("../../../js/character-builder/rules/character-sheet.json");

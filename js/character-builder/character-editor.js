@@ -4,9 +4,13 @@ import {
 } from "./editor-common.js";
 import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
 import {getBackgroundEquipment} from "./background-choices.js";
+import {filterSpellOptions} from "./spell-catalog.js";
 
 /** Show a name filter once a checkbox group grows past a short, scannable list. */
 const OPTION_FILTER_MINIMUM = 8;
+
+/** Spell lists accept the site's own filter vocabulary as well as names. */
+const SPELL_FILTER_HELP = "Type a spell name, or narrow the list with the site's spell filters: level=1, school=Evocation, ritual, concentration, verbal, somatic, material, or source=xphb. Separate filters with spaces or |; use ; for alternatives such as level=0;1.";
 
 /** The reset action of each ability-score method, matching what it clears. */
 const SCORE_RESET_LABELS = {
@@ -328,6 +332,48 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return fieldset;
 	}
 
+	/**
+	 * Render one single-choice list. Spell lists keep the site's spell filters so
+	 * a long list such as a feat's level-1 spells stays searchable.
+	 */
+	function renderSingleOption (descriptor, displayedOptions) {
+		const spellList = displayedOptions.some(option => option.spell);
+		const input = select(displayedOptions, descriptor.selected[0], "No selection");
+		input.setAttribute("aria-label", descriptor.label);
+		input.dataset.cbFocus = descriptor.id;
+		const disableUnavailable = () => {
+			for (const option of input.options) if (option.value && !descriptor.available && option.value !== descriptor.selected[0]) option.disabled = true;
+		};
+		disableUnavailable();
+		input.addEventListener("change", () => publish(setCharacterChoice(character, descriptor.id, input.value ? [input.value] : [])));
+		if (!spellList || displayedOptions.length < OPTION_FILTER_MINIMUM) return [input];
+		const filterInput = element("input");
+		filterInput.type = "search";
+		filterInput.value = optionFilters.get(descriptor.id) ?? "";
+		filterInput.placeholder = "Search spells: name, level=1, school=Evocation, ritual";
+		filterInput.setAttribute("aria-label", `Filter ${descriptor.label}`);
+		filterInput.dataset.cbFocus = `filter:${descriptor.id}`;
+		const wrapper = element("label", null, "cb-editor__field cb-editor__filter");
+		wrapper.append(element("span", "Filter spells"), filterInput);
+		const status = element("p", null, "cb-editor__help cb-editor__filter-status");
+		status.setAttribute("aria-live", "polite");
+		const applyFilter = () => {
+			const query = filterInput.value;
+			optionFilters.set(descriptor.id, query);
+			const current = displayedOptions.find(option => option.id === input.value);
+			const matches = filterSpellOptions(displayedOptions, query);
+			const visible = current && !matches.includes(current) ? [current, ...matches] : matches;
+			input.replaceChildren(new Option("No selection", ""), ...visible.map(option => new Option(option.detail ? `${option.label} · ${option.detail}` : option.label, option.id)));
+			input.value = current?.id || "";
+			disableUnavailable();
+			status.hidden = !query.trim() || matches.length === displayedOptions.length;
+			status.textContent = matches.length ? `Showing ${matches.length} of ${displayedOptions.length} spells.` : "No spells match this filter.";
+		};
+		filterInput.addEventListener("input", applyFilter);
+		applyFilter();
+		return [element("p", SPELL_FILTER_HELP, "cb-editor__help"), wrapper, status, input];
+	}
+
 	/** Render one saved choice as a selector, a checkbox group, or a fixed value. */
 	function renderChoiceGroup (descriptor) {
 		const hasSavedChoice = character.build.choices.some(choice => choice.id === descriptor.id);
@@ -358,28 +404,25 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		if (fixedOption) {
 			group.append(element("p", fixedOption.detail ? `${fixedOption.label} · ${fixedOption.detail}` : fixedOption.label, "cb-editor__fixed"));
 		} else if (descriptor.count === 1 && descriptor.selected.length <= 1) {
-			const input = select(displayedOptions, descriptor.selected[0], "No selection");
-			input.setAttribute("aria-label", descriptor.label);
-			input.dataset.cbFocus = descriptor.id;
-			for (const option of input.options) if (option.value && !descriptor.available && option.value !== descriptor.selected[0]) option.disabled = true;
-			input.addEventListener("change", () => publish(setCharacterChoice(character, descriptor.id, input.value ? [input.value] : [])));
-			options.append(input);
+			options.append(...renderSingleOption(descriptor, displayedOptions));
 		} else {
 			const atLimit = descriptor.selected.length >= descriptor.count;
+			const spellList = displayedOptions.some(option => option.spell);
 			let filterInput = null;
 			let filterStatus = null;
 			if (displayedOptions.length >= OPTION_FILTER_MINIMUM) {
 				filterInput = element("input");
 				filterInput.type = "search";
 				filterInput.value = optionFilters.get(descriptor.id) ?? "";
-				filterInput.placeholder = "Type to narrow the list";
+				filterInput.placeholder = spellList ? "Search spells: name, level=1, school=Evocation, ritual" : "Type to narrow the list";
 				filterInput.setAttribute("aria-label", `Filter ${descriptor.label}`);
 				filterInput.dataset.cbFocus = `filter:${descriptor.id}`;
 				filterStatus = element("p", null, "cb-editor__help cb-editor__filter-status");
 				filterStatus.setAttribute("aria-live", "polite");
 				filterStatus.hidden = true;
 				const wrapper = element("label", null, "cb-editor__field cb-editor__filter");
-				wrapper.append(element("span", "Filter options"), filterInput);
+				wrapper.append(element("span", spellList ? "Filter spells" : "Filter options"), filterInput);
+				if (spellList) group.append(element("p", SPELL_FILTER_HELP, "cb-editor__help"));
 				group.append(wrapper, filterStatus);
 			}
 			const rows = [];
@@ -405,7 +448,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				const applyFilter = () => {
 					const query = filterInput.value;
 					optionFilters.set(descriptor.id, query);
-					const matches = new Set(filterOptions(displayedOptions, query).map(option => option.id));
+					const matches = new Set((spellList ? filterSpellOptions : filterOptions)(displayedOptions, query).map(option => option.id));
 					let shown = 0;
 					for (const row of rows) {
 						const keep = matches.has(row.option.id) || descriptor.selected.includes(row.option.id);
