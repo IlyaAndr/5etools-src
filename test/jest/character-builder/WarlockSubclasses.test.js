@@ -53,6 +53,24 @@ describe("XPHB Warlock patrons", () => {
 
 		expect(getSubclassSpellGrants(subclass("Archfey"), spellCatalog).prepared[0].spells).toContain("spell:misty-step|xphb");
 		expect(getSubclassSpellGrants(subclass("Great Old One"), spellCatalog).prepared[1].spells).toContain("spell:hunger-of-hadar|xphb");
+
+		expect(fiend.innate).toEqual([]);
+		expect(celestial.innate).toEqual([]);
+		expect(getSubclassSpellGrants(subclass("Archfey"), spellCatalog).innate).toEqual([
+			{minimumLevel: 3, spellId: "spell:misty-step|xphb", uses: 1, ability: "cha"},
+		]);
+		expect(getSubclassSpellGrants(subclass("Great Old One"), spellCatalog).innate).toEqual([
+			{minimumLevel: 10, spellId: "spell:hex|xphb", uses: 1, ability: null},
+		]);
+	});
+
+	it("tracks a patron innate free cast as a resource", () => {
+		const document = setCharacterChoice(levelThree(), subclassId, ["archfey|xphb"]);
+		const model = createCharacterSheetModel(document, catalog, context);
+		const resource = model.resources.find(candidate => candidate.spellId === "spell:misty-step|xphb");
+		expect(resource).toMatchObject({maxUses: 1, freeLevel: 2, spellcastingAbility: "cha", recovery: {long: "all"}});
+		const spell = model.spells.find(candidate => candidate.id === "spell:misty-step|xphb");
+		expect(spell.sources.some(source => source.resourceId === resource.id && source.freeLevel === 2)).toBe(true);
 	});
 
 	it("rejects unknown spells and unsupported source shapes", () => {
@@ -63,6 +81,14 @@ describe("XPHB Warlock patrons", () => {
 		const malformed = clone(subclass("Archfey"));
 		malformed.record.additionalSpells[0].prepared[3] = "misty step|xphb";
 		expect(() => getSubclassSpellGrants(malformed, spellCatalog)).toThrow(/Unsupported Archfey prepared spells/);
+
+		const weekly = clone(subclass("Archfey"));
+		weekly.record.additionalSpells[0].innate = {3: {weekly: {1: ["misty step|xphb"]}}};
+		expect(() => getSubclassSpellGrants(weekly, spellCatalog)).toThrow(/Unsupported Archfey innate recharge weekly/);
+
+		const badCount = clone(subclass("Archfey"));
+		badCount.record.additionalSpells[0].innate = {3: {daily: {strange: ["misty step|xphb"]}}};
+		expect(() => getSubclassSpellGrants(badCount, spellCatalog)).toThrow(/Unsupported Archfey innate use count strange/);
 
 		expect(() => getSubclassSpellGrants({name: "Fiend"})).toThrow(/Missing reviewed subclass record/);
 	});

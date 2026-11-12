@@ -77,6 +77,7 @@ export function getWarlockSpellQueries (sources) {
 
 /** The reviewed 2024 patrons, read from the class source records. */
 const SUBCLASS_NAMES = ["Archfey", "Celestial", "Fiend", "Great Old One"];
+const ABILITY_KEYS = new Set(["str", "dex", "con", "int", "wis", "cha"]);
 const slugName = value => value.toLowerCase().replaceAll(" ", "-");
 
 /** List every reviewed patron with the original source record behind it. */
@@ -105,9 +106,9 @@ function subclassSpellId (uid, spellCatalog) {
 
 /**
  * Read the expanded spell list a patron grants straight from its source record.
- * `prepared` becomes the always-prepared list; the Celestial's cantrips come
- * from `known`. Innate free-cast grants need their own resource annotation and
- * stay unsupported until that resource is reviewed.
+ * `prepared` becomes the always-prepared list, the Celestial's cantrips come
+ * from `known`, and `innate` grants a limited free cast the sheet tracks as a
+ * resource. Unsupported shapes are rejected rather than guessed.
  */
 export function getSubclassSpellGrants (subclass, spellCatalog) {
 	if (!subclass?.record) throw new TypeError("Missing reviewed subclass record.");
@@ -116,6 +117,7 @@ export function getSubclassSpellGrants (subclass, spellCatalog) {
 	for (const key of Object.keys(block)) if (!["known", "prepared", "innate"].includes(key)) throw new TypeError(`Unsupported ${subclass.name} spell block ${key}.`);
 	const known = [];
 	const prepared = [];
+	const innate = [];
 	if (block.known !== undefined) {
 		if (!block.known || typeof block.known !== "object" || Array.isArray(block.known)) throw new TypeError(`Unsupported ${subclass.name} known spells.`);
 		for (const [level, list] of Object.entries(block.known)) {
@@ -134,7 +136,34 @@ export function getSubclassSpellGrants (subclass, spellCatalog) {
 			prepared.push({minimumLevel: Number(level), spells: list.map(uid => subclassSpellId(uid, spellCatalog).id)});
 		}
 	}
-	return {known, prepared: prepared.sort((left, right) => left.minimumLevel - right.minimumLevel)};
+	if (block.innate !== undefined) {
+		if (!block.innate || typeof block.innate !== "object" || Array.isArray(block.innate)) throw new TypeError(`Unsupported ${subclass.name} innate spells.`);
+		for (const [levelKey, entry] of Object.entries(block.innate)) {
+			const minimumLevel = levelKey === "_" ? 3 : (/^[1-9][0-9]*$/.test(levelKey) ? Number(levelKey) : null);
+			if (minimumLevel === null || minimumLevel > 20) throw new TypeError(`Unsupported ${subclass.name} innate spell level ${levelKey}.`);
+			const addInnate = (uid, uses, ability) => innate.push({minimumLevel, spellId: subclassSpellId(uid, spellCatalog).id, uses, ability});
+			if (Array.isArray(entry)) {
+				entry.forEach(uid => addInnate(uid, 1, null));
+				continue;
+			}
+			if (!entry || typeof entry !== "object") throw new TypeError(`Unsupported ${subclass.name} innate spells.`);
+			for (const [recharge, inner] of Object.entries(entry)) {
+				if (recharge !== "daily") throw new TypeError(`Unsupported ${subclass.name} innate recharge ${recharge}.`);
+				if (!inner || typeof inner !== "object" || Array.isArray(inner)) throw new TypeError(`Unsupported ${subclass.name} innate spells.`);
+				for (const [useKey, list] of Object.entries(inner)) {
+					if (!Array.isArray(list)) throw new TypeError(`Unsupported ${subclass.name} innate spells.`);
+					let uses = 1;
+					let ability = null;
+					if (ABILITY_KEYS.has(useKey)) ability = useKey;
+					else if (useKey === "pb") uses = "proficiencyBonus";
+					else if (/^[1-9][0-9]*$/.test(useKey)) uses = Number(useKey);
+					else throw new TypeError(`Unsupported ${subclass.name} innate use count ${useKey}.`);
+					list.forEach(uid => addInnate(uid, uses, ability));
+				}
+			}
+		}
+	}
+	return {known, prepared: prepared.sort((left, right) => left.minimumLevel - right.minimumLevel), innate};
 }
 
 /** Create an empty Warlock build with the shared spellcasting ability selected. */
