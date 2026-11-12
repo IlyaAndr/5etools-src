@@ -21,6 +21,27 @@
 	"species": [
 		{
 			"ref": {
+				"name": "Aasimar",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					186
+				]
+			},
+			"commonSpells": [
+				"light|xphb"
+			],
+			"savingThrowAdvantages": [],
+			"resistances": [
+				"necrotic",
+				"radiant"
+			],
+			"spellcastingAbility": "cha"
+		},
+		{
+			"ref": {
 				"name": "Dragonborn",
 				"source": "XPHB"
 			},

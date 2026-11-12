@@ -2,7 +2,7 @@ export const SPECIES_CATALOG_VERSION = 1;
 
 const SIZES = {S: "small", M: "medium"};
 const ABILITIES = ["int", "wis", "cha"];
-const SUPPORTED_REFS = ["dragonborn|xphb", "dwarf|xphb", "gnome|xphb", "goliath|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
+const SUPPORTED_REFS = ["aasimar|xphb", "dragonborn|xphb", "dwarf|xphb", "gnome|xphb", "goliath|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
 
 function fail (path, message) { throw new TypeError(`${path}: ${message}`); }
 function copy (value) { return JSON.parse(JSON.stringify(value)); }
@@ -89,7 +89,7 @@ function validateRules (rules) {
 	array(rules.species, "rules.species");
 	const refs = new Set();
 	for (const rule of rules.species) {
-		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel"]);
+		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel", "spellcastingAbility"]);
 		reference(rule.ref, "rules.species.ref");
 		const key = refKey(rule.ref);
 		if (!SUPPORTED_REFS.includes(key) || refs.has(key)) fail("rules.species", `unsupported or duplicate species ${key}`);
@@ -116,6 +116,11 @@ function validateRules (rules) {
 			if (new Set(rule.resistances).size !== rule.resistances.length) fail("rules.species.resistances", "duplicate resistance");
 		}
 		if (rule.hpPerLevel !== undefined) integer(rule.hpPerLevel, "rules.species.hpPerLevel", 0, 10);
+		if (rule.spellcastingAbility !== undefined) {
+			if (!ABILITIES.includes(rule.spellcastingAbility)) fail("rules.species.spellcastingAbility", "unsupported ability");
+			if (spellLineages.length) fail("rules.species.spellcastingAbility", "fixed ability with lineage spellcasting");
+			if (!Array.isArray(rule.commonSpells) || !rule.commonSpells.length) fail("rules.species.spellcastingAbility", "fixed ability without spells");
+		}
 		array(rule.commonSpells, "rules.species.commonSpells");
 		if (new Set(rule.commonSpells).size !== rule.commonSpells.length) fail("rules.species.commonSpells", "duplicate common spell");
 		rule.commonSpells.forEach(uid => string(uid, "rules.species.commonSpells"));
@@ -233,11 +238,24 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 		const groups = new Map();
 		if (raw.additionalSpells !== undefined) {
 			array(raw.additionalSpells, `species ${key}.additionalSpells`);
-			if (raw.additionalSpells.length !== spellLineages.length) fail(`species ${key}.additionalSpells`, "unmapped spell groups");
-			for (const group of raw.additionalSpells) {
+			const namedGroups = raw.additionalSpells.filter(group => group.name !== undefined);
+			const speciesGroups = raw.additionalSpells.filter(group => group.name === undefined);
+			if (speciesGroups.length > 1) fail(`species ${key}.additionalSpells`, "duplicate species spell group");
+			if (namedGroups.length !== spellLineages.length) fail(`species ${key}.additionalSpells`, "unmapped spell groups");
+			for (const group of namedGroups) {
 				string(group.name, "additionalSpells.name");
 				if (groups.has(group.name)) fail("additionalSpells", "duplicate spell group");
 				groups.set(group.name, group);
+			}
+			if (speciesGroups.length) {
+				// A group without a name describes spells every member of the species
+				// knows, such as the Aasimar's Light cantrip.
+				const group = speciesGroups[0];
+				if (typeof group.ability !== "string" || !ABILITIES.includes(group.ability)) fail(`species ${key}.additionalSpells.ability`, "unsupported fixed ability");
+				if (rule.spellcastingAbility !== group.ability) fail(`species ${key}.spellcastingAbility`, "fixed ability disagrees with the source record");
+				if (group.innate !== undefined) fail(`species ${key}.additionalSpells`, "unsupported species innate spells");
+				const uids = new Set(Object.values(group.known || {}).flat().filter(value => typeof value === "string").map(uid => uid.replace(/#.*$/, "").toLowerCase()));
+				if (JSON.stringify([...uids].sort()) !== JSON.stringify([...rule.commonSpells].map(uid => uid.toLowerCase()).sort())) fail(`species ${key}.commonSpells`, "common spells disagree with the source record");
 			}
 		} else if (spellLineages.length) fail(`species ${key}.additionalSpells`, "missing spell groups");
 		const id = `species:${slug(raw.name)}|${raw.source.toLowerCase()}`;
@@ -281,6 +299,11 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			const rawSpell = spellIndex.get(uid.toLowerCase());
 			if (!rawSpell || rawSpell.level !== 0) fail(`species ${key}.commonSpells`, "unsupported common spell");
 			const spellId = `spell:${slug(rawSpell.name)}|${rawSpell.source.toLowerCase()}`;
+			if (!lineageEntries.length) {
+				if (!rule.spellcastingAbility) fail(`species ${key}.commonSpells`, "common spell without a spellcasting ability");
+				if (!collectedSpells.has(spellId)) collectedSpells.set(spellId, {id: spellId, ref: {name: rawSpell.name, source: rawSpell.source}, level: rawSpell.level, ...spellMetadata(rawSpell, uid.toLowerCase())});
+				return {spellId, minimumCharacterLevel: 1, alwaysPrepared: false, canCastWithSlots: false, resource: null};
+			}
 			const grant = lineageEntries[0]?.grants.find(candidate => candidate.spellId === spellId);
 			if (!grant || grant.minimumCharacterLevel !== 1 || grant.resource !== null || lineageEntries.some(lineage => !lineage.grants.some(candidate => JSON.stringify(candidate) === JSON.stringify(grant)))) fail(`species ${key}.commonSpells`, "common spell is not consistently granted by every spell group");
 			for (const lineage of lineageEntries) lineage.grants = lineage.grants.filter(candidate => candidate.spellId !== spellId);
@@ -296,7 +319,8 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			creatureTypes: [...raw.creatureTypes],
 			lineageChoiceId: lineageEntries.length ? `${id}:${rule.lineageChoice}` : null,
 			lineageLabel: lineageEntries.length ? rule.lineageLabel : null,
-			abilityChoiceId: grantsSpells ? `${id}:spellcasting-ability` : null,
+			abilityChoiceId: grantsSpells && rule.spellcastingAbility === undefined ? `${id}:spellcasting-ability` : null,
+			spellcastingAbility: rule.spellcastingAbility ?? null,
 			sizeChoiceId: raw.size.length > 1 ? `${id}:size` : null,
 			savingThrowAdvantages: copy(rule.savingThrowAdvantages),
 			resistances: [...fixedResistances],

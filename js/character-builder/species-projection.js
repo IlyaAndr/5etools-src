@@ -28,7 +28,7 @@ export function projectSpecies (document, catalog) {
 	const lineageId = select(species.lineageChoiceId, species.lineages.map(lineage => lineage.id));
 	const lineage = species.lineages.find(candidate => candidate.id === lineageId);
 	const abilityOptions = lineage?.abilityOptions || [...new Set(species.lineages.flatMap(candidate => candidate.abilityOptions))];
-	const ability = select(species.abilityChoiceId, abilityOptions);
+	const ability = species.abilityChoiceId ? select(species.abilityChoiceId, abilityOptions) : species.spellcastingAbility;
 	const size = species.sizeChoiceId ? select(species.sizeChoiceId, species.sizes) : species.sizes[0];
 	const proficiencyBonus = 2 + Math.floor((document.build.level - 1) / 4);
 	const grants = [...species.baseGrants, ...(lineage?.grants || [])].filter(grant => grant.minimumCharacterLevel <= document.build.level);

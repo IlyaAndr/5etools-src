@@ -79,6 +79,37 @@ describe("Lineage-free 2024 species", () => {
 	});
 });
 
+describe("Species-wide cantrips with a fixed ability", () => {
+	const aasimar = () => {
+		const document = speciesCharacter("Aasimar");
+		document.build.choices.push({id: "species:aasimar|xphb:size", selected: ["medium"]});
+		return document;
+	};
+
+	it("projects the Aasimar's resistances and its Charisma cantrip", () => {
+		const projection = projectSpecies(aasimar(), catalog);
+		expect(projection.resistances).toEqual(["necrotic", "radiant"]);
+		expect(projection.spellcastingAbility).toBe("cha");
+		expect(projection.spells).toEqual([expect.objectContaining({id: "spell:light|xphb", ability: "cha", minimumCharacterLevel: 1})]);
+		expect(projection.unresolvedChoices).toEqual([]);
+	});
+
+	it("offers only the size choice", () => {
+		const descriptors = getSpeciesChoiceDescriptors(aasimar(), catalog, {sources});
+		expect(descriptors.map(descriptor => descriptor.id)).toEqual(["species:aasimar|xphb:size"]);
+	});
+
+	it("adds Light and both resistances to the sheet", () => {
+		const model = createCharacterSheetModel(aasimar(), catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.status).toBe("complete");
+		expect(model.spells.some(spell => spell.id === "spell:light|xphb")).toBe(true);
+		expect(model.defenses.filter(defense => defense.type === "resistance").map(defense => defense.damageType).sort()).toEqual(["necrotic", "radiant"]);
+		expect(model.darkvision).toBe(60);
+		expect(model.spellcasting.find(profile => profile.label === "Species").ability).toBe("cha");
+	});
+});
+
 describe("Ancestry choices without species spells", () => {
 	it.each([
 		["acid", "acid"], ["cold", "cold"], ["fire", "fire"], ["lightning", "lightning"], ["poison", "poison"],
