@@ -40,6 +40,30 @@ export function findFeatRecord (sources, featRule) {
 	return matches[0];
 }
 
+/**
+ * Evaluate a feat's reviewed prerequisites: its character level, one of its
+ * ability requirements, and spellcasting. Proficiency prerequisites are not
+ * supported yet, so feats that use them stay out of the reviewed list.
+ */
+export function meetsFeatPrerequisites (featRecord, {level, scores, spellcasting}) {
+	const prerequisites = featRecord?.prerequisite;
+	if (prerequisites === undefined) return true;
+	if (!Array.isArray(prerequisites) || !prerequisites.length) throw new TypeError(`Unsupported ${featRecord.name} prerequisites.`);
+	return prerequisites.some(entry => {
+		if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} prerequisite.`);
+		for (const key of Object.keys(entry)) if (!["level", "ability", "spellcasting2020"].includes(key)) throw new TypeError(`Unsupported ${featRecord.name} prerequisite ${key}.`);
+		if (entry.level !== undefined && (!Number.isSafeInteger(entry.level) || level < entry.level)) return false;
+		if (entry.ability !== undefined) {
+			if (!Array.isArray(entry.ability) || !entry.ability.length) throw new TypeError(`Unsupported ${featRecord.name} ability prerequisite.`);
+			const met = entry.ability.every(group => group && typeof group === "object" && !Array.isArray(group)
+				&& Object.entries(group).every(([ability, value]) => ABILITY_IDS.includes(ability) && Number.isSafeInteger(value) && (scores[ability] ?? 0) >= value));
+			if (!met) return false;
+		}
+		if (entry.spellcasting2020 !== undefined && (typeof entry.spellcasting2020 !== "boolean" || (entry.spellcasting2020 && !spellcasting))) return false;
+		return true;
+	});
+}
+
 /** Read one spell choice entry, rejecting shapes this subset cannot review. */
 function readSpellEntry (entry, path) {
 	if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`${path}: expected a spell choice entry`);

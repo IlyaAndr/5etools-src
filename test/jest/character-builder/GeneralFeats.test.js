@@ -46,12 +46,40 @@ describe("Reviewed general feats", () => {
 	it("offers the reviewed general feats beside Ability Score Improvement", () => {
 		const list = getWarlockChoiceDescriptors(levelFive(), catalog, context);
 		const feat = list.find(entry => entry.id === `${owner}:level-4-feat`);
-		expect(feat.options.map(option => option.id)).toEqual(["ability-score-improvement|xphb", "crusher|xphb", "durable|xphb", "mage-slayer|xphb", "mounted-combatant|xphb", "piercer|xphb", "slasher|xphb", "weapon-master|xphb"]);
+		expect(feat.options.map(option => option.id)).toEqual([
+			"ability-score-improvement|xphb", "actor|xphb", "athlete|xphb", "charger|xphb", "crossbow-expert|xphb", "crusher|xphb",
+			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "grappler|xphb", "great-weapon-master|xphb",
+			"inspiring-leader|xphb", "mage-slayer|xphb", "mounted-combatant|xphb", "piercer|xphb", "polearm-master|xphb", "sentinel|xphb",
+			"sharpshooter|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
+		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
 		const ability = crusher.find(entry => entry.id === `${owner}:level-4-feat-ability`);
 		expect(ability.options.map(option => option.id)).toEqual(["str", "con"]);
 		expect(crusher.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(false);
+	});
+
+	it("enforces a feat's ability prerequisite", () => {
+		const model = createCharacterSheetModel(withFeat("great-weapon-master|xphb"), catalog, context);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual(expect.objectContaining({
+			id: `${owner}:level-4-feat`,
+			message: "Great Weapon Master: the feat's prerequisites are not met.",
+		}));
+	});
+
+	it("applies a fixed-ability feat that meets its prerequisite", () => {
+		const model = createCharacterSheetModel(withFeat("actor|xphb"), catalog, context);
+		expect(model.status).toBe("complete");
+		expect(score(model, "cha")).toBe(18);
+		expect(model.features.some(feature => feature.name === "Actor")).toBe(true);
+	});
+
+	it("accepts a spellcasting feat for a spellcasting class", () => {
+		const model = createCharacterSheetModel(withFeat("war-caster|xphb", "cha"), catalog, context);
+		expect(model.status).toBe("complete");
+		expect(score(model, "cha")).toBe(18);
+		expect(model.features.some(feature => feature.name === "War Caster")).toBe(true);
 	});
 
 	it("applies a chosen-feat ability increase and renders the feat", () => {
