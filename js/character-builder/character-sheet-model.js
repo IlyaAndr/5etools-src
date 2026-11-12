@@ -421,10 +421,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const lineageId = catalogSpecies?.lineageChoiceId ? (decisions.get(catalogSpecies.lineageChoiceId) || [])[0] : null;
 	const selectedLineage = catalogSpecies?.lineages.find(candidate => candidate.id === lineageId);
 	if (selectedLineage && rawClass && (!featRule.spellGroup || Array.isArray(featOptions))) {
-		const castingChoices = [{id: species.speciesId, allowed: [...selectedLineage.abilityOptions], selected: species.spellcastingAbility}];
+		const castingChoices = [];
+		if (selectedLineage.abilityOptions.length) castingChoices.push({id: species.speciesId, allowed: [...selectedLineage.abilityOptions], selected: species.spellcastingAbility});
 		if (rawClass.spellcastingAbility) castingChoices.push({id: classOwner, allowed: [rawClass.spellcastingAbility], selected: rawClass.spellcastingAbility});
 		if (featOptions) castingChoices.push({id: featOwner, allowed: [...featOptions], selected: initiateAbility || null});
-		model.spellcastingChoicePlan = planSpellcastingChoices({sources: castingChoices, abilityScores: scores});
+		if (castingChoices.length >= 2) model.spellcastingChoicePlan = planSpellcastingChoices({sources: castingChoices, abilityScores: scores});
 	}
 	if (model.issues.length) return model;
 

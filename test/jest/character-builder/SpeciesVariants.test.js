@@ -34,6 +34,12 @@ function speciesCharacter (name) {
 	return document;
 }
 
+const lineageCharacter = (name, lineage) => {
+	const document = speciesCharacter(name);
+	document.build.choices.push({id: `species:${name.toLowerCase()}|xphb:lineage`, selected: [lineage]});
+	return document;
+};
+
 describe("Lineage-free 2024 species", () => {
 	it.each([
 		["Dwarf", {darkvision: 120, resistances: ["poison"], hpPerLevel: 1, size: "medium"}],
@@ -70,5 +76,40 @@ describe("Lineage-free 2024 species", () => {
 		expect(model.issues).toEqual([]);
 		expect(model.size).toBe("small");
 		expect(model.darkvision).toBe(0);
+	});
+});
+
+describe("Ancestry choices without species spells", () => {
+	it.each([
+		["acid", "acid"], ["cold", "cold"], ["fire", "fire"], ["lightning", "lightning"], ["poison", "poison"],
+	])("gives the Dragonborn its %s ancestry resistance", (lineage, damageType) => {
+		const projection = projectSpecies(lineageCharacter("Dragonborn", lineage), catalog);
+		expect(projection.resistances).toEqual([damageType]);
+		expect(projection.spells).toEqual([]);
+		expect(projection.spellcastingAbility).toBeNull();
+		expect(projection.unresolvedChoices).toEqual([]);
+	});
+
+	it("records the Dragonborn ancestry on the sheet with its resistance", () => {
+		const model = createCharacterSheetModel(lineageCharacter("Dragonborn", "fire"), catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.status).toBe("complete");
+		expect(model.defenses).toContainEqual(expect.objectContaining({type: "resistance", damageType: "fire"}));
+		expect(model.features.find(feature => feature.name === "Draconic Ancestry").selection).toEqual({label: "Selected lineage", value: "Fire"});
+		expect(model.darkvision).toBe(60);
+	});
+
+	it("offers the six Giant Ancestries and records the chosen one", () => {
+		const document = lineageCharacter("Goliath", "storms-thunder");
+		const descriptor = getSpeciesChoiceDescriptors(document, catalog, {sources}).find(entry => entry.id === "species:goliath|xphb:lineage");
+		expect(descriptor.label).toBe("Giant Ancestry");
+		expect(descriptor.options.map(option => option.label)).toEqual([
+			"Cloud's Jaunt", "Fire's Burn", "Frost's Chill", "Hill's Tumble", "Stone's Endurance", "Storm's Thunder",
+		]);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.speed).toBe(35);
+		expect(model.defenses.filter(defense => defense.type === "resistance")).toEqual([]);
+		expect(model.features.find(feature => feature.name === "Giant Ancestry").selection).toEqual({label: "Selected lineage", value: "Storm's Thunder"});
 	});
 });
