@@ -792,6 +792,12 @@ def main():
             page.select_option('#new-species', 'Goliath|XPHB')
             page.click('#new-character')
             assert "Storm's Thunder" in group_text(page, editor, 'Giant Ancestry')
+            # Aasimar has no lineage or ability choice: only its size is asked.
+            page.select_option('#new-species', 'Aasimar|XPHB')
+            page.click('#new-character')
+            assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
+            assert 'Medium' in group_text(page, editor, 'Size')
+            assert 'Small' in group_text(page, editor, 'Size')
             assert not errors, errors
         finally:
             browser.close()
