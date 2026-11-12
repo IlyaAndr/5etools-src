@@ -10,7 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyGrants, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -255,7 +255,11 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		if (subclassEntry) model.subclassName = subclassEntry.name;
 	}
 	const classRecords = classRule.name === "Warlock" ? sources?.warlock?.class : sources?.fighter?.class;
-	const hasSpellcasting = Boolean((classRecords || []).find(candidate => candidate.name === build.class.name && candidate.source === build.class.source)?.spellcastingAbility);
+	const classRecord = (classRecords || []).find(candidate => candidate.name === build.class.name && candidate.source === build.class.source);
+	const hasSpellcasting = Boolean(classRecord?.spellcastingAbility);
+	const classArmor = classRecord?.startingProficiencies?.armor ?? [];
+	if (!Array.isArray(classArmor) || classArmor.some(armor => !["light", "medium", "heavy", "shield"].includes(armor))) throw new TypeError(`Unsupported ${build.class.name} armor proficiencies.`);
+	const proficiencies = {armor: new Set(classArmor)};
 	const featTraining = [];
 	const featSenses = [];
 	for (const featLevel of classRule.featLevels || []) {
@@ -265,10 +269,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		if (featId && featId !== "ability-score-improvement|xphb") {
 			const featRule = rules.feats[featId];
 			const featData = findFeatRecord(sources, featRule);
-			if (!meetsFeatPrerequisites(featData, {level: build.level, scores, spellcasting: hasSpellcasting})) {
+			if (!meetsFeatPrerequisites(featData, {level: build.level, scores, spellcasting: hasSpellcasting, proficiencies})) {
 				issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the feat's prerequisites are not met.`);
 				continue;
 			}
+			const grants = getFeatProficiencyGrants(featData);
+			for (const armor of grants.armor) proficiencies.armor.add(armor);
 			featTraining.push(...getFeatTraining(featData));
 			featSenses.push(...getFeatSenses(featData).map(sense => ({...sense, label: featRule.name})));
 			const ability = getFeatAbilityChoice(featData);
