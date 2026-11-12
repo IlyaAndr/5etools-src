@@ -1,4 +1,4 @@
-import {validateCharacterDocument} from "./character-document.js";
+import {ABILITY_IDS, validateCharacterDocument} from "./character-document.js";
 import {describeChoices, getSpellOptions} from "./choice-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getBackgroundRule} from "./background-choices.js";
@@ -11,6 +11,33 @@ export function getFeatRule (background, rules) {
 	const rule = rules?.feats?.[entry.rule.featId];
 	if (!rule) throw new TypeError(`Missing reviewed feat ${entry.rule.featId}.`);
 	return {id: entry.rule.featId, owner: `feat:${entry.rule.featId}`, rule};
+}
+
+/**
+ * Read a general feat's Ability Score Increase from its source record: either a
+ * single fixed ability or a choice among a small set, always +1.
+ */
+export function getFeatAbilityChoice (featRecord) {
+	if (!Array.isArray(featRecord?.ability) || featRecord.ability.length !== 1) return null;
+	const entry = featRecord.ability[0];
+	if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} ability increase.`);
+	if (entry.choose !== undefined) {
+		const choose = entry.choose;
+		if (!choose || typeof choose !== "object" || !Array.isArray(choose.from) || !choose.from.length
+			|| (choose.amount !== undefined && choose.amount !== 1)
+			|| choose.from.some(ability => !ABILITY_IDS.includes(ability))) throw new TypeError(`Unsupported ${featRecord.name} ability choice.`);
+		return {options: [...choose.from], amount: 1};
+	}
+	const abilities = ABILITY_IDS.filter(ability => entry[ability] !== undefined);
+	if (abilities.length !== 1 || entry[abilities[0]] !== 1 || Object.keys(entry).some(key => !ABILITY_IDS.includes(key))) throw new TypeError(`Unsupported ${featRecord.name} ability increase.`);
+	return {fixed: abilities[0], amount: 1};
+}
+
+/** Find the original record behind a reviewed feat annotation. */
+export function findFeatRecord (sources, featRule) {
+	const matches = (sources?.feats?.feat || []).filter(record => record.name === featRule.record.name && record.source === featRule.record.source);
+	if (matches.length !== 1) throw new TypeError(`Missing or ambiguous ${featRule.record.source} ${featRule.record.name} source record.`);
+	return matches[0];
 }
 
 /** Read one spell choice entry, rejecting shapes this subset cannot review. */

@@ -10,6 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
+import {findFeatRecord, getFeatAbilityChoice} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -34,6 +35,9 @@ function checkRules (rules, document) {
 			|| record.featLevels.some(level => !Number.isSafeInteger(level) || level < 1 || level > 20)
 			|| new Set(record.featLevels).size !== record.featLevels.length)) throw new TypeError("sheetRules.classes: unsupported feat levels");
 		if (record.epicBoonLevel !== undefined && (!Number.isSafeInteger(record.epicBoonLevel) || record.epicBoonLevel < 1 || record.epicBoonLevel > 20)) throw new TypeError("sheetRules.classes: unsupported epic boon level");
+		if (record.generalFeats !== undefined && (!Array.isArray(record.generalFeats) || !record.generalFeats.length
+			|| record.generalFeats.some(id => typeof id !== "string" || !rules.feats[id])
+			|| new Set(record.generalFeats).size !== record.generalFeats.length)) throw new TypeError("sheetRules.classes: unsupported general feats");
 	}
 	for (const [id, feat] of Object.entries(rules.feats)) {
 		if (!feat || typeof feat !== "object" || Array.isArray(feat) || typeof feat.name !== "string"
@@ -252,7 +256,24 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	}
 	for (const featLevel of classRule.featLevels || []) {
 		if (build.level < featLevel) continue;
-		select(`${classOwner}:level-${featLevel}-feat`, ["ability-score-improvement|xphb"], 1, `Level ${featLevel} feat`);
+		const featOptions = ["ability-score-improvement|xphb", ...(classRule.generalFeats || [])];
+		const [featId] = select(`${classOwner}:level-${featLevel}-feat`, featOptions, 1, `Level ${featLevel} feat`);
+		if (featId && featId !== "ability-score-improvement|xphb") {
+			const featRule = rules.feats[featId];
+			const ability = getFeatAbilityChoice(findFeatRecord(sources, featRule));
+			if (!ability) continue;
+			if (ability.fixed) {
+				if (scores[ability.fixed] + ability.amount > 20) issue(`${classOwner}:level-${featLevel}-feat`, `${featRule.name}: the ability score cannot exceed 20.`);
+				else scores[ability.fixed] += ability.amount;
+			} else {
+				const choiceId = `${classOwner}:level-${featLevel}-feat-ability`;
+				const [abilityId] = select(choiceId, ability.options, 1, `${featRule.name} ability`);
+				if (!abilityId) continue;
+				if (scores[abilityId] + ability.amount > 20) issue(choiceId, `${featRule.name}: the ability score cannot exceed 20.`);
+				else scores[abilityId] += ability.amount;
+			}
+			continue;
+		}
 		increases(`${classOwner}:level-${featLevel}-ability-increases`, ABILITY_IDS, scores, false);
 	}
 	const equipmentIds = Object.entries(rules.equipment).filter(([, value]) => value.classId === classId).map(([id]) => id);
@@ -522,7 +543,9 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	feature(record(sources.feats.feat, featRule.record.name, "feat"), "Origin Feat", "feat");
 	for (const featLevel of classRule.featLevels || []) {
 		if (build.level < featLevel) continue;
-		feature(record(sources.feats.feat, "Ability Score Improvement", "feat"), "Feat", "feat");
+		const featId = (decisions.get(`${classOwner}:level-${featLevel}-feat`) || [])[0];
+		const featRule = featId && featId !== "ability-score-improvement|xphb" ? rules.feats[featId] : null;
+		feature(record(sources.feats.feat, featRule ? featRule.record.name : "Ability Score Improvement", "feat"), "Feat", "feat");
 	}
 	function resource (definition) {
 		model.resources.push({...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0});

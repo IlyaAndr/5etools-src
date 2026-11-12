@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld until Origin feats are modelled. Ability Score Improvement is chosen at levels 4/8/12/16; general feats and the level-19 Epic Boon are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld until Origin feats are modelled. Ability Score Improvement at levels 4/8/12/16 is joined by a reviewed set of general feats (Crusher, Durable, Mage Slayer, Mounted Combatant, Piercer, Slasher, Weapon Master) whose ability increases are applied; the remaining general feats and the level-19 Epic Boon are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -110,6 +110,55 @@
 			"name": "Savage Attacker",
 			"record": {
 				"name": "Savage Attacker",
+				"source": "XPHB"
+			}
+		},
+		"crusher|xphb": {
+			"name": "Crusher",
+			"record": {
+				"name": "Crusher",
+				"source": "XPHB"
+			}
+		},
+		"durable|xphb": {
+			"name": "Durable",
+			"record": {
+				"name": "Durable",
+				"source": "XPHB"
+			}
+		},
+		"mage-slayer|xphb": {
+			"name": "Mage Slayer",
+			"record": {
+				"name": "Mage Slayer",
+				"source": "XPHB"
+			}
+		},
+		"mounted-combatant|xphb": {
+			"name": "Mounted Combatant",
+			"record": {
+				"name": "Mounted Combatant",
+				"source": "XPHB"
+			}
+		},
+		"piercer|xphb": {
+			"name": "Piercer",
+			"record": {
+				"name": "Piercer",
+				"source": "XPHB"
+			}
+		},
+		"slasher|xphb": {
+			"name": "Slasher",
+			"record": {
+				"name": "Slasher",
+				"source": "XPHB"
+			}
+		},
+		"weapon-master|xphb": {
+			"name": "Weapon Master",
+			"record": {
+				"name": "Weapon Master",
 				"source": "XPHB"
 			}
 		}
@@ -210,6 +259,15 @@
 				8,
 				12,
 				16
+			],
+			"generalFeats": [
+				"crusher|xphb",
+				"durable|xphb",
+				"mage-slayer|xphb",
+				"mounted-combatant|xphb",
+				"piercer|xphb",
+				"slasher|xphb",
+				"weapon-master|xphb"
 			],
 			"subclasses": [
 				{

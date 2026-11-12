@@ -5,6 +5,7 @@ import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
+import {findFeatRecord, getFeatAbilityChoice} from "./feat-choices.js";
 
 /** The filter expressions the reviewed class table applies to its spell columns. */
 const SPELL_LIST_LABELS = Object.freeze({
@@ -259,10 +260,29 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	}
 	result.push(descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3));
 	for (const featLevel of warlock.featLevels || []) {
+		const featOptions = [
+			option("ability-score-improvement|xphb", "Ability Score Improvement"),
+			...(warlock.generalFeats || []).map(id => option(id, rules.feats[id].name)),
+		];
+		const featId = decisions.get(`${owner}:level-${featLevel}-feat`)?.[0];
+		const asiSelected = featId === "ability-score-improvement|xphb";
 		result.push(
-			descriptor(`${owner}:level-${featLevel}-feat`, `Level ${featLevel} Feat`, 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], featLevel),
-			descriptor(`${owner}:level-${featLevel}-ability-increases`, `Level ${featLevel} Ability Increases`, 1, getIncreaseOptions(levelFourAbilities, levelFourWeights, abilityName, decisions.get(`${owner}:level-${featLevel}-ability-increases`)), featLevel),
+			descriptor(`${owner}:level-${featLevel}-feat`, `Level ${featLevel} Feat`, 1, featOptions, featLevel),
+			{
+				...descriptor(`${owner}:level-${featLevel}-ability-increases`, `Level ${featLevel} Ability Increases`, 1, getIncreaseOptions(levelFourAbilities, levelFourWeights, abilityName, decisions.get(`${owner}:level-${featLevel}-ability-increases`)), featLevel, asiSelected),
+				dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: "ability-score-improvement|xphb"},
+			},
 		);
+		const featRule = featId && featId !== "ability-score-improvement|xphb" ? rules.feats[featId] : null;
+		if (featRule) {
+			const ability = getFeatAbilityChoice(findFeatRecord(sources, featRule));
+			if (ability?.options) {
+				result.push({
+					...descriptor(`${owner}:level-${featLevel}-feat-ability`, `${featRule.name} Ability`, 1, ability.options.map(id => option(id, abilityName(id))), featLevel),
+					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
+				});
+			}
+		}
 	}
 	return result;
 }
