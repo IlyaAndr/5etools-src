@@ -622,8 +622,9 @@ def main():
             # withheld with the reason beside the group.
             assert editor.get_by_label('Pact of the Blade', exact=True).count() == 1
             assert editor.get_by_label('Thirsting Blade', exact=True).count() == 0
-            assert editor.get_by_label('Pact of the Tome', exact=True).count() == 0
-            assert 'Pact of the Tome' in group_text(page, editor, 'Eldritch Invocations')
+            assert editor.get_by_label('Pact of the Tome', exact=True).count() == 1
+            assert editor.get_by_label('Lessons of the First Ones', exact=True).count() == 0
+            assert 'Lessons of the First Ones' in group_text(page, editor, 'Eldritch Invocations')
             # A dependent choice leaves with its prerequisite: the Pact Weapon is
             # offered only while Pact of the Blade is selected, and deselecting
             # the invocation removes the saved weapon instead of leaving an

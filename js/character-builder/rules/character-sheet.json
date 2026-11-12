@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, and Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld until Origin feats are modelled. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -544,7 +544,20 @@
 		"pact-of-the-tome|xphb": {
 			"name": "Pact of the Tome",
 			"minimumLevel": 1,
-			"unsupported": "The three cantrips and two rituals it grants have no reviewed choice yet."
+			"tomeChoices": [
+				{
+					"id": "pact-of-the-tome-cantrips",
+					"label": "Pact of the Tome Cantrips",
+					"count": 3,
+					"query": "level=0"
+				},
+				{
+					"id": "pact-of-the-tome-rituals",
+					"label": "Pact of the Tome Rituals",
+					"count": 2,
+					"query": "level=1|components & miscellaneous=ritual"
+				}
+			]
 		},
 		"repelling-blast|xphb": {
 			"name": "Repelling Blast",

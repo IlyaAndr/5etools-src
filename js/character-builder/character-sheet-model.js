@@ -9,7 +9,7 @@ import {getWarlockSourceChoices, getAvailableInvocations, getWarlockSubclasses, 
 import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
-import {resolveSpellCatalog} from "./spell-catalog.js";
+import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -49,6 +49,17 @@ function checkRules (rules, document) {
 		if (invocation.weaponChoice !== undefined && (typeof invocation.weaponChoice !== "string" || !invocation.weaponChoice.trim()
 			|| !Array.isArray(invocation.weaponOptions) || !invocation.weaponOptions.length || invocation.weaponOptions.some(value => typeof value !== "string" || !rules.pactWeapons[value]))) throw new TypeError(`sheetRules.invocations.${id}: unsupported weapon choice`);
 		if (invocation.weaponChoice === undefined && invocation.weaponOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: weapon options without a choice`);
+		if (invocation.tomeChoices !== undefined) {
+			if (!Array.isArray(invocation.tomeChoices) || !invocation.tomeChoices.length) throw new TypeError(`sheetRules.invocations.${id}: unsupported tome choices`);
+			for (const choice of invocation.tomeChoices) {
+				if (!choice || typeof choice !== "object" || Array.isArray(choice)
+					|| typeof choice.id !== "string" || !choice.id.trim()
+					|| typeof choice.label !== "string" || !choice.label.trim()
+					|| !Number.isSafeInteger(choice.count) || choice.count < 1
+					|| typeof choice.query !== "string" || !choice.query.trim()) throw new TypeError(`sheetRules.invocations.${id}: unsupported tome choice`);
+			}
+			if (new Set(invocation.tomeChoices.map(choice => choice.id)).size !== invocation.tomeChoices.length) throw new TypeError(`sheetRules.invocations.${id}: duplicate tome choice`);
+		}
 		if (invocation.pactWeaponExtraAttacks !== undefined && (!Number.isSafeInteger(invocation.pactWeaponExtraAttacks)
 			|| invocation.pactWeaponExtraAttacks < 1 || invocation.pactWeaponExtraAttacks > 2)) throw new TypeError(`sheetRules.invocations.${id}: unsupported pact weapon extra attacks`);
 		if (invocation.pactWeaponSmite !== undefined) {
@@ -249,6 +260,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	let cantrips = [];
 	let prepared = [];
 	const invocationCantrips = new Map();
+	const tomeSpells = [];
 	let initiateAbility;
 	let initiateCantrips = [];
 	let initiateSpell;
@@ -282,6 +294,14 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			if (!invocation.weaponChoice) continue;
 			const [weaponId] = select(`${classOwner}:${invocation.weaponChoice}`, invocation.weaponOptions, 1, "Pact Weapon");
 			pactWeapon = weaponId ? rules.pactWeapons[weaponId] : null;
+		}
+		for (const id of invocations) {
+			const invocation = rules.invocations[id];
+			if (!invocation.tomeChoices || !spellCatalog) continue;
+			for (const choice of invocation.tomeChoices) {
+				const options = getSpellQueryOptions(spellCatalog, choice.query).map(entry => entry.id);
+				for (const spellId of select(`${classOwner}:${choice.id}`, options, choice.count, choice.label)) tomeSpells.push({id: spellId, label: invocation.name});
+			}
 		}
 	}
 	// Devouring Blade replaces the extra attack of Thirsting Blade with two
@@ -540,6 +560,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	} else if (classRule.name === "Warlock") {
 		for (const id of invocations) feature(record(sources.optionalFeatures.optionalfeature, rules.invocations[id].name, "invocation"), "Invocation", "optionalfeature");
 		for (const id of [...cantrips, ...prepared]) addSpell(id, {...classCasting, kind: "class", label: classRule.name, prepared: prepared.includes(id), canCastWithSlots: prepared.includes(id), slotLevel: prepared.includes(id) ? levelRule.slotLevel : null});
+		for (const {id, label} of tomeSpells) {
+			const metadata = spellIndex.get(id);
+			addSpell(id, {...classCasting, kind: "invocation", label, alwaysPrepared: metadata.level > 0, canCastWithSlots: metadata.level > 0, slotLevel: metadata.level > 0 ? levelRule.slotLevel : null});
+		}
 		if (classRule.subclasses && spellCatalog) {
 			const subclassRule = classRule.subclasses.find(value => value.name === model.subclassName);
 			const subclass = subclassRule ? getWarlockSubclasses(sources).find(value => value.name === subclassRule.name) : null;
