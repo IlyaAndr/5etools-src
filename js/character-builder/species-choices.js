@@ -19,17 +19,18 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) 
 	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
 	const abilityName = id => abilities.find(ability => ability.id === id)?.name || id;
 	const descriptor = describeChoices(document);
-	const [lineageId] = selectedIds(document, species.lineageChoiceId);
-	const selectedLineage = species.lineages.find(lineage => lineage.id === lineageId);
-	const abilityOptions = selectedLineage?.abilityOptions || [...new Set(species.lineages.flatMap(lineage => lineage.abilityOptions))];
-	const result = [
-		descriptor(species.lineageChoiceId, species.lineageLabel, 1, species.lineages.map(lineage => option(lineage.id, lineage.name))),
-	];
-	if (species.abilityChoiceId) {
-		result.push({
-			...descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))),
-			help: `The ${document.build.species.name} spellcasting trait lets you choose the ability used by its spells.`,
-		});
+	const result = [];
+	if (species.lineages.length) {
+		const [lineageId] = selectedIds(document, species.lineageChoiceId);
+		const selectedLineage = species.lineages.find(lineage => lineage.id === lineageId);
+		const abilityOptions = selectedLineage?.abilityOptions || [...new Set(species.lineages.flatMap(lineage => lineage.abilityOptions))];
+		result.push(descriptor(species.lineageChoiceId, species.lineageLabel, 1, species.lineages.map(lineage => option(lineage.id, lineage.name))));
+		if (species.abilityChoiceId) {
+			result.push({
+				...descriptor(species.abilityChoiceId, "Species Spellcasting Ability", 1, abilityOptions.map(id => option(id, abilityName(id)))),
+				help: `The ${document.build.species.name} spellcasting trait lets you choose the ability used by its spells.`,
+			});
+		}
 	}
 	if (species.sizeChoiceId) {
 		const sizeLabels = species.sizes.map(id => id[0].toUpperCase() + id.slice(1));

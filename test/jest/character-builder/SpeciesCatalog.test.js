@@ -11,16 +11,30 @@ const inputs = () => JSON.parse(JSON.stringify(sourceInputs));
 const gnome = data => data.races.race.find(species => species.name === "Gnome" && species.source === "XPHB");
 
 describe("Reviewed species catalog", () => {
-	it("normalizes only the reviewed 2024 species and all five lineages", () => {
+	it("normalizes only the reviewed 2024 species and their lineages", () => {
 		const catalog = createSpeciesCatalog(inputs());
 		expect(catalog.species.map(species => species.ref)).toEqual([
-			{name: "Gnome", source: "XPHB"}, {name: "Tiefling", source: "XPHB"},
+			{name: "Dwarf", source: "XPHB"}, {name: "Gnome", source: "XPHB"}, {name: "Halfling", source: "XPHB"},
+			{name: "Orc", source: "XPHB"}, {name: "Tiefling", source: "XPHB"},
 		]);
 		expect(catalog.species.map(species => species.lineages.map(lineage => lineage.id))).toEqual([
-			["forest", "rock"], ["abyssal", "chthonic", "infernal"],
+			[], ["forest", "rock"], [], [], ["abyssal", "chthonic", "infernal"],
 		]);
+		expect(catalog.species.filter(species => !species.lineages.length).every(species => species.lineageChoiceId === null && species.abilityChoiceId === null)).toBe(true);
 		expect(catalog.spells).toHaveLength(14);
 		expect(catalog.dataset).toEqual(sourceInputs.rules.dataset);
+	});
+
+	it("records the fixed species resistances, the hit point bonus, and absent darkvision", () => {
+		const catalog = createSpeciesCatalog(inputs());
+		const dwarf = catalog.species.find(species => species.ref.name === "Dwarf");
+		const halfling = catalog.species.find(species => species.ref.name === "Halfling");
+		expect(dwarf.resistances).toEqual(["poison"]);
+		expect(dwarf.hpPerLevel).toBe(1);
+		expect(dwarf.darkvision).toBe(120);
+		expect(halfling.darkvision).toBe(0);
+		expect(halfling.hpPerLevel).toBe(0);
+		expect(halfling.sizes).toEqual(["small"]);
 	});
 
 	it("preserves ritual, casting time, components, and tagged descriptions", () => {
@@ -49,7 +63,7 @@ describe("Reviewed species catalog", () => {
 		const before = JSON.stringify(data);
 		const catalog = createSpeciesCatalog(data);
 		expect(JSON.stringify(data)).toBe(before);
-		catalog.species[0].lineages[0].abilityOptions.push("str");
+		catalog.species.find(species => species.ref.name === "Gnome").lineages[0].abilityOptions.push("str");
 		catalog.spells[0].entries.push("Changed output only");
 		catalog.sources[0].title = "Changed output only";
 		expect(JSON.stringify(data)).toBe(before);
@@ -106,7 +120,7 @@ describe("Reviewed species catalog", () => {
 		gnome(data).additionalSpells.push({name: "New Lineage"});
 		expect(() => createSpeciesCatalog(data)).toThrow("unmapped spell groups");
 		data.races = inputs().races;
-		data.rules.species[0].lineages[1].additionalSpellsName = "Forest Gnome";
+		data.rules.species.find(species => species.ref.name === "Gnome").lineages[1].additionalSpellsName = "Forest Gnome";
 		expect(() => createSpeciesCatalog(data)).toThrow("duplicate spell group mapping");
 	});
 

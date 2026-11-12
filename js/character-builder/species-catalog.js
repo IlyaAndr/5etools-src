@@ -2,7 +2,7 @@ export const SPECIES_CATALOG_VERSION = 1;
 
 const SIZES = {S: "small", M: "medium"};
 const ABILITIES = ["int", "wis", "cha"];
-const SUPPORTED_REFS = ["gnome|xphb", "tiefling|xphb"];
+const SUPPORTED_REFS = ["dwarf|xphb", "gnome|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
 
 function fail (path, message) { throw new TypeError(`${path}: ${message}`); }
 function copy (value) { return JSON.parse(JSON.stringify(value)); }
@@ -89,7 +89,7 @@ function validateRules (rules) {
 	array(rules.species, "rules.species");
 	const refs = new Set();
 	for (const rule of rules.species) {
-		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages"]);
+		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel"]);
 		reference(rule.ref, "rules.species.ref");
 		const key = refKey(rule.ref);
 		if (!SUPPORTED_REFS.includes(key) || refs.has(key)) fail("rules.species", `unsupported or duplicate species ${key}`);
@@ -99,8 +99,20 @@ function validateRules (rules) {
 		array(rule.provenance.pages, "rules.species.provenance.pages");
 		if (!rule.provenance.pages.length) fail("rules.species.provenance.pages", "missing page references");
 		rule.provenance.pages.forEach(page => integer(page, "rules.species.provenance.pages", 1));
-		if (!["lineage", "legacy"].includes(rule.lineageChoice)) fail("rules.species.lineageChoice", "unsupported choice name");
-		string(rule.lineageLabel, "rules.species.lineageLabel");
+		const lineages = rule.lineages === undefined ? [] : rule.lineages;
+		if (lineages.length) {
+			if (!["lineage", "legacy"].includes(rule.lineageChoice)) fail("rules.species.lineageChoice", "unsupported choice name");
+			string(rule.lineageLabel, "rules.species.lineageLabel");
+			object(rule.leveledSpellPolicy, "rules.species.leveledSpellPolicy", ["alwaysPrepared", "canCastWithSlots", "reset"]);
+			if (rule.leveledSpellPolicy.alwaysPrepared !== true || rule.leveledSpellPolicy.canCastWithSlots !== true || rule.leveledSpellPolicy.reset !== "long") fail("rules.species.leveledSpellPolicy", "unsupported spell policy");
+		} else if (rule.lineageChoice !== undefined || rule.lineageLabel !== undefined || rule.leveledSpellPolicy !== undefined) fail("rules.species.lineages", "lineage options without lineages");
+		if (rule.resistances !== undefined) {
+			array(rule.resistances, "rules.species.resistances");
+			if (!rule.resistances.length) fail("rules.species.resistances", "missing resistance annotations");
+			rule.resistances.forEach(type => string(type, "rules.species.resistances"));
+			if (new Set(rule.resistances).size !== rule.resistances.length) fail("rules.species.resistances", "duplicate resistance");
+		}
+		if (rule.hpPerLevel !== undefined) integer(rule.hpPerLevel, "rules.species.hpPerLevel", 0, 10);
 		array(rule.commonSpells, "rules.species.commonSpells");
 		if (new Set(rule.commonSpells).size !== rule.commonSpells.length) fail("rules.species.commonSpells", "duplicate common spell");
 		rule.commonSpells.forEach(uid => string(uid, "rules.species.commonSpells"));
@@ -112,13 +124,9 @@ function validateRules (rules) {
 			string(advantage.feature, "rules.species.savingThrowAdvantages.feature");
 			advantageAbilities.add(advantage.ability);
 		}
-		object(rule.leveledSpellPolicy, "rules.species.leveledSpellPolicy", ["alwaysPrepared", "canCastWithSlots", "reset"]);
-		if (rule.leveledSpellPolicy.alwaysPrepared !== true || rule.leveledSpellPolicy.canCastWithSlots !== true || rule.leveledSpellPolicy.reset !== "long") fail("rules.species.leveledSpellPolicy", "unsupported spell policy");
-		array(rule.lineages, "rules.species.lineages");
-		if (!rule.lineages.length) fail("rules.species.lineages", "missing lineage annotations");
 		const lineageIds = new Set();
 		const lineageNames = new Set();
-		for (const lineage of rule.lineages) {
+		for (const lineage of lineages) {
 			object(lineage, "rules.species.lineages", ["id", "additionalSpellsName", "resistance", "notes"]);
 			if (typeof lineage.id !== "string" || !/^[a-z][a-z-]*$/.test(lineage.id) || lineageIds.has(lineage.id)) fail("rules.species.lineages.id", "invalid or duplicate lineage ID");
 			string(lineage.additionalSpellsName, "rules.species.lineages.additionalSpellsName");
@@ -208,35 +216,45 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 		array(raw.size, `species ${key}.size`);
 		if (!raw.size.length || raw.size.some(size => typeof size !== "string" || !Object.hasOwn(SIZES, size)) || new Set(raw.size).size !== raw.size.length) fail(`species ${key}.size`, "unsupported size options");
 		integer(raw.speed, `species ${key}.speed`, 1);
-		integer(raw.darkvision, `species ${key}.darkvision`, 1);
+		if (raw.darkvision !== undefined) integer(raw.darkvision, `species ${key}.darkvision`, 1);
 		array(raw.creatureTypes, `species ${key}.creatureTypes`);
 		raw.creatureTypes.forEach(type => string(type, `species ${key}.creatureTypes`));
-		array(raw.additionalSpells, `species ${key}.additionalSpells`);
-		if (raw.additionalSpells.length !== rule.lineages.length) fail(`species ${key}.additionalSpells`, "unmapped spell groups");
+		const lineages = rule.lineages === undefined ? [] : rule.lineages;
 		const groups = new Map();
-		for (const group of raw.additionalSpells) {
-			string(group.name, "additionalSpells.name");
-			if (groups.has(group.name)) fail("additionalSpells", "duplicate spell group");
-			groups.set(group.name, group);
-		}
+		if (raw.additionalSpells !== undefined) {
+			array(raw.additionalSpells, `species ${key}.additionalSpells`);
+			if (raw.additionalSpells.length !== lineages.length) fail(`species ${key}.additionalSpells`, "unmapped spell groups");
+			for (const group of raw.additionalSpells) {
+				string(group.name, "additionalSpells.name");
+				if (groups.has(group.name)) fail("additionalSpells", "duplicate spell group");
+				groups.set(group.name, group);
+			}
+		} else if (lineages.length) fail(`species ${key}.additionalSpells`, "missing spell groups");
 		const id = `species:${slug(raw.name)}|${raw.source.toLowerCase()}`;
 		const resistanceOptions = raw.resist === undefined ? [] : raw.resist;
+		let fixedResistances = [];
+		const mappedResistances = new Set(lineages.map(lineage => lineage.resistance).filter(value => value !== null));
 		if (raw.resist !== undefined) {
 			array(resistanceOptions, `species ${key}.resist`);
-			if (resistanceOptions.length !== 1) fail(`species ${key}.resist`, "unsupported resistance selection");
-			object(resistanceOptions[0], `species ${key}.resist`, ["choose"]);
-			object(resistanceOptions[0].choose, `species ${key}.resist.choose`, ["from"]);
-			array(resistanceOptions[0].choose.from, `species ${key}.resist.choose.from`);
-			const from = resistanceOptions[0].choose.from;
-			if (!from.length || from.some(value => typeof value !== "string" || !value.trim()) || new Set(from).size !== from.length) fail(`species ${key}.resist.choose.from`, "invalid resistance options");
-		}
-		const sourceResistances = resistanceOptions[0]?.choose.from || [];
-		const mappedResistances = new Set(rule.lineages.map(lineage => lineage.resistance).filter(value => value !== null));
-		if (sourceResistances.length !== mappedResistances.size || sourceResistances.some(value => !mappedResistances.has(value))) fail(`species ${key}.resist`, "resistance mapping disagrees with base species");
-		const lineages = rule.lineages.map(lineage => {
+			if (!resistanceOptions.length) fail(`species ${key}.resist`, "missing resistances");
+			if (resistanceOptions.every(value => typeof value === "string")) {
+				fixedResistances = [...resistanceOptions];
+			} else {
+				if (resistanceOptions.length !== 1) fail(`species ${key}.resist`, "unsupported resistance selection");
+				object(resistanceOptions[0], `species ${key}.resist`, ["choose"]);
+				object(resistanceOptions[0].choose, `species ${key}.resist.choose`, ["from"]);
+				array(resistanceOptions[0].choose.from, `species ${key}.resist.choose.from`);
+				const from = resistanceOptions[0].choose.from;
+				if (!from.length || from.some(value => typeof value !== "string" || !value.trim()) || new Set(from).size !== from.length) fail(`species ${key}.resist.choose.from`, "invalid resistance options");
+				if (from.length !== mappedResistances.size || from.some(value => !mappedResistances.has(value))) fail(`species ${key}.resist`, "resistance mapping disagrees with base species");
+			}
+		} else if (mappedResistances.size) fail(`species ${key}.resist`, "lineage resistances without a base species selection");
+		const ruleResistances = rule.resistances === undefined ? [] : rule.resistances;
+		if (fixedResistances.length && (!ruleResistances.length || ruleResistances.some(value => !fixedResistances.includes(value)) || fixedResistances.some(value => !ruleResistances.includes(value)))) fail(`species ${key}.resistances`, "resistance annotations disagree with base species");
+		const lineageEntries = lineages.map(lineage => {
 			const group = groups.get(lineage.additionalSpellsName);
 			if (!group) fail(`species ${key}.lineages`, `missing spell group ${lineage.additionalSpellsName}`);
-			if ((lineage.resistance === null && resistanceOptions.length) || (lineage.resistance !== null && !resistanceOptions[0]?.choose.from.includes(lineage.resistance))) fail(`species ${key}.lineages`, "resistance mapping disagrees with base species");
+			if ((lineage.resistance === null && resistanceOptions.length && !fixedResistances.length) || (lineage.resistance !== null && !resistanceOptions[0]?.choose?.from?.includes(lineage.resistance))) fail(`species ${key}.lineages`, "resistance mapping disagrees with base species");
 			return {
 				id: lineage.id,
 				name: lineage.additionalSpellsName,
@@ -249,26 +267,29 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			const rawSpell = spellIndex.get(uid.toLowerCase());
 			if (!rawSpell || rawSpell.level !== 0) fail(`species ${key}.commonSpells`, "unsupported common spell");
 			const spellId = `spell:${slug(rawSpell.name)}|${rawSpell.source.toLowerCase()}`;
-			const grant = lineages[0].grants.find(candidate => candidate.spellId === spellId);
-			if (!grant || grant.minimumCharacterLevel !== 1 || grant.resource !== null || lineages.some(lineage => !lineage.grants.some(candidate => JSON.stringify(candidate) === JSON.stringify(grant)))) fail(`species ${key}.commonSpells`, "common spell is not consistently granted by every spell group");
-			for (const lineage of lineages) lineage.grants = lineage.grants.filter(candidate => candidate.spellId !== spellId);
+			const grant = lineageEntries[0]?.grants.find(candidate => candidate.spellId === spellId);
+			if (!grant || grant.minimumCharacterLevel !== 1 || grant.resource !== null || lineageEntries.some(lineage => !lineage.grants.some(candidate => JSON.stringify(candidate) === JSON.stringify(grant)))) fail(`species ${key}.commonSpells`, "common spell is not consistently granted by every spell group");
+			for (const lineage of lineageEntries) lineage.grants = lineage.grants.filter(candidate => candidate.spellId !== spellId);
 			return grant;
 		});
+		const grantsSpells = baseGrants.length > 0 || lineageEntries.some(lineage => lineage.grants.length > 0);
 		return {
 			id,
 			ref: {name: raw.name, source: raw.source},
 			sizes: raw.size.map(size => SIZES[size]),
 			speed: raw.speed,
-			darkvision: raw.darkvision,
+			darkvision: raw.darkvision ?? 0,
 			creatureTypes: [...raw.creatureTypes],
-			lineageChoiceId: `${id}:${rule.lineageChoice}`,
-			lineageLabel: rule.lineageLabel,
-			abilityChoiceId: `${id}:spellcasting-ability`,
+			lineageChoiceId: lineageEntries.length ? `${id}:${rule.lineageChoice}` : null,
+			lineageLabel: lineageEntries.length ? rule.lineageLabel : null,
+			abilityChoiceId: grantsSpells ? `${id}:spellcasting-ability` : null,
 			sizeChoiceId: raw.size.length > 1 ? `${id}:size` : null,
 			savingThrowAdvantages: copy(rule.savingThrowAdvantages),
+			resistances: [...fixedResistances],
+			hpPerLevel: rule.hpPerLevel ?? 0,
 			provenance: copy(rule.provenance),
 			baseGrants,
-			lineages,
+			lineages: lineageEntries,
 		};
 	});
 	return {schemaVersion: SPECIES_CATALOG_VERSION, ruleset: "2024", dataset: copy(rules.dataset), sources: copy(rules.sources), species, spells: [...collectedSpells.values()]};
