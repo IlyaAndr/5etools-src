@@ -30,6 +30,10 @@ function checkRules (rules, document) {
 					|| typeof entry.id !== "string" || !entry.id.trim() || typeof entry.name !== "string" || !entry.name.trim())
 				|| new Set(record.subclasses.map(entry => entry.id)).size !== record.subclasses.length) throw new TypeError("sheetRules.classes: unsupported subclass list");
 		}
+		if (record.featLevels !== undefined && (!Array.isArray(record.featLevels) || !record.featLevels.length
+			|| record.featLevels.some(level => !Number.isSafeInteger(level) || level < 1 || level > 20)
+			|| new Set(record.featLevels).size !== record.featLevels.length)) throw new TypeError("sheetRules.classes: unsupported feat levels");
+		if (record.epicBoonLevel !== undefined && (!Number.isSafeInteger(record.epicBoonLevel) || record.epicBoonLevel < 1 || record.epicBoonLevel > 20)) throw new TypeError("sheetRules.classes: unsupported epic boon level");
 	}
 	for (const [id, feat] of Object.entries(rules.feats)) {
 		if (!feat || typeof feat !== "object" || Array.isArray(feat) || typeof feat.name !== "string"
@@ -246,9 +250,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const subclassEntry = classRule.subclasses ? classRule.subclasses.find(value => value.id === subclass) : classRule.subclass;
 		if (subclassEntry) model.subclassName = subclassEntry.name;
 	}
-	if (build.level >= 4) {
-		select(`${classOwner}:level-4-feat`, ["ability-score-improvement|xphb"], 1, "Level 4 feat");
-		increases(`${classOwner}:level-4-ability-increases`, ABILITY_IDS, scores, false);
+	for (const featLevel of classRule.featLevels || []) {
+		if (build.level < featLevel) continue;
+		select(`${classOwner}:level-${featLevel}-feat`, ["ability-score-improvement|xphb"], 1, `Level ${featLevel} feat`);
+		increases(`${classOwner}:level-${featLevel}-ability-increases`, ABILITY_IDS, scores, false);
 	}
 	const equipmentIds = Object.entries(rules.equipment).filter(([, value]) => value.classId === classId).map(([id]) => id);
 	if (!equipmentIds.length) issue(`${classOwner}:equipment`, "No reviewed starting equipment is available for this class.");
@@ -515,7 +520,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		}
 	}
 	feature(record(sources.feats.feat, featRule.record.name, "feat"), "Origin Feat", "feat");
-	if (build.level >= 4) feature(record(sources.feats.feat, "Ability Score Improvement", "feat"), "Feat", "feat");
+	for (const featLevel of classRule.featLevels || []) {
+		if (build.level < featLevel) continue;
+		feature(record(sources.feats.feat, "Ability Score Improvement", "feat"), "Feat", "feat");
+	}
 	function resource (definition) {
 		model.resources.push({...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0});
 	}

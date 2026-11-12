@@ -67,7 +67,7 @@ export function getFighterClassChoiceDescriptors (document, {rules, sources} = {
 		id, label, count, options, selected: [...(choices.get(id) || [])], available: level >= minimumLevel, minimumLevel,
 	});
 	const masteryOptions = Object.entries(rules.weapons).map(([id, weapon]) => option(id, `${weapon.name} (${weapon.mastery})`));
-	return [
+	const result = [
 		descriptor("class:fighter|xphb:skills", "Fighter Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => {
 			if (!skills.has(id)) throw new TypeError(`Missing skill ${id} in the skills catalog.`);
 			return option(id, skills.get(id));
@@ -75,9 +75,14 @@ export function getFighterClassChoiceDescriptors (document, {rules, sources} = {
 		descriptor("class:fighter|xphb:fighting-style", "Fighting Style", 1, [option("defense|xphb", "Defense")]),
 		descriptor("class:fighter|xphb:weapon-masteries", "Weapon Masteries", sourceChoices.masteries(level), masteryOptions),
 		descriptor("class:fighter|xphb:subclass", "Subclass", 1, [option(fighter.subclass.id, fighter.subclass.name)], 3),
-		descriptor("class:fighter|xphb:level-4-feat", "Level 4 Feat", 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], 4),
-		descriptor("class:fighter|xphb:level-4-ability-increases", "Level 4 Ability Increases", 1, getIncreaseOptions(abilities.map(ability => ability.id), false, abilityName, choices.get("class:fighter|xphb:level-4-ability-increases")), 4),
 	];
+	for (const featLevel of fighter.featLevels || []) {
+		result.push(
+			descriptor(`class:fighter|xphb:level-${featLevel}-feat`, `Level ${featLevel} Feat`, 1, [option("ability-score-improvement|xphb", "Ability Score Improvement")], featLevel),
+			descriptor(`class:fighter|xphb:level-${featLevel}-ability-increases`, `Level ${featLevel} Ability Increases`, 1, getIncreaseOptions(abilities.map(ability => ability.id), false, abilityName, choices.get(`class:fighter|xphb:level-${featLevel}-ability-increases`)), featLevel),
+		);
+	}
+	return result;
 }
 
 /**
