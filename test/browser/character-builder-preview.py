@@ -637,6 +637,7 @@ def main():
             editor.get_by_label('Pact of the Blade', exact=True).check()
             assert editor.get_by_label('Pact Weapon', exact=True).input_value() == ''
             editor.get_by_label('Pact of the Blade', exact=True).uncheck()
+            editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
             # Spell lists expose the same filter once they grow, and level and
             # school hints are searchable along with names.
@@ -685,6 +686,7 @@ def main():
             editor.get_by_label('Level', exact=True).select_option('9')
             # Levels 4/8/12/16 grant an Ability Score Improvement (or, later, a
             # feat); the level-8 increase is a real choice at level 9.
+            editor.get_by_label('Level 8 Feat', exact=True).select_option('ability-score-improvement|xphb')
             editor.get_by_label('Level 8 Ability Increases', exact=True).select_option('str-1.int-1')
             editor.get_by_label('Pact of the Blade', exact=True).check()
             editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
