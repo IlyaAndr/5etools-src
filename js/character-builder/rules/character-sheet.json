@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, and Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma. Patron expanded spell lists are derived from the class source records, patron innate free casts are tracked as resources, and patron damage resistances are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Gnome or Tiefling, Soldier or Acolyte, and the class's own equipment package plus independent background gear; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, and Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -1663,6 +1663,141 @@
 				{
 					"type": "resistance",
 					"damageType": "psychic"
+				}
+			]
+		},
+		{
+			"id": "celestial-healing-light",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Healing Light",
+				"source": "XPHB",
+				"page": 160,
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"subclassShortName": "Celestial",
+				"subclassSource": "XPHB",
+				"level": 3
+			},
+			"when": {
+				"subclassId": "celestial|xphb",
+				"minimumLevel": 3
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:celestial:healing-light",
+						"name": "Healing Light",
+						"maxUses": {
+							"$ref": "healingLight"
+						},
+						"recovery": {
+							"long": "all"
+						},
+						"activation": "bonus",
+						"note": "Spend one or more dice; each restores 1d6 HP."
+					}
+				}
+			]
+		},
+		{
+			"id": "fiend-dark-ones-own-luck",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Dark One's Own Luck",
+				"source": "XPHB",
+				"page": 162,
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"subclassShortName": "Fiend",
+				"subclassSource": "XPHB",
+				"level": 6
+			},
+			"when": {
+				"subclassId": "fiend|xphb",
+				"minimumLevel": 6
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:fiend:dark-ones-own-luck",
+						"name": "Dark One's Own Luck",
+						"maxUses": {
+							"$ref": "darkOnesLuck"
+						},
+						"recovery": {
+							"long": "all"
+						},
+						"note": "Add 1d10 to one ability check or saving throw."
+					}
+				}
+			]
+		},
+		{
+			"id": "archfey-misty-escape",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Misty Escape",
+				"source": "XPHB",
+				"page": 159,
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"subclassShortName": "Archfey",
+				"subclassSource": "XPHB",
+				"level": 6
+			},
+			"when": {
+				"subclassId": "archfey|xphb",
+				"minimumLevel": 6
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:archfey:misty-escape",
+						"name": "Misty Escape",
+						"maxUses": 1,
+						"recovery": {
+							"short": 1,
+							"long": "all"
+						},
+						"activation": "reaction",
+						"note": "Reaction: turn invisible, then teleport up to 60 ft."
+					}
+				}
+			]
+		},
+		{
+			"id": "fiend-hurl-through-hell",
+			"source": {
+				"type": "subclassFeature",
+				"name": "Hurl Through Hell",
+				"source": "XPHB",
+				"page": 162,
+				"className": "Warlock",
+				"classSource": "XPHB",
+				"subclassShortName": "Fiend",
+				"subclassSource": "XPHB",
+				"level": 14
+			},
+			"when": {
+				"subclassId": "fiend|xphb",
+				"minimumLevel": 14
+			},
+			"effects": [
+				{
+					"type": "resource",
+					"value": {
+						"id": "class:warlock|xphb:fiend:hurl-through-hell",
+						"name": "Hurl Through Hell",
+						"maxUses": 1,
+						"recovery": {
+							"long": "all"
+						},
+						"note": "When you hit a creature, banish it; it takes 8d10 Psychic damage when it returns."
+					}
 				}
 			]
 		}

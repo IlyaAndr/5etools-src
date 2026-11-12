@@ -27,6 +27,12 @@ const context = {rules: readJson("../../../js/character-builder/rules/character-
 const clone = value => JSON.parse(JSON.stringify(value));
 const levelThree = () => clone(createSheetExamples(catalog.dataset).find(example => example.id === "infernal-tiefling-warlock-level-3").document);
 const levelFive = () => clone(createSheetExamples(catalog.dataset).find(example => example.id === "infernal-tiefling-warlock-level-5").document);
+const levelSix = patron => {
+	const document = setCharacterChoice(levelFive(), subclassId, [patron]);
+	document.build.level = 6;
+	document.build.choices.find(choice => choice.id.endsWith(":prepared-spells")).selected.push("spell:charm-person|xphb");
+	return document;
+};
 const subclassId = "class:warlock|xphb:subclass";
 const subclass = name => getWarlockSubclasses(sources).find(entry => entry.name === name);
 
@@ -133,5 +139,33 @@ describe("XPHB Warlock patrons", () => {
 		const model = createCharacterSheetModel(document, catalog, context);
 		expect(model.status).toBe("complete");
 		expect(model.defenses).toContainEqual(expect.objectContaining({type: "resistance", damageType: "radiant", annotationId: "celestial-radiant-soul"}));
+	});
+
+	it("declares each patron resource against a unique source feature", () => {
+		const fields = ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"];
+		const records = sources.warlock.subclassFeature;
+		for (const [id, patron, level] of [
+			["celestial-healing-light", "celestial|xphb", 3],
+			["fiend-dark-ones-own-luck", "fiend|xphb", 6],
+			["archfey-misty-escape", "archfey|xphb", 6],
+			["fiend-hurl-through-hell", "fiend|xphb", 14],
+		]) {
+			const annotation = context.rules.mechanics.find(entry => entry.id === id);
+			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
+			expect(annotation.effects[0].type).toBe("resource");
+			const matches = records.filter(candidate => fields.every(field => annotation.source[field] === undefined || annotation.source[field] === candidate[field]));
+			expect(matches).toHaveLength(1);
+		}
+	});
+
+	it("tracks each patron's limited-use resource", () => {
+		const celestial = createCharacterSheetModel(setCharacterChoice(levelThree(), subclassId, ["celestial|xphb"]), catalog, context);
+		expect(celestial.resources.find(resource => resource.name === "Healing Light")).toMatchObject({maxUses: 4, activation: "bonus", recovery: {long: "all"}, note: "Spend one or more dice; each restores 1d6 HP."});
+
+		const archfey = createCharacterSheetModel(levelSix("archfey|xphb"), catalog, context);
+		expect(archfey.resources.find(resource => resource.name === "Misty Escape")).toMatchObject({maxUses: 1, recovery: {short: 1, long: "all"}, note: "Reaction: turn invisible, then teleport up to 60 ft."});
+
+		const fiend = createCharacterSheetModel(levelSix("fiend|xphb"), catalog, context);
+		expect(fiend.resources.find(resource => resource.name === "Dark One's Own Luck").maxUses).toBeGreaterThanOrEqual(1);
 	});
 });

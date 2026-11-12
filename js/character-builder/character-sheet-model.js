@@ -368,7 +368,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		wearingArmor: equipment.armor.worn !== false,
 		choices: decisions,
 		hasSource: source => (originalSources[source.type] || []).filter(candidate => ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"].every(field => source[field] === undefined || source[field] === candidate[field])).length === 1,
-		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
+		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, healingLight: build.level + 1, darkOnesLuck: Math.max(1, mods.cha), initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
 	});
 	const effectsOf = type => effects.filter(effect => effect.type === type);
 	model.abilities = abilityGroups.map(({id, name, skills}) => ({

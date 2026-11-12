@@ -166,6 +166,7 @@ function resourceRow (resource, model, hasDifferentCasting) {
 	const activation = resource.activation || (time?.length === 1 && time[0].number === 1 && ["action", "bonus", "reaction"].includes(time[0].unit) ? time[0].unit : null);
 	if (activation && activation !== "reaction") details.push(`Activation: ${activation === "bonus" ? "Bonus Action" : title(activation)}`);
 	if (resource.healing) details.push(`Healing: ${resource.healing.dice} ${signed(resource.healing.modifier)} HP`);
+	if (resource.note) details.push(resource.note);
 	if (resource.freeLevel !== undefined) details.push(`Free casting level: ${resource.freeLevel}`);
 	if (hasDifferentCasting && resource.spellcastingAbility) details.push(`Ability: ${resource.spellcastingAbility.toUpperCase()}`);
 	if (resource.slotLevel !== undefined) details.push(`Slot level: ${resource.slotLevel}`);
