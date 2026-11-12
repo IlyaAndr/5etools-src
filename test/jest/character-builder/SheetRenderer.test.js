@@ -175,6 +175,14 @@ describe("Calculated character sheet renderer", () => {
 		expect(renderCharacterSheet(createCharacterSheetModel(document, catalog, {...context, rules}), catalog)).toContain("Truesight: 30 ft");
 	});
 
+	it("renders condition immunities and telepathy senses", () => {
+		const model = project(character("tiefling", 3));
+		model.defenses.push({type: "conditionImmunity", condition: "charmed"}, {type: "telepathy", range: 30});
+		const html = renderCharacterSheet(model, catalog);
+		expect(html).toContain("Immunity: Charmed");
+		expect(html).toContain("Telepathy: 30 ft");
+	});
+
 	it("shows a single shared spellcasting profile when all sources have the same values", () => {
 		const html = render(character("tiefling"));
 		expect(html).toContain("Spell DC</span><strong>15</strong>");
