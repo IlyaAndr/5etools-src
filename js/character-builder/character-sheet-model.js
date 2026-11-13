@@ -16,6 +16,8 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
 const modifier = score => Math.floor((score - 10) / 2);
 const signed = value => `${value >= 0 ? "+" : ""}${value}`;
+// Fiendish Resilience can name any damage type except Force.
+const DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
 
 function checkRules (rules, document) {
 	if (rules.schemaVersion !== 1 || rules.ruleset !== document.ruleset) throw new TypeError("sheetRules: unsupported version or ruleset");
@@ -295,6 +297,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const [subclass] = select(`${classOwner}:subclass`, subclassIds, 1, "Subclass");
 		const subclassEntry = classRule.subclasses ? classRule.subclasses.find(value => value.id === subclass) : classRule.subclass;
 		if (subclassEntry) model.subclassName = subclassEntry.name;
+		// Fiendish Resilience is chosen after a rest, so it stays optional; the
+		// reviewed resistance effects are gated on the saved value.
+		if (subclass === "fiend|xphb" && build.level >= 10) {
+			consumed.add(`${classOwner}:fiend-resilience`);
+			const [resilience] = decisions.get(`${classOwner}:fiend-resilience`) || [];
+			if (resilience !== undefined && ![...DAMAGE_TYPES].includes(resilience)) issue(`${classOwner}:fiend-resilience`, "Fiendish Resilience must name a reviewed damage type.");
+		}
 	}
 	const classRecords = classRule.name === "Warlock" ? sources?.warlock?.class : sources?.fighter?.class;
 	const classRecord = (classRecords || []).find(candidate => candidate.name === build.class.name && candidate.source === build.class.source);

@@ -277,6 +277,15 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 		}
 	}
 	result.push(descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3));
+	// Fiendish Resilience picks a damage type after a rest; the reviewed
+	// resistance effects are gated on this choice.
+	if ((decisions.get(`${owner}:subclass`) || [])[0] === "fiend|xphb" && document.build.level >= 10) {
+		const damageTypes = ["acid", "bludgeoning", "cold", "fire", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
+		result.push({
+			...descriptor(`${owner}:fiend-resilience`, "Fiendish Resilience", 1, damageTypes.map(type => option(type, type[0].toUpperCase() + type.slice(1))), 10),
+			help: "Choose the damage type you resist. You can change it whenever you finish a Short or Long Rest.",
+		});
+	}
 	for (const featLevel of warlock.featLevels || []) {
 		const featOptions = [
 			option("ability-score-improvement|xphb", "Ability Score Improvement"),

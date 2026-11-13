@@ -732,6 +732,10 @@ def main():
             assert 'Boon of Combat Prowess' in group_text(page, editor, 'Epic Boon')
             editor.get_by_label('Epic Boon', exact=True).select_option('boon-of-truesight|xphb')
             assert editor.get_by_label('Boon of Truesight Ability', exact=True).count() == 1
+            # The Fiend's rest-time resistance choice appears from level 10.
+            assert editor.get_by_label('Fiendish Resilience', exact=True).count() == 1
+            editor.get_by_label('Fiendish Resilience', exact=True).select_option('psychic')
+            editor.get_by_label('Fiendish Resilience', exact=True).select_option('')
             editor.get_by_label('Epic Boon', exact=True).select_option('')
             editor.get_by_label('Level', exact=True).select_option('5')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'

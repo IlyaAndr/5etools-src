@@ -117,6 +117,33 @@ describe("XPHB Warlock patrons", () => {
 		expect(spell.sources.some(source => source.kind === "subclass" && source.label === name && source.alwaysPrepared)).toBe(true);
 	});
 
+	it("grants Fiendish Resilience to the chosen damage type from level 10", () => {
+		const document = levelSix("fiend|xphb");
+		document.build.level = 10;
+		document.build.choices.find(choice => choice.id.endsWith(":invocations")).selected = ["eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb", "fiendish-vigor|xphb", "mask-of-many-faces|xphb"];
+		document.build.choices.find(choice => choice.id.endsWith(":cantrips")).selected.push("spell:chill-touch|xphb");
+		document.build.choices.find(choice => choice.id.endsWith(":prepared-spells")).selected.push("spell:bane|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb");
+		document.build.choices.push(
+			{id: "class:warlock|xphb:level-8-feat", selected: ["ability-score-improvement|xphb"]},
+			{id: "class:warlock|xphb:level-8-ability-increases", selected: ["str-1.int-1"]},
+		);
+		const choiceId = "class:warlock|xphb:fiend-resilience";
+		const descriptor = getWarlockChoiceDescriptors(document, catalog, context).find(entry => entry.id === choiceId);
+		expect(descriptor.options.map(option => option.id)).toEqual(["acid", "bludgeoning", "cold", "fire", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"]);
+		const model = createCharacterSheetModel(setCharacterChoice(document, choiceId, ["fire"]), catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.status).toBe("complete");
+		expect(model.defenses.filter(defense => defense.annotationId?.startsWith("fiendish-resilience-")).map(defense => defense.damageType)).toEqual(["fire"]);
+	});
+
+	it("leaves Fiendish Resilience unset until a rest chooses it", () => {
+		const document = levelSix("fiend|xphb");
+		document.build.level = 10;
+		const descriptors = getWarlockChoiceDescriptors(document, catalog, context);
+		expect(descriptors.some(entry => entry.id === "class:warlock|xphb:fiend-resilience")).toBe(true);
+		expect(getWarlockChoiceDescriptors(levelSix("celestial|xphb"), catalog, context).some(entry => entry.id === "class:warlock|xphb:fiend-resilience")).toBe(false);
+	});
+
 	it("declares each patron resistance against a unique source feature", () => {
 		const fields = ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"];
 		const records = sources.warlock.subclassFeature;
