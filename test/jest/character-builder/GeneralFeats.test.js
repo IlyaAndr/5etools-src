@@ -79,8 +79,9 @@ describe("Reviewed general feats", () => {
 			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "grappler|xphb", "great-weapon-master|xphb",
 			"heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "keen-mind|xphb", "lightly-armored|xphb", "mage-slayer|xphb",
 			"martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "observant|xphb",
-			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "sentinel|xphb", "sharpshooter|xphb", "shield-master|xphb", "skulker|xphb",
-			"slasher|xphb", "speedy|xphb", "spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
+			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "resilient|xphb", "sentinel|xphb", "sharpshooter|xphb",
+			"shield-master|xphb", "skill-expert|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb",
+			"war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -186,6 +187,41 @@ describe("Reviewed general feats", () => {
 			const model = createCharacterSheetModel(keenMind(["skill:religion"]), catalog, context);
 			expect(model.status).toBe("incomplete");
 			expect(model.issues).toContainEqual(expect.objectContaining({id: `${owner}:level-4-feat-proficiency`}));
+		});
+
+		it("adds Resilient's saving throw proficiency in the chosen ability", () => {
+			const model = createCharacterSheetModel(withChoice("resilient|xphb", "str"), catalog, context);
+			expect(model.issues).toEqual([]);
+			const strength = model.abilities.find(ability => ability.id === "str");
+			expect(strength.saveProficient).toBe(true);
+			expect(strength.save - strength.modifier).toBe(model.proficiencyBonus);
+		});
+
+		it("rejects Resilient for an ability that already has saving throw proficiency", () => {
+			const model = createCharacterSheetModel(withChoice("resilient|xphb", "cha"), catalog, context);
+			expect(model.status).toBe("incomplete");
+			expect(model.issues).toContainEqual(expect.objectContaining({id: `${owner}:level-4-feat`}));
+		});
+
+		it("doubles the proficient skill's bonus for Skill Expert", () => {
+			const base = withChoice("skill-expert|xphb", "dex");
+			base.build.choices.push({id: `${owner}:level-4-feat-proficiency`, selected: ["skill:animal-handling"]});
+			base.build.choices.push({id: `${owner}:level-4-feat-expertise`, selected: ["animal-handling"]});
+			const model = createCharacterSheetModel(base, catalog, context);
+			expect(model.issues).toEqual([]);
+			const skill = model.abilities.flatMap(ability => ability.skills).find(entry => entry.id === "animal-handling");
+			const wisdom = model.abilities.find(ability => ability.id === "wis");
+			expect(skill).toMatchObject({proficient: true, expertise: true});
+			expect(skill.modifier - wisdom.modifier).toBe(model.proficiencyBonus * 2);
+		});
+
+		it("rejects Skill Expert expertise on a skill it does not have", () => {
+			const base = withChoice("skill-expert|xphb", "dex");
+			base.build.choices.push({id: `${owner}:level-4-feat-proficiency`, selected: ["skill:animal-handling"]});
+			base.build.choices.push({id: `${owner}:level-4-feat-expertise`, selected: ["athletics"]});
+			const model = createCharacterSheetModel(base, catalog, context);
+			expect(model.status).toBe("incomplete");
+			expect(model.issues).toContainEqual(expect.objectContaining({id: `${owner}:level-4-feat-expertise`}));
 		});
 	});
 
