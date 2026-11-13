@@ -2,7 +2,7 @@ export const SPECIES_CATALOG_VERSION = 1;
 
 const SIZES = {S: "small", M: "medium"};
 const ABILITIES = ["int", "wis", "cha"];
-const SUPPORTED_REFS = ["aasimar|xphb", "dragonborn|xphb", "elf|xphb", "dwarf|xphb", "gnome|xphb", "goliath|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
+const SUPPORTED_REFS = ["aasimar|xphb", "dragonborn|xphb", "elf|xphb", "human|xphb", "dwarf|xphb", "gnome|xphb", "goliath|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
 
 function fail (path, message) { throw new TypeError(`${path}: ${message}`); }
 function copy (value) { return JSON.parse(JSON.stringify(value)); }
@@ -89,7 +89,7 @@ function validateRules (rules) {
 	array(rules.species, "rules.species");
 	const refs = new Set();
 	for (const rule of rules.species) {
-		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel", "spellcastingAbility", "skillChoice"]);
+		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel", "spellcastingAbility", "skillChoice", "featChoice"]);
 		reference(rule.ref, "rules.species.ref");
 		const key = refKey(rule.ref);
 		if (!SUPPORTED_REFS.includes(key) || refs.has(key)) fail("rules.species", `unsupported or duplicate species ${key}`);
@@ -116,6 +116,15 @@ function validateRules (rules) {
 			if (new Set(rule.resistances).size !== rule.resistances.length) fail("rules.species.resistances", "duplicate resistance");
 		}
 		if (rule.hpPerLevel !== undefined) integer(rule.hpPerLevel, "rules.species.hpPerLevel", 0, 10);
+		if (rule.featChoice !== undefined) {
+			const choice = rule.featChoice;
+			object(choice, "rules.species.featChoice", ["options", "withheld"]);
+			array(choice.options, "rules.species.featChoice.options");
+			if (!choice.options.length) fail("rules.species.featChoice.options", "missing feat options");
+			choice.options.forEach(id => string(id, "rules.species.featChoice.options"));
+			if (new Set(choice.options).size !== choice.options.length) fail("rules.species.featChoice.options", "duplicate feat option");
+			if (choice.withheld !== undefined) string(choice.withheld, "rules.species.featChoice.withheld");
+		}
 		if (rule.skillChoice !== undefined) {
 			array(rule.skillChoice, "rules.species.skillChoice");
 			if (!rule.skillChoice.length) fail("rules.species.skillChoice", "missing skill options");
@@ -362,6 +371,9 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			sizeChoiceId: raw.size.length > 1 ? `${id}:size` : null,
 			skillChoiceId: rule.skillChoice === undefined ? null : `${id}:skill`,
 			skillOptions: rule.skillChoice === undefined ? [] : [...rule.skillChoice],
+			featChoiceId: rule.featChoice === undefined ? null : `${id}:feat`,
+			featOptions: rule.featChoice === undefined ? [] : [...rule.featChoice.options],
+			featWithheld: rule.featChoice?.withheld ?? null,
 			savingThrowAdvantages: copy(rule.savingThrowAdvantages),
 			resistances: [...fixedResistances],
 			hpPerLevel: rule.hpPerLevel ?? 0,

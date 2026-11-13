@@ -306,6 +306,54 @@
 		},
 		{
 			"ref": {
+				"name": "Human",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					193
+				]
+			},
+			"commonSpells": [],
+			"savingThrowAdvantages": [],
+			"skillChoice": [
+				"acrobatics",
+				"animal-handling",
+				"arcana",
+				"athletics",
+				"deception",
+				"history",
+				"insight",
+				"intimidation",
+				"investigation",
+				"medicine",
+				"nature",
+				"perception",
+				"performance",
+				"persuasion",
+				"religion",
+				"sleight-of-hand",
+				"stealth",
+				"survival"
+			],
+			"featChoice": {
+				"options": [
+					"alert|xphb",
+					"crafter|xphb",
+					"healer|xphb",
+					"lucky|xphb",
+					"musician|xphb",
+					"savage-attacker|xphb",
+					"skilled|xphb",
+					"tavern-brawler|xphb",
+					"tough|xphb"
+				],
+				"withheld": "Magic Initiate's spell choices are not part of the species feat slot yet, so its three variants are not offered here."
+			}
+		},
+		{
+			"ref": {
 				"name": "Orc",
 				"source": "XPHB"
 			},

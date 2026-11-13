@@ -118,6 +118,10 @@ Charisma, and its Necrotic and Radiant resistance comes from the fixed list.
 Elf chooses one of three lineages and one Keen Senses skill; its High Elf lineage
 also chooses a cantrip from the reviewed 20-cantrip Wizard list, because the
 source record states that choice as a filter rather than a fixed spell.
+Human chooses any skill (Skillful) and an Origin feat (Versatile). The species
+feat slot renders the chosen feat and applies its own proficiency choice; the
+three Magic Initiate variants stay withheld with the stated reason, because their
+spell choices still hang off the single background-feat slot.
 Their traits render as features on the sheet.
 Imported characters retain their explicit choices; previously selected different
 abilities remain visible and each source's values are displayed separately.

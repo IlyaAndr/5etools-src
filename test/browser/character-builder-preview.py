@@ -812,6 +812,13 @@ def main():
             assert editor.get_by_label('Elf Cantrip', exact=True).count() == 0
             editor.get_by_label('Elven Lineage', exact=True).select_option('high-elf')
             assert 'Minor Illusion' in group_text(page, editor, 'Elf Cantrip')
+            # Human chooses any skill and an Origin feat from its species slot.
+            page.select_option('#new-species', 'Human|XPHB')
+            page.click('#new-character')
+            assert 'Medicine' in group_text(page, editor, 'Skill')
+            assert 'Magic Initiate' in group_text(page, editor, 'Origin Feat')
+            editor.get_by_label('Origin Feat', exact=True).select_option('skilled|xphb')
+            assert "Thieves' Tools" in group_text(page, editor, 'Skilled Proficiencies')
             assert not errors, errors
         finally:
             browser.close()

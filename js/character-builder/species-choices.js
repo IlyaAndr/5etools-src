@@ -1,6 +1,7 @@
 import {validateCharacterDocument} from "./character-document.js";
 import {describeChoices, option, selectedIds} from "./choice-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
+import {getFeatProficiencyOptions} from "./feat-choices.js";
 
 /** Find the reviewed catalog entry for one source-qualified species reference. */
 export function findSpeciesRule (catalog, ref) {
@@ -12,7 +13,7 @@ export function findSpeciesRule (catalog, ref) {
  * An unsupported species has no reviewed choices; the composition layer decides
  * whether the character can be edited at all.
  */
-export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) {
+export function getSpeciesChoiceDescriptors (document, catalog, {sources, rules} = {}) {
 	validateCharacterDocument(document);
 	const species = findSpeciesRule(catalog, document.build.species);
 	if (!species) return [];
@@ -50,6 +51,26 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) 
 			})),
 			help: `The 2024 ${document.build.species.name} entry grants one of these skill proficiencies.`,
 		});
+	}
+	if (species.featChoiceId) {
+		const featName = id => {
+			const rule = rules?.feats?.[id];
+			if (!rule) throw new TypeError(`species ${species.id}: unknown feat ${id}`);
+			return rule.name;
+		};
+		result.push({
+			...descriptor(species.featChoiceId, "Origin Feat", 1, species.featOptions.map(id => option(id, featName(id)))),
+			...(species.featWithheld ? {help: species.featWithheld} : {}),
+		});
+		const [featId] = selectedIds(document, species.featChoiceId);
+		const featRule = featId ? rules?.feats?.[featId] : null;
+		if (featRule?.proficiencyChoice) {
+			const choice = getFeatProficiencyOptions(featRule, rules, abilities);
+			result.push({
+				...descriptor(`${species.id}:feat-proficiency`, `${featRule.name} Proficiencies`, choice.count, choice.options),
+				dependsOn: {choice: species.featChoiceId, option: featId},
+			});
+		}
 	}
 	if (selectedLineage) {
 		for (const choice of selectedLineage.choices || []) {

@@ -14,12 +14,13 @@ describe("Reviewed species catalog", () => {
 	it("normalizes only the reviewed 2024 species and their lineages", () => {
 		const catalog = createSpeciesCatalog(inputs());
 		expect(catalog.species.map(species => species.ref)).toEqual([
-			{name: "Aasimar", source: "XPHB"}, {name: "Dragonborn", source: "XPHB"}, {name: "Dwarf", source: "XPHB"}, {name: "Elf", source: "XPHB"}, {name: "Gnome", source: "XPHB"},
-			{name: "Goliath", source: "XPHB"}, {name: "Halfling", source: "XPHB"}, {name: "Orc", source: "XPHB"}, {name: "Tiefling", source: "XPHB"},
+			{name: "Aasimar", source: "XPHB"}, {name: "Dragonborn", source: "XPHB"}, {name: "Dwarf", source: "XPHB"}, {name: "Elf", source: "XPHB"},
+			{name: "Gnome", source: "XPHB"}, {name: "Goliath", source: "XPHB"}, {name: "Halfling", source: "XPHB"}, {name: "Human", source: "XPHB"},
+			{name: "Orc", source: "XPHB"}, {name: "Tiefling", source: "XPHB"},
 		]);
 		expect(catalog.species.map(species => species.lineages.map(lineage => lineage.id))).toEqual([
 			[], ["acid", "cold", "fire", "lightning", "poison"], [], ["drow", "high-elf", "wood-elf"], ["forest", "rock"],
-			["clouds-jaunt", "fires-burn", "frosts-chill", "hills-tumble", "stones-endurance", "storms-thunder"], [], [], ["abyssal", "chthonic", "infernal"],
+			["clouds-jaunt", "fires-burn", "frosts-chill", "hills-tumble", "stones-endurance", "storms-thunder"], [], [], [], ["abyssal", "chthonic", "infernal"],
 		]);
 		expect(catalog.species.filter(species => !species.lineages.length).every(species => species.lineageChoiceId === null && species.abilityChoiceId === null)).toBe(true);
 		expect(catalog.species.filter(species => ["Dragonborn", "Goliath"].includes(species.ref.name)).every(species => species.abilityChoiceId === null && species.baseGrants.length === 0 && species.lineages.every(lineage => !lineage.grants.length))).toBe(true);
