@@ -158,8 +158,7 @@ export function getSubclassSpellGrants (subclass, spellCatalog) {
 					if (ABILITY_KEYS.has(useKey)) {
 						ability = useKey;
 						uses = {ability: useKey};
-					}
-					else if (useKey === "pb") uses = "proficiencyBonus";
+					} else if (useKey === "pb") uses = "proficiencyBonus";
 					else if (/^[1-9][0-9]*$/.test(useKey)) uses = Number(useKey);
 					else throw new TypeError(`Unsupported ${subclass.name} innate use count ${useKey}.`);
 					list.forEach(uid => addInnate(uid, uses, ability));
