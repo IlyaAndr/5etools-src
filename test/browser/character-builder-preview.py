@@ -716,6 +716,10 @@ def main():
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert 'Lifedrinker: 1d6 Necrotic, Psychic, or Radiant' in page.locator('.cb-attack-panel').inner_text()
             assert 'expend one to regain 1d8' in page.locator('.cb-resource').filter(has_text='Hit Dice').inner_text()
+            # Contact Patron always prepares Contact Other Plane with one free use.
+            contact = page.locator('.cb-resource').filter(has_text='Contact Patron')
+            assert contact.count() == 1
+            assert 'Contact Other Plane' in contact.inner_text()
             editor.get_by_label('Lifedrinker', exact=True).uncheck()
             editor.get_by_label('Pact of the Blade', exact=True).uncheck()
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:

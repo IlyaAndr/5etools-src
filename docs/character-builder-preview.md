@@ -51,7 +51,10 @@ throws, Weapon Mastery progression, Second Wind uses, background skills, and
 background ability choices come from the original class and background records.
 Warlock spell and invocation progression also uses those records, each
 Mystic Arcanum slot at level 11/13/15/17 offers one level 6/7/8/9 Warlock spell
-chosen from the reviewed catalog with its own once-per-Long-Rest free cast, and each
+chosen from the reviewed catalog with its own once-per-Long-Rest free cast.
+Contact Patron prepares Contact Other Plane from level 9 with its own free cast,
+and Eldritch Master turns Magical Cunning into a full Pact Magic recovery at
+level 20 instead of adding a second pool. Each
 patron's expanded spell list is derived from its subclass record, patron innate
 free casts and limited-use pools are tracked as resources, patron damage
 resistances, condition immunities, and senses apply, and the temporary hit

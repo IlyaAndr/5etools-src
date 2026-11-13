@@ -270,6 +270,33 @@ describe("Warlock editor choices", () => {
 		expect(() => createCharacterSheetModel(document, catalog, {...context, rules})).toThrow(/arcanum list/);
 	});
 
+	it("grants Contact Patron's prepared spell and free cast from level 9", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
+		const before = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 8}}), catalog, context);
+		expect(before.spells.some(entry => entry.id === "spell:contact-other-plane|xphb")).toBe(false);
+		const model = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 9}}), catalog, context);
+		expect(model.issues).toEqual([]);
+		const spell = model.spells.find(entry => entry.id === "spell:contact-other-plane|xphb");
+		expect(spell.level).toBe(5);
+		expect(spell.sources).toContainEqual(expect.objectContaining({kind: "class", label: "Contact Patron", alwaysPrepared: true, canCastWithSlots: true, freeLevel: 5, resourceId: "class:warlock|xphb:contact-patron"}));
+		expect(model.resources.find(resource => resource.id === "class:warlock|xphb:contact-patron")).toMatchObject({maxUses: 1, recovery: {long: "all"}, spellId: "spell:contact-other-plane|xphb", freeLevel: 5, note: "Contact Other Plane without a spell slot; the spell's saving throw automatically succeeds."});
+	});
+
+	it("lets Eldritch Master replace Magical Cunning's recovery instead of adding a second pool", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
+		const early = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 5}}), catalog, context);
+		const earlyPool = early.resources.filter(resource => resource.id === "class:warlock|xphb:magical-cunning");
+		expect(earlyPool).toHaveLength(1);
+		expect(earlyPool[0].note).toContain("half your maximum");
+		const late = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 20}}), catalog, context);
+		expect(late.issues).toEqual([]);
+		const latePool = late.resources.filter(resource => resource.id === "class:warlock|xphb:magical-cunning");
+		expect(latePool).toHaveLength(1);
+		expect(latePool[0].note).toBe("Regain all your expended Pact Magic slots.");
+	});
+
 	it("matches the reviewed invocations to the original Eldritch Invocation records", () => {
 		const records = context.sources.optionalFeatures.optionalfeature.filter(record => record.source === "XPHB" && (record.featureType || []).includes("EI"));
 		const annotations = Object.entries(context.rules.invocations);
