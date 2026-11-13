@@ -5,7 +5,7 @@ import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyOptions, getFeatSpellChoiceCount} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyOptions, getFeatSpellChoiceCount, getFeatSpellGroupChoices} from "./feat-choices.js";
 
 /** The filter expressions the reviewed class table applies to its spell columns. */
 const SPELL_LIST_LABELS = Object.freeze({
@@ -274,6 +274,14 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 				...descriptor(`${owner}:${id}:feat-proficiency`, `${featRule.name} Proficiencies`, choice.count, choice.options, value.minimumLevel, invocationChoices.includes(id)),
 				dependsOn: {choice: featChoiceId, option: featId},
 			});
+		}
+		if (featRule?.spellGroup) {
+			for (const choice of getFeatSpellGroupChoices(featRule, {sources, spells, spellCatalog}, `${owner}:${id}`)) {
+				result.push({
+					...descriptor(choice.id, choice.label, choice.count, choice.options, value.minimumLevel, invocationChoices.includes(id)),
+					dependsOn: {choice: featChoiceId, option: featId},
+				});
+			}
 		}
 	}
 	result.push(descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3));

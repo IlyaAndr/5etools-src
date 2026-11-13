@@ -10,7 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, getFeatFixedTools, getFeatProficiencyGrants, getFeatSenses, getFeatSpellChoiceCount, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatFixedTools, getFeatProficiencyGrants, getFeatSenses, getFeatSourceChoices, getFeatSpellChoiceCount, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -61,6 +61,12 @@ function checkRules (rules, document) {
 		for (const flag of ["savingThrow", "expertiseChoice", "freeCast"]) if (feat[flag] !== undefined && typeof feat[flag] !== "boolean") throw new TypeError(`sheetRules.feats.${id}: unsupported ${flag} flag`);
 		if (feat.spells !== undefined || feat.freeCast !== undefined) {
 			if (!Array.isArray(feat.spells) || !feat.spells.length || feat.spells.some(spell => typeof spell !== "string" || !spell.startsWith("spell:"))) throw new TypeError(`sheetRules.feats.${id}: unsupported feat spells`);
+		}
+		if (feat.riders !== undefined) {
+			if (!feat.riders || typeof feat.riders !== "object" || Array.isArray(feat.riders)) throw new TypeError(`sheetRules.feats.${id}: unsupported spell riders`);
+			for (const [spell, rider] of Object.entries(feat.riders)) {
+				if (!spell.startsWith("spell:") || !rider || typeof rider !== "object" || Array.isArray(rider) || !/^\d+d\d+$/.test(rider.dice)) throw new TypeError(`sheetRules.feats.${id}: unsupported spell rider`);
+			}
 		}
 		if (feat.spellChoice !== undefined) {
 			const choice = feat.spellChoice;
@@ -403,6 +409,16 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	// choices reuse the general-feat rules, but not the background feat's spell
 	// slot, which the reviewed free-cast effects are keyed to.
 	const extraFeatRules = [];
+	function applyExtraFeat (featRule, owner) {
+		applyFeatProficiencies(featRule, `${owner}:feat-proficiency`);
+		if (!featRule.spellGroup) return;
+		const sourceChoices = getFeatSourceChoices(sources, featRule);
+		const [abilityId] = select(`${owner}:feat-ability`, sourceChoices.abilities, 1, `${featRule.name} ability`);
+		const cantrips = select(`${owner}:feat-cantrips`, null, null, `${featRule.name} cantrips`);
+		const [spellId] = select(`${owner}:feat-spell`, featRule.spells, 1, `${featRule.name} spell`);
+		const rider = spellId ? featRule.riders?.[spellId] || null : null;
+		for (const id of [...cantrips, ...(spellId ? [spellId] : [])]) featSpells.push({id, owner, label: featRule.name, ability: abilityId, freeCast: id === spellId, rider});
+	}
 	function applyFeatProficiencies (featRule, choiceId) {
 		if (!featRule?.proficiencyChoice) return;
 		const picked = select(choiceId, null, null, `${featRule.name} proficiencies`);
@@ -418,7 +434,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	if (species.feat && !speciesFeatRule) throw new TypeError(`species ${species.speciesId}: missing reviewed feat ${species.feat}.`);
 	if (speciesFeatRule) {
 		extraFeatRules.push(speciesFeatRule);
-		applyFeatProficiencies(speciesFeatRule, `${species.speciesId}:feat-proficiency`);
+		applyExtraFeat(speciesFeatRule, species.speciesId);
 	}
 	const equipmentIds = Object.entries(rules.equipment).filter(([, value]) => value.classId === classId).map(([id]) => id);
 	if (!equipmentIds.length) issue(`${classOwner}:equipment`, "No reviewed starting equipment is available for this class.");
@@ -472,7 +488,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			const featRule = featId ? rules.feats[featId] : null;
 			if (!featRule) continue;
 			extraFeatRules.push(featRule);
-			applyFeatProficiencies(featRule, `${classOwner}:${id}:feat-proficiency`);
+			applyExtraFeat(featRule, `${classOwner}:${id}`);
 		}
 		for (const id of invocations) {
 			const invocation = rules.invocations[id];
@@ -737,7 +753,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		}
 		const caster = grant.ability ? casting(grant.owner, grant.label, grant.ability) : null;
 		addSpell(grant.id, {...caster, kind: "feat", label: grant.label, alwaysPrepared: true, canCastWithSlots: true, freeLevel: grant.freeCast ? 1 : null, resourceId: grant.freeCast ? `${grant.owner}:${metadata.ref ? metadata.name : grant.id}` : null, slotLevel: classCasting && metadata.level <= levelRule.slotLevel ? levelRule.slotLevel : null});
-		if (grant.freeCast) resource({id: `${grant.owner}:${metadata.name}`, name: metadata.name, maxUses: 1, recovery: {long: "all"}, spellId: grant.id, freeLevel: 1, spellcastingAbility: grant.ability});
+		if (grant.freeCast) resource({id: `${grant.owner}:${metadata.name}`, name: metadata.name, maxUses: 1, recovery: {long: "all"}, spellId: grant.id, freeLevel: 1, spellcastingAbility: grant.ability, ...(grant.rider ? {healing: {dice: grant.rider.dice, modifier: grant.ability ? modifier(scores[grant.ability]) : 0}} : {})});
 	}
 	for (const grant of species.spells) {
 		addSpell(grant.id, {...speciesCasting, kind: "species", label: "Species", alwaysPrepared: grant.alwaysPrepared, canCastWithSlots: grant.canCastWithSlots, resourceId: grant.resourceId, freeLevel: grant.resourceId ? grant.level : null, slotLevel: classCasting && grant.canCastWithSlots && grant.level <= levelRule.slotLevel ? levelRule.slotLevel : null});

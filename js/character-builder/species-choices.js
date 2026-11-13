@@ -1,7 +1,7 @@
 import {validateCharacterDocument} from "./character-document.js";
 import {describeChoices, option, selectedIds} from "./choice-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
-import {getFeatProficiencyOptions} from "./feat-choices.js";
+import {getFeatProficiencyOptions, getFeatSpellGroupChoices} from "./feat-choices.js";
 
 /** Find the reviewed catalog entry for one source-qualified species reference. */
 export function findSpeciesRule (catalog, ref) {
@@ -13,7 +13,7 @@ export function findSpeciesRule (catalog, ref) {
  * An unsupported species has no reviewed choices; the composition layer decides
  * whether the character can be edited at all.
  */
-export function getSpeciesChoiceDescriptors (document, catalog, {sources, rules} = {}) {
+export function getSpeciesChoiceDescriptors (document, catalog, {sources, rules, spells, spellCatalog} = {}) {
 	validateCharacterDocument(document);
 	const species = findSpeciesRule(catalog, document.build.species);
 	if (!species) return [];
@@ -70,6 +70,14 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources, rules}
 				...descriptor(`${species.id}:feat-proficiency`, `${featRule.name} Proficiencies`, choice.count, choice.options),
 				dependsOn: {choice: species.featChoiceId, option: featId},
 			});
+		}
+		if (featRule?.spellGroup) {
+			for (const choice of getFeatSpellGroupChoices(featRule, {sources, spells, spellCatalog}, species.id)) {
+				result.push({
+					...descriptor(choice.id, choice.label, choice.count, choice.options),
+					dependsOn: {choice: species.featChoiceId, option: featId},
+				});
+			}
 		}
 	}
 	if (selectedLineage) {

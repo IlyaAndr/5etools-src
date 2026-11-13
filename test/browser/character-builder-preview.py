@@ -835,6 +835,11 @@ def main():
             assert 'Magic Initiate' in group_text(page, editor, 'Origin Feat')
             editor.get_by_label('Origin Feat', exact=True).select_option('skilled|xphb')
             assert "Thieves' Tools" in group_text(page, editor, 'Skilled Proficiencies')
+            # Magic Initiate carries its own spell choices through the slot.
+            editor.get_by_label('Origin Feat', exact=True).select_option('magic-initiate-cleric|xphb')
+            assert 'Sacred Flame' in group_text(page, editor, 'Magic Initiate (Cleric) Cantrips')
+            assert 'Wisdom' in group_text(page, editor, 'Magic Initiate (Cleric) Spellcasting Ability')
+            assert 'Healing Word' in group_text(page, editor, 'Magic Initiate (Cleric) Level 1 Spell')
             assert not errors, errors
         finally:
             browser.close()

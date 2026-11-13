@@ -172,16 +172,15 @@ describe("Human's Skillful and Versatile", () => {
 		return document;
 	};
 
-	it("offers any skill and the reviewed Origin feats, naming the withheld ones", () => {
+	it("offers any skill and every reviewed Origin feat", () => {
 		const document = human();
 		const descriptors = getSpeciesChoiceDescriptors(document, catalog, {sources, rules});
 		const skill = descriptors.find(descriptor => descriptor.id === "species:human|xphb:skill");
 		expect(skill.options).toHaveLength(18);
 		const feat = descriptors.find(descriptor => descriptor.id === "species:human|xphb:feat");
-		expect(feat.options).toHaveLength(9);
+		expect(feat.options).toHaveLength(12);
 		expect(feat.options.map(option => option.id)).toEqual(expect.arrayContaining(["alert|xphb", "skilled|xphb", "tough|xphb"]));
-		expect(feat.options.map(option => option.id)).not.toContain("magic-initiate-cleric|xphb");
-		expect(feat.help).toContain("Magic Initiate");
+		expect(feat.options.map(option => option.id)).toContain("magic-initiate-cleric|xphb");
 		expect(projectSpecies(document, catalog).unresolvedChoices.map(choice => choice.id)).toEqual(["species:human|xphb:feat"]);
 	});
 
@@ -199,6 +198,23 @@ describe("Human's Skillful and Versatile", () => {
 		const model = createCharacterSheetModel(human({feat: "tough|xphb"}), catalog, context);
 		expect(model.issues).toEqual([]);
 		expect(model.features.some(feature => feature.name === "Tough")).toBe(true);
+	});
+
+	it("carries Magic Initiate's spell choices through the species feat slot", () => {
+		let document = human({feat: "magic-initiate-wizard|xphb"});
+		const descriptors = getSpeciesChoiceDescriptors(document, catalog, {sources, rules, spells});
+		const ability = descriptors.find(entry => entry.id === "species:human|xphb:feat-ability");
+		expect(ability.options.map(option => option.id)).toEqual(["int", "wis", "cha"]);
+		const cantrips = descriptors.find(entry => entry.id === "species:human|xphb:feat-cantrips");
+		expect(cantrips.count).toBe(2);
+		const chosenCantrips = cantrips.options.slice(0, 2).map(option => option.id);
+		document = setCharacterChoice(document, "species:human|xphb:feat-ability", ["wis"]);
+		document = setCharacterChoice(document, "species:human|xphb:feat-cantrips", chosenCantrips);
+		document = setCharacterChoice(document, "species:human|xphb:feat-spell", ["spell:shield|xphb"]);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.spells.map(entry => entry.id)).toEqual(expect.arrayContaining([...chosenCantrips, "spell:shield|xphb"]));
+		expect(model.resources.find(resource => resource.name === "Shield")).toMatchObject({maxUses: 1, spellcastingAbility: "wis"});
 	});
 
 	it("rejects a species feat proficiency that repeats an existing skill", () => {

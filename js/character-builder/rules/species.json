@@ -191,7 +191,7 @@
 				]
 			},
 			"lineageChoice": "lineage",
-		"lineageLabel": "Gnomish Lineage",
+			"lineageLabel": "Gnomish Lineage",
 			"commonSpells": [],
 			"savingThrowAdvantages": [
 				{
@@ -343,13 +343,15 @@
 					"crafter|xphb",
 					"healer|xphb",
 					"lucky|xphb",
+					"magic-initiate-cleric|xphb",
+					"magic-initiate-druid|xphb",
+					"magic-initiate-wizard|xphb",
 					"musician|xphb",
 					"savage-attacker|xphb",
 					"skilled|xphb",
 					"tavern-brawler|xphb",
 					"tough|xphb"
-				],
-				"withheld": "Magic Initiate's spell choices are not part of this feat slot yet, so its three variants are not offered here."
+				]
 			}
 		},
 		{
@@ -378,7 +380,7 @@
 				]
 			},
 			"lineageChoice": "legacy",
-		"lineageLabel": "Fiendish Legacy",
+			"lineageLabel": "Fiendish Legacy",
 			"commonSpells": [
 				"thaumaturgy|xphb"
 			],

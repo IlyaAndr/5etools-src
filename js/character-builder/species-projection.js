@@ -12,7 +12,7 @@ export function projectSpecies (document, catalog) {
 	const choices = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));
 	const permittedIds = [species.lineageChoiceId, species.abilityChoiceId, species.sizeChoiceId, species.skillChoiceId, species.featChoiceId].filter(Boolean);
 	for (const lineage of species.lineages) for (const choice of lineage.choices || []) permittedIds.push(choice.id);
-	if (species.featChoiceId) permittedIds.push(`${species.id}:feat-proficiency`);
+	if (species.featChoiceId) permittedIds.push(`${species.id}:feat-proficiency`, `${species.id}:feat-ability`, `${species.id}:feat-cantrips`, `${species.id}:feat-spell`);
 	for (const id of choices.keys()) {
 		if (id.startsWith(`${species.id}:`) && !permittedIds.includes(id)) throw new TypeError(`character.build.choices: unknown species choice ${id}`);
 	}
