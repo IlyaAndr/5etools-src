@@ -118,12 +118,11 @@ function validateRules (rules) {
 		if (rule.hpPerLevel !== undefined) integer(rule.hpPerLevel, "rules.species.hpPerLevel", 0, 10);
 		if (rule.featChoice !== undefined) {
 			const choice = rule.featChoice;
-			object(choice, "rules.species.featChoice", ["options", "withheld"]);
+			object(choice, "rules.species.featChoice", ["options"]);
 			array(choice.options, "rules.species.featChoice.options");
 			if (!choice.options.length) fail("rules.species.featChoice.options", "missing feat options");
 			choice.options.forEach(id => string(id, "rules.species.featChoice.options"));
 			if (new Set(choice.options).size !== choice.options.length) fail("rules.species.featChoice.options", "duplicate feat option");
-			if (choice.withheld !== undefined) string(choice.withheld, "rules.species.featChoice.withheld");
 		}
 		if (rule.skillChoice !== undefined) {
 			array(rule.skillChoice, "rules.species.skillChoice");
@@ -373,7 +372,6 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			skillOptions: rule.skillChoice === undefined ? [] : [...rule.skillChoice],
 			featChoiceId: rule.featChoice === undefined ? null : `${id}:feat`,
 			featOptions: rule.featChoice === undefined ? [] : [...rule.featChoice.options],
-			featWithheld: rule.featChoice?.withheld ?? null,
 			savingThrowAdvantages: copy(rule.savingThrowAdvantages),
 			resistances: [...fixedResistances],
 			hpPerLevel: rule.hpPerLevel ?? 0,

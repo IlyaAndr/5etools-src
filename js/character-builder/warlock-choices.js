@@ -47,13 +47,12 @@ function readProgressionTable (warlock) {
 /**
  * Reviewed invocations the character may take: the level must reach the
  * annotated minimum, and every prerequisite invocation must already be
- * selected. Annotations whose choice this subset cannot express stay out of the
- * list so the sheet reports them instead of silently ignoring them.
+ * selected. Every reviewed invocation is offered, because an annotation that
+ * this subset cannot express is rejected instead of being listed as withheld.
  */
 export function getAvailableInvocations (rules, level, selected = []) {
 	const chosen = new Set(selected);
-	return Object.entries(rules?.invocations || {}).filter(([, value]) => !value.unsupported
-		&& value.minimumLevel <= level
+	return Object.entries(rules?.invocations || {}).filter(([, value]) => value.minimumLevel <= level
 		&& (value.requires || []).every(id => chosen.has(id)));
 }
 
@@ -223,10 +222,6 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	const levelFourAbilities = abilities.map(ability => ability.id);
 	const levelFourWeights = [{from: levelFourAbilities, weights: [2]}, {from: levelFourAbilities, weights: [1, 1]}];
 	const invocationDescriptor = descriptor(`${owner}:invocations`, "Eldritch Invocations", progression.invocations, invocations);
-	const unsupportedInvocations = Object.values(rules.invocations).filter(value => value.unsupported);
-	if (unsupportedInvocations.length) {
-		invocationDescriptor.help = `Not offered yet because their choices are not reviewed: ${unsupportedInvocations.map(value => `${value.name}: ${value.unsupported}`).join(" ")}`;
-	}
 	const result = [
 		descriptor(`${owner}:skills`, "Warlock Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => option(id, skillNames.get(id)))),
 		descriptor(`${owner}:cantrips`, "Warlock Cantrips", progression.cantrips, cantripOptions),
@@ -268,7 +263,6 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 		result.push({
 			...descriptor(featChoiceId, `${value.name} Feat`, 1, value.featChoice.options.map(featId => option(featId, rules.feats[featId].name)), value.minimumLevel, invocationChoices.includes(id)),
 			dependsOn: {choice: `${owner}:invocations`, option: id},
-			...(value.featChoice.withheld ? {help: value.featChoice.withheld} : {}),
 		});
 		const [featId] = decisions.get(featChoiceId) || [];
 		const featRule = featId ? rules.feats[featId] : null;

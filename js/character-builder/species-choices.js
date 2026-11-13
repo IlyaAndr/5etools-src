@@ -58,10 +58,7 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources, rules,
 			if (!rule) throw new TypeError(`species ${species.id}: unknown feat ${id}`);
 			return rule.name;
 		};
-		result.push({
-			...descriptor(species.featChoiceId, "Origin Feat", 1, species.featOptions.map(id => option(id, featName(id)))),
-			...(species.featWithheld ? {help: species.featWithheld} : {}),
-		});
+		result.push(descriptor(species.featChoiceId, "Origin Feat", 1, species.featOptions.map(id => option(id, featName(id)))));
 		const [featId] = selectedIds(document, species.featChoiceId);
 		const featRule = featId ? rules?.feats?.[featId] : null;
 		if (featRule?.proficiencyChoice) {
