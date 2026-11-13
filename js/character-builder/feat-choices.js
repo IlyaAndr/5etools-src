@@ -230,15 +230,16 @@ function readSpellChoices (group, label) {
 }
 
 /** Read the original feat record for the reviewed spell choices and ability choice. */
-export function getFeatSourceChoices (sources, featRule) {
-	if (!featRule?.rule.spellGroup) return null;
-	const matches = (sources?.feats?.feat || []).filter(feat => feat.name === featRule.rule.record.name && feat.source === featRule.rule.record.source);
-	if (matches.length !== 1) throw new TypeError(`Missing or ambiguous ${featRule.rule.record.source} ${featRule.rule.record.name} source record.`);
-	const group = (matches[0].additionalSpells || []).find(candidate => candidate.name === featRule.rule.spellGroup);
-	if (!group) throw new TypeError(`Missing ${featRule.rule.name} spell group ${featRule.rule.spellGroup}.`);
+export function getFeatSourceChoices (sources, feat) {
+	const featRule = feat?.rule ?? feat;
+	if (!featRule?.spellGroup) return null;
+	const matches = (sources?.feats?.feat || []).filter(feature => feature.name === featRule.record.name && feature.source === featRule.record.source);
+	if (matches.length !== 1) throw new TypeError(`Missing or ambiguous ${featRule.record.source} ${featRule.record.name} source record.`);
+	const group = (matches[0].additionalSpells || []).find(candidate => candidate.name === featRule.spellGroup);
+	if (!group) throw new TypeError(`Missing ${featRule.name} spell group ${featRule.spellGroup}.`);
 	const abilities = group.ability?.choose;
-	if (!Array.isArray(abilities) || !abilities.length) throw new TypeError(`Missing ${featRule.rule.name} spellcasting abilities.`);
-	return {record: matches[0], abilities: [...abilities], spellChoices: readSpellChoices(group, featRule.rule.name)};
+	if (!Array.isArray(abilities) || !abilities.length) throw new TypeError(`Missing ${featRule.name} spellcasting abilities.`);
+	return {record: matches[0], abilities: [...abilities], spellChoices: readSpellChoices(group, featRule.name)};
 }
 
 /** Build the skill and tool options for a feat's reviewed proficiency choice. */
@@ -259,6 +260,23 @@ export function getFeatProficiencyOptions (annotation, rules, skillGroups) {
 	for (const toolId of choice.tools || []) options.push({id: `tool:${toolId}`, label: rules.tools[toolId]});
 	if (options.length < choice.count) throw new TypeError(`${annotation.name}: not enough reviewed proficiencies.`);
 	return {count: choice.count, options};
+}
+
+/** Build the spell-choice descriptors for one origin feat and owner prefix. */
+export function getFeatSpellGroupChoices (featRule, {sources, spells, spellCatalog}, owner) {
+	const sourceChoices = getFeatSourceChoices(sources, featRule);
+	const abilities = createSkillCatalog(sources?.skills, sources?.abilityNames);
+	const abilityName = id => abilities.find(ability => ability.id === id)?.name || id;
+	const rawSpells = spells?.spell || sources?.spells?.spell || spells || sources?.spells;
+	const catalog = resolveSpellCatalog({spellCatalog, spells: rawSpells, sources});
+	if (!catalog) throw new TypeError("Missing spell list data.");
+	const cantripChoice = sourceChoices.spellChoices.find(choice => choice.id === "cantrips");
+	if (!cantripChoice) throw new TypeError(`${featRule.name}: no cantrip choices`);
+	return [
+		{id: `${owner}:feat-ability`, label: `${featRule.name} Spellcasting Ability`, count: 1, options: sourceChoices.abilities.map(id => ({id, label: abilityName(id)}))},
+		{id: `${owner}:feat-cantrips`, label: `${featRule.name} ${cantripChoice.label}`, count: cantripChoice.count, options: getSpellQueryOptions(catalog, cantripChoice.query)},
+		{id: `${owner}:feat-spell`, label: `${featRule.name} Level 1 Spell`, count: featRule.spells.length, options: getSpellOptions(rawSpells, featRule.spells)},
+	];
 }
 
 /** Return origin-feat choices independently of the species or class. */

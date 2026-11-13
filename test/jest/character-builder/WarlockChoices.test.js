@@ -176,7 +176,7 @@ describe("Warlock editor choices", () => {
 		expect(model.attacks.map(attack => attack.name)).not.toContain("Longsword");
 	});
 
-	it("offers Lessons of the First Ones and withholds only the feats it cannot carry", () => {
+	it("offers Lessons of the First Ones with every reviewed Origin feat", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		const firstLevel = choice(draft, "class:warlock|xphb:invocations");
 		expect(firstLevel.options.map(option => option.id)).not.toContain("lessons-of-the-first-ones|xphb");
@@ -186,8 +186,8 @@ describe("Warlock editor choices", () => {
 		const selected = setCharacterChoice(secondLevel, "class:warlock|xphb:invocations", ["lessons-of-the-first-ones|xphb"]);
 		const featChoiceId = "class:warlock|xphb:lessons-of-the-first-ones|xphb:feat";
 		const featChoice = getWarlockChoiceDescriptors(selected, catalog, context).find(entry => entry.id === featChoiceId);
-		expect(featChoice.options).toHaveLength(9);
-		expect(featChoice.help).toContain("Magic Initiate");
+		expect(featChoice.options).toHaveLength(12);
+		expect(featChoice.help).toBeUndefined();
 		const model = createCharacterSheetModel(selected, catalog, context);
 		expect(model.issues).toContainEqual(expect.objectContaining({id: featChoiceId}));
 		const chosen = setCharacterChoice(selected, featChoiceId, ["skilled|xphb"]);
@@ -196,6 +196,26 @@ describe("Warlock editor choices", () => {
 		expect(proficiency.count).toBe(3);
 		const complete = createCharacterSheetModel(setCharacterChoice(chosen, proficiencyId, ["tool:lute|xphb", "tool:dice-set|xphb", "tool:smiths-tools|xphb"]), catalog, context);
 		expect(complete.issues.filter(issue => issue.id.startsWith("class:warlock|xphb:lessons"))).toEqual([]);
+	});
+
+	it("carries Magic Initiate's spell choices through the Lessons feat slot", () => {
+		const example = createSheetExamples(catalog.dataset).find(entry => entry.id === "infernal-tiefling-warlock-level-3").document;
+		const owner = "class:warlock|xphb:lessons-of-the-first-ones|xphb";
+		const invocations = example.build.choices.find(entry => entry.id === "class:warlock|xphb:invocations").selected;
+		const selected = setCharacterChoice(example, "class:warlock|xphb:invocations", [...invocations.slice(1), "lessons-of-the-first-ones|xphb"]);
+		const withFeat = setCharacterChoice(selected, `${owner}:feat`, ["magic-initiate-druid|xphb"]);
+		const choices = getWarlockChoiceDescriptors(withFeat, catalog, context);
+		expect(choices.find(entry => entry.id === `${owner}:feat-ability`).options.map(option => option.id)).toEqual(["int", "wis", "cha"]);
+		expect(choices.find(entry => entry.id === `${owner}:feat-cantrips`).count).toBe(2);
+		expect(choices.find(entry => entry.id === `${owner}:feat-spell`).options.map(option => option.id)).toEqual(["spell:cure-wounds|xphb"]);
+		const cantrips = choices.find(entry => entry.id === `${owner}:feat-cantrips`).options.slice(0, 2).map(option => option.id);
+		let document = setCharacterChoice(withFeat, `${owner}:feat-ability`, ["wis"]);
+		document = setCharacterChoice(document, `${owner}:feat-cantrips`, cantrips);
+		document = setCharacterChoice(document, `${owner}:feat-spell`, ["spell:cure-wounds|xphb"]);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.spells.map(entry => entry.id)).toEqual(expect.arrayContaining([...cantrips, "spell:cure-wounds|xphb"]));
+		expect(model.resources.find(resource => resource.name === "Cure Wounds")).toMatchObject({maxUses: 1, spellcastingAbility: "wis", healing: {dice: "2d8"}});
 	});
 
 	it("matches the reviewed invocations to the original Eldritch Invocation records", () => {
