@@ -176,19 +176,26 @@ describe("Warlock editor choices", () => {
 		expect(model.attacks.map(attack => attack.name)).not.toContain("Longsword");
 	});
 
-	it("withholds invocations whose choices are not reviewed yet and says why", () => {
+	it("offers Lessons of the First Ones and withholds only the feats it cannot carry", () => {
 		const draft = createWarlockDraft(catalog.dataset);
-		const invocationChoice = choice(draft, "class:warlock|xphb:invocations");
-		expect(invocationChoice.options.map(option => option.id)).toContain("pact-of-the-tome|xphb");
-		expect(invocationChoice.options.map(option => option.id)).not.toContain("lessons-of-the-first-ones|xphb");
-		expect(invocationChoice.help).not.toContain("Pact of the Tome");
-		expect(invocationChoice.help).toContain("Lessons of the First Ones: The Origin feat it grants has no reviewed choice or effect yet.");
+		const firstLevel = choice(draft, "class:warlock|xphb:invocations");
+		expect(firstLevel.options.map(option => option.id)).not.toContain("lessons-of-the-first-ones|xphb");
+		expect(firstLevel.help).toBeUndefined();
 		const secondLevel = {...draft, build: {...draft.build, level: 2}};
-		const saved = setCharacterChoice(secondLevel, "class:warlock|xphb:invocations", ["lessons-of-the-first-ones|xphb"]);
-		expect(createCharacterSheetModel(saved, catalog, context).issues).toContainEqual(expect.objectContaining({
-			id: "class:warlock|xphb:invocations",
-			message: "Lessons of the First Ones: The Origin feat it grants has no reviewed choice or effect yet.",
-		}));
+		expect(choice(secondLevel, "class:warlock|xphb:invocations").options.map(option => option.id)).toContain("lessons-of-the-first-ones|xphb");
+		const selected = setCharacterChoice(secondLevel, "class:warlock|xphb:invocations", ["lessons-of-the-first-ones|xphb"]);
+		const featChoiceId = "class:warlock|xphb:lessons-of-the-first-ones|xphb:feat";
+		const featChoice = getWarlockChoiceDescriptors(selected, catalog, context).find(entry => entry.id === featChoiceId);
+		expect(featChoice.options).toHaveLength(9);
+		expect(featChoice.help).toContain("Magic Initiate");
+		const model = createCharacterSheetModel(selected, catalog, context);
+		expect(model.issues).toContainEqual(expect.objectContaining({id: featChoiceId}));
+		const chosen = setCharacterChoice(selected, featChoiceId, ["skilled|xphb"]);
+		const proficiencyId = "class:warlock|xphb:lessons-of-the-first-ones|xphb:feat-proficiency";
+		const proficiency = getWarlockChoiceDescriptors(chosen, catalog, context).find(entry => entry.id === proficiencyId);
+		expect(proficiency.count).toBe(3);
+		const complete = createCharacterSheetModel(setCharacterChoice(chosen, proficiencyId, ["tool:lute|xphb", "tool:dice-set|xphb", "tool:smiths-tools|xphb"]), catalog, context);
+		expect(complete.issues.filter(issue => issue.id.startsWith("class:warlock|xphb:lessons"))).toEqual([]);
 	});
 
 	it("matches the reviewed invocations to the original Eldritch Invocation records", () => {

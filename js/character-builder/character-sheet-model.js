@@ -73,6 +73,14 @@ function checkRules (rules, document) {
 		if (invocation.weaponChoice !== undefined && (typeof invocation.weaponChoice !== "string" || !invocation.weaponChoice.trim()
 			|| !Array.isArray(invocation.weaponOptions) || !invocation.weaponOptions.length || invocation.weaponOptions.some(value => typeof value !== "string" || !rules.pactWeapons[value]))) throw new TypeError(`sheetRules.invocations.${id}: unsupported weapon choice`);
 		if (invocation.weaponChoice === undefined && invocation.weaponOptions !== undefined) throw new TypeError(`sheetRules.invocations.${id}: weapon options without a choice`);
+		if (invocation.featChoice !== undefined) {
+			const choice = invocation.featChoice;
+			if (!choice || typeof choice !== "object" || Array.isArray(choice)
+				|| !Array.isArray(choice.options) || !choice.options.length
+				|| choice.options.some(value => typeof value !== "string" || !rules.feats[value])
+				|| new Set(choice.options).size !== choice.options.length
+				|| (choice.withheld !== undefined && (typeof choice.withheld !== "string" || !choice.withheld.trim()))) throw new TypeError(`sheetRules.invocations.${id}: unsupported feat choice`);
+		}
 		if (invocation.tomeChoices !== undefined) {
 			if (!Array.isArray(invocation.tomeChoices) || !invocation.tomeChoices.length) throw new TypeError(`sheetRules.invocations.${id}: unsupported tome choices`);
 			for (const choice of invocation.tomeChoices) {
@@ -346,18 +354,26 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		}
 		if (slot.asi) increases(`${classOwner}:level-${slot.level}-ability-increases`, ABILITY_IDS, scores, false);
 	}
-	// A species may grant a chosen Origin feat (Human's Versatile).
-	const speciesFeatRule = species.feat ? rules.feats[species.feat] : null;
-	if (species.feat && !speciesFeatRule) throw new TypeError(`species ${species.speciesId}: missing reviewed feat ${species.feat}.`);
-	if (speciesFeatRule?.proficiencyChoice) {
-		const picked = select(`${species.speciesId}:feat-proficiency`, null, null, `${speciesFeatRule.name} proficiencies`);
+	// Extra Origin feats granted by a species or an invocation. Their proficiency
+	// choices reuse the general-feat rules, but not the background feat's spell
+	// slot, which the reviewed free-cast effects are keyed to.
+	const extraFeatRules = [];
+	function applyFeatProficiencies (featRule, choiceId) {
+		if (!featRule?.proficiencyChoice) return;
+		const picked = select(choiceId, null, null, `${featRule.name} proficiencies`);
 		for (const value of picked) {
 			if (value.startsWith("skill:")) {
 				const skill = value.slice("skill:".length);
-				if (skillProficiencies.has(skill)) issue(`${species.speciesId}:feat-proficiency`, `${speciesFeatRule.name}: that skill is already granted; replacement choices are outside this subset.`);
+				if (skillProficiencies.has(skill)) issue(choiceId, `${featRule.name}: that skill is already granted; replacement choices are outside this subset.`);
 				else skillProficiencies.add(skill);
 			} else featTraining.push(rules.tools[value.slice("tool:".length)]);
 		}
+	}
+	const speciesFeatRule = species.feat ? rules.feats[species.feat] : null;
+	if (species.feat && !speciesFeatRule) throw new TypeError(`species ${species.speciesId}: missing reviewed feat ${species.feat}.`);
+	if (speciesFeatRule) {
+		extraFeatRules.push(speciesFeatRule);
+		applyFeatProficiencies(speciesFeatRule, `${species.speciesId}:feat-proficiency`);
 	}
 	const equipmentIds = Object.entries(rules.equipment).filter(([, value]) => value.classId === classId).map(([id]) => id);
 	if (!equipmentIds.length) issue(`${classOwner}:equipment`, "No reviewed starting equipment is available for this class.");
@@ -403,6 +419,15 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			if (!invocation.weaponChoice) continue;
 			const [weaponId] = select(`${classOwner}:${invocation.weaponChoice}`, invocation.weaponOptions, 1, "Pact Weapon");
 			pactWeapon = weaponId ? rules.pactWeapons[weaponId] : null;
+		}
+		for (const id of invocations) {
+			const invocation = rules.invocations[id];
+			if (!invocation.featChoice) continue;
+			const [featId] = select(`${classOwner}:${id}:feat`, invocation.featChoice.options, 1, `${invocation.name} feat`);
+			const featRule = featId ? rules.feats[featId] : null;
+			if (!featRule) continue;
+			extraFeatRules.push(featRule);
+			applyFeatProficiencies(featRule, `${classOwner}:${id}:feat-proficiency`);
 		}
 		for (const id of invocations) {
 			const invocation = rules.invocations[id];
@@ -625,7 +650,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		}
 	}
 	feature(record(sources.feats.feat, featRule.record.name, "feat"), "Origin Feat", "feat");
-	if (speciesFeatRule) feature(record(sources.feats.feat, speciesFeatRule.record.name, "feat"), "Origin Feat", "feat");
+	for (const extra of extraFeatRules) if (!model.features.some(entry => entry.name === extra.record.name)) feature(record(sources.feats.feat, extra.record.name, "feat"), "Origin Feat", "feat");
 	for (const featLevel of classRule.featLevels || []) {
 		if (build.level < featLevel) continue;
 		const featId = (decisions.get(`${classOwner}:level-${featLevel}-feat`) || [])[0];

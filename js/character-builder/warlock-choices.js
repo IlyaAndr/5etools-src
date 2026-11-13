@@ -259,6 +259,23 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 			});
 		}
 	}
+	for (const [id, value] of Object.entries(rules.invocations).filter(([, entry]) => entry.featChoice)) {
+		const featChoiceId = `${owner}:${id}:feat`;
+		result.push({
+			...descriptor(featChoiceId, `${value.name} Feat`, 1, value.featChoice.options.map(featId => option(featId, rules.feats[featId].name)), value.minimumLevel, invocationChoices.includes(id)),
+			dependsOn: {choice: `${owner}:invocations`, option: id},
+			...(value.featChoice.withheld ? {help: value.featChoice.withheld} : {}),
+		});
+		const [featId] = decisions.get(featChoiceId) || [];
+		const featRule = featId ? rules.feats[featId] : null;
+		if (featRule?.proficiencyChoice) {
+			const choice = getFeatProficiencyOptions(featRule, rules, skillGroups);
+			result.push({
+				...descriptor(`${owner}:${id}:feat-proficiency`, `${featRule.name} Proficiencies`, choice.count, choice.options, value.minimumLevel, invocationChoices.includes(id)),
+				dependsOn: {choice: featChoiceId, option: featId},
+			});
+		}
+	}
 	result.push(descriptor(`${owner}:subclass`, "Subclass", 1, warlock.subclasses.map(value => option(value.id, value.name)), 3));
 	for (const featLevel of warlock.featLevels || []) {
 		const featOptions = [

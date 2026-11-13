@@ -621,13 +621,15 @@ def main():
             # check reads the class's armor training.
             assert 'Moderately Armored' in group_text(page, editor, 'Level 4 Feat')
             # Invocations appear only when their annotated prerequisite is
-            # selected, and the ones whose choices are not reviewed yet are
-            # withheld with the reason beside the group.
+            # selected; Lessons of the First Ones now carries a reviewed feat slot.
             assert editor.get_by_label('Pact of the Blade', exact=True).count() == 1
             assert editor.get_by_label('Thirsting Blade', exact=True).count() == 0
             assert editor.get_by_label('Pact of the Tome', exact=True).count() == 1
-            assert editor.get_by_label('Lessons of the First Ones', exact=True).count() == 0
-            assert 'Lessons of the First Ones' in group_text(page, editor, 'Eldritch Invocations')
+            assert editor.get_by_label('Lessons of the First Ones', exact=True).count() == 1
+            editor.get_by_label('Lessons of the First Ones', exact=True).check()
+            assert 'Skilled' in group_text(page, editor, 'Lessons of the First Ones Feat')
+            assert 'Magic Initiate' in group_text(page, editor, 'Lessons of the First Ones Feat')
+            editor.get_by_label('Lessons of the First Ones', exact=True).uncheck()
             # A dependent choice leaves with its prerequisite: the Pact Weapon is
             # offered only while Pact of the Blade is selected, and deselecting
             # the invocation removes the saved weapon instead of leaving an
