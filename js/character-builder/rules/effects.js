@@ -42,7 +42,7 @@ const EFFECT_FIELDS = {
 	conditionImmunity: ["type", "condition"],
 	telepathy: ["type", "range"],
 	temporaryHP: ["type", "value", "trigger", "note"],
-	damageRider: ["type", "name", "amount", "damageTypes", "frequency", "appliesTo", "note"],
+	damageRider: ["type", "name", "amount", "damageTypes", "frequency", "appliesTo", "detail", "note"],
 };
 const DAMAGE_TYPES = new Set(["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"]);
 const nonempty = value => typeof value === "string" && !!value.trim();
@@ -121,10 +121,16 @@ function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 		case "conditionImmunity": if (!nonempty(effect.condition)) throw new TypeError("Invalid condition immunity mechanic."); break;
 		case "telepathy": if (!integer(effect.range, 1)) throw new TypeError("Invalid telepathy mechanic."); break;
 		case "damageRider": {
+			// A rider is either a computed damage bonus or a described effect; never both.
+			if (!nonempty(effect.name) || !nonempty(effect.frequency) || (effect.note !== undefined && !nonempty(effect.note))) throw new TypeError("Invalid damage rider mechanic.");
+			if (effect.detail !== undefined) {
+				if (!nonempty(effect.detail) || effect.amount !== undefined || effect.damageTypes !== undefined || effect.appliesTo !== undefined) throw new TypeError("Invalid damage rider mechanic.");
+				break;
+			}
 			const types = effect.damageTypes;
-			if (!nonempty(effect.name) || !validInt(effect.amount, -100, 100) || !Array.isArray(types) || !types.length
+			if (!validInt(effect.amount, -100, 100) || !Array.isArray(types) || !types.length
 				|| types.some(type => !DAMAGE_TYPES.has(type)) || new Set(types).size !== types.length
-				|| !nonempty(effect.frequency) || !nonempty(effect.appliesTo) || (effect.note !== undefined && !nonempty(effect.note))) throw new TypeError("Invalid damage rider mechanic.");
+				|| !nonempty(effect.appliesTo)) throw new TypeError("Invalid damage rider mechanic.");
 			break;
 		}
 		case "temporaryHP":

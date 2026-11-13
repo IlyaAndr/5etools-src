@@ -2,6 +2,7 @@ import {readFileSync} from "node:fs";
 import "../../../js/parser.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
+import {renderCharacterSheet} from "../../../js/character-builder/sheet-renderer.js";
 import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {createSpellCatalog} from "../../../js/character-builder/spell-catalog.js";
@@ -66,8 +67,9 @@ describe("XPHB Warlock patrons", () => {
 		expect(getSubclassSpellGrants(subclass("Archfey"), spellCatalog).innate).toEqual([
 			{minimumLevel: 3, spellId: "spell:misty-step|xphb", uses: {ability: "cha"}, ability: "cha"},
 		]);
+		// The source lists Hex without a use limit, so it is always available rather than a per-rest pool.
 		expect(getSubclassSpellGrants(subclass("Great Old One"), spellCatalog).innate).toEqual([
-			{minimumLevel: 10, spellId: "spell:hex|xphb", uses: 1, ability: null},
+			{minimumLevel: 10, spellId: "spell:hex|xphb", uses: null, ability: null},
 		]);
 	});
 
@@ -248,6 +250,51 @@ describe("XPHB Warlock patrons", () => {
 		})]);
 		const archfey = createCharacterSheetModel(levelSix("archfey|xphb"), catalog, context);
 		expect(archfey.temporaryHitPoints).toEqual([]);
+	});
+
+	it("tracks the Great Old One's free Hex and its Eldritch Hex rider", () => {
+		const document = levelSix("great-old-one|xphb");
+		document.build.level = 10;
+		document.build.choices.find(choice => choice.id.endsWith(":invocations")).selected = ["eldritch-mind|xphb", "agonizing-blast|xphb", "armor-of-shadows|xphb", "devils-sight|xphb", "repelling-blast|xphb", "fiendish-vigor|xphb", "mask-of-many-faces|xphb"];
+		document.build.choices.find(choice => choice.id.endsWith(":cantrips")).selected.push("spell:chill-touch|xphb");
+		document.build.choices.find(choice => choice.id.endsWith(":prepared-spells")).selected.push("spell:bane|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb");
+		document.build.choices.push(
+			{id: "class:warlock|xphb:level-8-feat", selected: ["ability-score-improvement|xphb"]},
+			{id: "class:warlock|xphb:level-8-ability-increases", selected: ["str-1.int-1"]},
+		);
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		const hex = model.spells.find(spell => spell.id === "spell:hex|xphb");
+		expect(hex.sources).toContainEqual(expect.objectContaining({kind: "subclass", label: "Great Old One", alwaysPrepared: true, canCastWithSlots: true}));
+		// The source lists the spell without a use limit, so it must not become a 1/day pool.
+		expect(model.resources.some(resource => resource.spellId === "spell:hex|xphb")).toBe(false);
+		expect(model.damageRiders).toContainEqual(expect.objectContaining({
+			name: "Eldritch Hex",
+			frequency: "While Hex is active",
+			detail: "The target also has Disadvantage on saving throws of the ability you chose for Hex.",
+			annotationId: "great-old-one-eldritch-hex",
+		}));
+		const html = renderCharacterSheet(model, catalog);
+		expect(html).toContain("data-rider=\"great-old-one-eldritch-hex\"");
+		expect(html).toContain("Eldritch Hex:</strong> While Hex is active · The target also has Disadvantage on saving throws");
+	});
+
+	it("declares the patron riders against unique source features", () => {
+		const fields = ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"];
+		const records = sources.warlock.subclassFeature;
+		for (const [id, patron, level, name] of [
+			["great-old-one-eldritch-hex", "great-old-one|xphb", 10, "Eldritch Hex"],
+			["archfey-bewitching-magic", "archfey|xphb", 14, "Bewitching Magic"],
+		]) {
+			const annotation = context.rules.mechanics.find(entry => entry.id === id);
+			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
+			expect(annotation.effects).toHaveLength(1);
+			expect(annotation.effects[0]).toMatchObject({type: "damageRider", name});
+			expect(annotation.effects[0].detail).toBeTruthy();
+			expect(annotation.effects[0].amount).toBeUndefined();
+			const matches = records.filter(candidate => fields.every(field => annotation.source[field] === undefined || annotation.source[field] === candidate[field]));
+			expect(matches).toHaveLength(1);
+		}
 	});
 
 	it("declares the patron immunity and sense against unique source features", () => {

@@ -242,6 +242,16 @@ describe("Declarative character mechanics", () => {
 		expect(() => resolveMechanicEffects([rule], context())).toThrow(/damage rider/);
 	});
 
+	it("resolves a described rider without an amount and rejects a mixed shape", () => {
+		const input = annotation();
+		input.effects = [{type: "damageRider", name: "Bewitching Magic", frequency: "After you cast an Enchantment or Illusion spell", detail: "Cast Misty Step as part of the same action."}];
+		expect(resolveMechanicEffects([input], context())[0]).toMatchObject({type: "damageRider", name: "Bewitching Magic", detail: "Cast Misty Step as part of the same action."});
+		input.effects = [{type: "damageRider", name: "Bewitching Magic", frequency: "Always", detail: "Cast Misty Step.", amount: 2}];
+		expect(() => resolveMechanicEffects([input], context())).toThrow(/damage rider/);
+		input.effects = [{type: "damageRider", name: "Bewitching Magic", frequency: "Always"}];
+		expect(() => resolveMechanicEffects([input], context())).toThrow(/damage rider/);
+	});
+
 	it("rejects a source reference that does not resolve to the checked source", () => {
 		const input = annotation();
 		input.source.name = "Different Feature";

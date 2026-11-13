@@ -208,10 +208,12 @@ function attacks (model) {
 function riders (model) {
 	if (!model.damageRiders.length) return "";
 	const rows = model.damageRiders.map(rider => {
-		const detail = [rider.frequency, `${signed(rider.amount)} to ${rider.appliesTo}`, rider.damageTypes.map(title).join(" or ")].join(" · ");
-		return `<li data-rider="${escape(rider.annotationId)}"><strong>${text(rider.name)}:</strong> ${escape(detail)}${rider.note ? ` · ${escape(rider.note)}` : ""}</li>`;
+		const detail = rider.detail !== undefined
+			? [rider.frequency, rider.detail]
+			: [rider.frequency, `${signed(rider.amount)} to ${rider.appliesTo}`, rider.damageTypes.map(title).join(" or ")];
+		return `<li data-rider="${escape(rider.annotationId)}"><strong>${text(rider.name)}:</strong> ${escape(detail.join(" · "))}${rider.note ? ` · ${escape(rider.note)}` : ""}</li>`;
 	}).join("");
-	return block("Damage riders · calculated", `<ul class="cb-riders">${rows}</ul>`, "cb-rider-block");
+	return block("Riders · calculated", `<ul class="cb-riders">${rows}</ul>`, "cb-rider-block");
 }
 
 function features (model) {
