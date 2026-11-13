@@ -69,7 +69,7 @@ export function composeChoiceDescriptors (document, catalog, {rules, sources, sp
 		}
 		: null;
 	const descriptors = [
-		...getSpeciesChoiceDescriptors(document, catalog, {sources}),
+		...getSpeciesChoiceDescriptors(document, catalog, {sources, rules}),
 		...getBackgroundChoiceDescriptors(document, {rules, sources}),
 		...(languages ? [languages] : []),
 		...(distinctClassSkills ? [distinctClassSkills] : []),

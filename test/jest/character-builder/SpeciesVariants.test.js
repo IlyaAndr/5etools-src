@@ -160,6 +160,55 @@ describe("Elven lineages and the Keen Senses skill", () => {
 	});
 });
 
+describe("Human's Skillful and Versatile", () => {
+	const human = ({feat, skill = "animal-handling", proficiencies} = {}) => {
+		const document = speciesCharacter("Human");
+		document.build.choices.push(
+			{id: "species:human|xphb:size", selected: ["medium"]},
+			{id: "species:human|xphb:skill", selected: [skill]},
+		);
+		if (feat) document.build.choices.push({id: "species:human|xphb:feat", selected: [feat]});
+		if (proficiencies) document.build.choices.push({id: "species:human|xphb:feat-proficiency", selected: proficiencies});
+		return document;
+	};
+
+	it("offers any skill and the reviewed Origin feats, naming the withheld ones", () => {
+		const document = human();
+		const descriptors = getSpeciesChoiceDescriptors(document, catalog, {sources, rules});
+		const skill = descriptors.find(descriptor => descriptor.id === "species:human|xphb:skill");
+		expect(skill.options).toHaveLength(18);
+		const feat = descriptors.find(descriptor => descriptor.id === "species:human|xphb:feat");
+		expect(feat.options).toHaveLength(9);
+		expect(feat.options.map(option => option.id)).toEqual(expect.arrayContaining(["alert|xphb", "skilled|xphb", "tough|xphb"]));
+		expect(feat.options.map(option => option.id)).not.toContain("magic-initiate-cleric|xphb");
+		expect(feat.help).toContain("Magic Initiate");
+		expect(projectSpecies(document, catalog).unresolvedChoices.map(choice => choice.id)).toEqual(["species:human|xphb:feat"]);
+	});
+
+	it("applies the chosen Origin feat's proficiency choice and renders the feat", () => {
+		const document = human({feat: "skilled|xphb", proficiencies: ["tool:smiths-tools|xphb", "tool:lute|xphb", "tool:dice-set|xphb"]});
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.status).toBe("complete");
+		expect(model.training).toEqual(expect.arrayContaining(["Smith's Tools", "Lute", "Dice Set"]));
+		expect(model.features.map(feature => feature.name)).toEqual(expect.arrayContaining(["Skilled", "Skillful", "Versatile"]));
+		expect(model.abilities.flatMap(ability => ability.skills).find(skill => skill.id === "animal-handling").proficient).toBe(true);
+	});
+
+	it("renders a choice-free Origin feat from the species slot", () => {
+		const model = createCharacterSheetModel(human({feat: "tough|xphb"}), catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.features.some(feature => feature.name === "Tough")).toBe(true);
+	});
+
+	it("rejects a species feat proficiency that repeats an existing skill", () => {
+		const document = human({feat: "skilled|xphb", proficiencies: ["skill:animal-handling", "tool:lute|xphb", "tool:dice-set|xphb"]});
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual(expect.objectContaining({id: "species:human|xphb:feat-proficiency"}));
+	});
+});
+
 describe("Ancestry choices without species spells", () => {
 	it.each([
 		["acid", "acid"], ["cold", "cold"], ["fire", "fire"], ["lightning", "lightning"], ["poison", "poison"],
