@@ -5,7 +5,7 @@ import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyOptions} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyOptions, getFeatSpellChoiceCount} from "./feat-choices.js";
 
 /** The filter expressions the reviewed class table applies to its spell columns. */
 const SPELL_LIST_LABELS = Object.freeze({
@@ -310,7 +310,7 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 			}
 			if (featRule.spellChoice) {
 				result.push({
-					...descriptor(`${owner}:level-${featLevel}-feat-spell`, featRule.spellChoice.label, featRule.spellChoice.count, getSpellQueryOptions(spellCatalog, featRule.spellChoice.query), featLevel),
+					...descriptor(`${owner}:level-${featLevel}-feat-spell`, featRule.spellChoice.label, getFeatSpellChoiceCount(featRule.spellChoice, document.build.level), getSpellQueryOptions(spellCatalog, featRule.spellChoice.query), featLevel),
 					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
 				});
 			}
