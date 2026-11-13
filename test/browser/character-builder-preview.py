@@ -758,6 +758,14 @@ def main():
             temporary = page.locator('[data-temporary-hp="fiend-dark-ones-blessing"]')
             assert temporary.count() == 1
             assert 'Temporary Hit Points' in temporary.inner_text()
+            # The print hint counts the pages and the compact toggle only
+            # tightens the layout.
+            assert 'to print.' in page.locator('#sheet-pages').inner_text()
+            page.locator('#compact-sheet').check()
+            assert 'cb-compact' in page.locator('#sheet-preview').get_attribute('class')
+            assert page.locator('.cb-spell-body').count() > 0
+            page.locator('#compact-sheet').uncheck()
+            assert 'cb-compact' not in page.locator('#sheet-preview').get_attribute('class')
             warlock_pdf = output / 'created-warlock.pdf'
             export_pdf(page, warlock_pdf)
             pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(warlock_pdf), '-'], text=True))

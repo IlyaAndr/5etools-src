@@ -22,6 +22,8 @@ const backgroundSelect = document.getElementById("new-background");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
+const compactToggle = document.getElementById("compact-sheet");
+const pageCount = document.getElementById("sheet-pages");
 
 let catalog;
 let sheetContext;
@@ -46,6 +48,8 @@ function showDocument (character, exampleId = "") {
 	const model = createCharacterSheetModel(character, catalog, sheetContext);
 	const html = renderCharacterSheet(model, catalog);
 	preview.innerHTML = html;
+	const pages = preview.querySelectorAll(".cb-page").length;
+	pageCount.textContent = pages ? `${pages} ${pages === 1 ? "page" : "pages"} to print.` : "";
 	document.title = `${character.name} — Character Builder`;
 	selectedExample = exampleId;
 	currentCharacter = character;
@@ -186,6 +190,10 @@ importInput.addEventListener("change", async () => {
 	}
 });
 
+/** Compact print only tightens the layout; every description still prints. */
+compactToggle.addEventListener("change", () => {
+	preview.classList.toggle("cb-compact", compactToggle.checked);
+});
 printButton.addEventListener("click", () => {
 	if (hasPreview) window.print();
 });
