@@ -81,7 +81,7 @@ describe("Reviewed general feats", () => {
 			"martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "observant|xphb",
 			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "resilient|xphb", "sentinel|xphb", "sharpshooter|xphb",
 			"shield-master|xphb", "skill-expert|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb",
-			"war-caster|xphb", "weapon-master|xphb",
+			"telekinetic|xphb", "telepathic|xphb", "war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -222,6 +222,22 @@ describe("Reviewed general feats", () => {
 			const model = createCharacterSheetModel(base, catalog, context);
 			expect(model.status).toBe("incomplete");
 			expect(model.issues).toContainEqual(expect.objectContaining({id: `${owner}:level-4-feat-expertise`}));
+		});
+
+		it("adds Telekinetic's Mage Hand as a feat spell", () => {
+			const model = createCharacterSheetModel(withChoice("telekinetic|xphb", "int"), catalog, context);
+			expect(model.issues).toEqual([]);
+			const spell = model.spells.find(entry => entry.id === "spell:mage-hand|xphb");
+			expect(spell).toBeDefined();
+			expect(spell.sources.some(source => source.kind === "feat" && source.ability === "int")).toBe(true);
+			expect(model.resources.some(resource => resource.name === "Mage Hand")).toBe(false);
+		});
+
+		it("adds Telepathic's Detect Thoughts with a long-rest free cast", () => {
+			const model = createCharacterSheetModel(withChoice("telepathic|xphb", "wis"), catalog, context);
+			expect(model.issues).toEqual([]);
+			expect(model.spells.some(entry => entry.id === "spell:detect-thoughts|xphb")).toBe(true);
+			expect(model.resources.find(resource => resource.name === "Detect Thoughts")).toMatchObject({maxUses: 1, freeLevel: 1, spellcastingAbility: "wis"});
 		});
 	});
 

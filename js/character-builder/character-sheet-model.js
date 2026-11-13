@@ -56,7 +56,10 @@ function checkRules (rules, document) {
 				|| ((!choice.skills || (Array.isArray(choice.skills) && !choice.skills.length)) && !choice.tools?.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported proficiency choice`);
 		}
 		if (feat.tools !== undefined && (!Array.isArray(feat.tools) || !feat.tools.length || feat.tools.some(tool => typeof tool !== "string" || !rules.tools[tool]))) throw new TypeError(`sheetRules.feats.${id}: unsupported tool training`);
-		for (const flag of ["savingThrow", "expertiseChoice"]) if (feat[flag] !== undefined && typeof feat[flag] !== "boolean") throw new TypeError(`sheetRules.feats.${id}: unsupported ${flag} flag`);
+		for (const flag of ["savingThrow", "expertiseChoice", "freeCast"]) if (feat[flag] !== undefined && typeof feat[flag] !== "boolean") throw new TypeError(`sheetRules.feats.${id}: unsupported ${flag} flag`);
+		if (feat.spells !== undefined || feat.freeCast !== undefined) {
+			if (!Array.isArray(feat.spells) || !feat.spells.length || feat.spells.some(spell => typeof spell !== "string" || !spell.startsWith("spell:"))) throw new TypeError(`sheetRules.feats.${id}: unsupported feat spells`);
+		}
 	}
 	for (const [id, tool] of Object.entries(rules.tools)) {
 		if (typeof tool !== "string" || !tool.trim()) throw new TypeError(`sheetRules.tools.${id}: unsupported tool annotation`);
@@ -295,6 +298,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const featSenses = [];
 	const featSaves = [];
 	const featExpertise = new Set();
+	const featSpells = [];
 	const allSkillIds = () => createSkillCatalog(sources?.skills, sources?.abilityNames).flatMap(group => group.skills.map(skill => skill.id));
 	const featSlots = (classRule.featLevels || [])
 		.filter(level => build.level >= level)
@@ -360,12 +364,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 				if (skillId && !skillProficiencies.has(skillId)) issue(`${slot.choiceId}-expertise`, `${featRule.name}: expertise requires a skill you are proficient in.`);
 				else if (skillId) featExpertise.add(skillId);
 			}
-			if (featRule.savingThrow) {
-				const abilityId = ability.fixed ?? (decisions.get(slot.abilityId) || [])[0] ?? null;
-				if (abilityId) {
-					if (classSaves.includes(abilityId) || featSaves.includes(abilityId)) issue(slot.choiceId, `${featRule.name}: that saving throw is already proficient.`);
-					else featSaves.push(abilityId);
-				}
+			const chosenAbility = ability.fixed ?? (decisions.get(slot.abilityId) || [])[0] ?? null;
+			if (featRule.savingThrow && chosenAbility) {
+				if (classSaves.includes(chosenAbility) || featSaves.includes(chosenAbility)) issue(slot.choiceId, `${featRule.name}: that saving throw is already proficient.`);
+				else featSaves.push(chosenAbility);
+			}
+			if (featRule.spells) {
+				for (const spellId of featRule.spells) featSpells.push({id: spellId, owner: slot.choiceId, label: featRule.name, ability: chosenAbility, freeCast: featRule.freeCast === true});
 			}
 			continue;
 		}
@@ -536,7 +541,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		subclassId: (decisions.get(`${classOwner}:subclass`) || [])[0] || null,
 		level: build.level,
 		invocations,
-		knownSpells: [...cantrips, ...prepared, ...initiateCantrips, ...(initiateSpell ? [initiateSpell] : []), ...species.spells.map(spell => spell.id)],
+		knownSpells: [...cantrips, ...prepared, ...initiateCantrips, ...(initiateSpell ? [initiateSpell] : []), ...species.spells.map(spell => spell.id), ...featSpells.map(grant => grant.id)],
 		wearingArmor: equipment.armor.worn !== false,
 		choices: decisions,
 		hasSource: source => (originalSources[source.type] || []).filter(candidate => ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"].every(field => source[field] === undefined || source[field] === candidate[field])).length === 1,
@@ -700,6 +705,16 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		}
 		if (!collected.has(id)) collected.set(id, {id, ref: metadata.ref ? {...metadata.ref} : {name: metadata.name, source: metadata.source}, level: metadata.level, metadata: copy(metadata), sources: []});
 		collected.get(id).sources.push({freeLevel: null, slotLevel: null, resourceId: null, atWill: metadata.level === 0, prepared: false, alwaysPrepared: false, canCastWithSlots: false, ...spellSource});
+	}
+	for (const grant of featSpells) {
+		const metadata = spellIndex.get(grant.id);
+		if (!metadata) {
+			issue(grant.owner, `${grant.label}: spell metadata is unavailable for ${grant.id}.`);
+			continue;
+		}
+		const caster = grant.ability ? casting(grant.owner, grant.label, grant.ability) : null;
+		addSpell(grant.id, {...caster, kind: "feat", label: grant.label, alwaysPrepared: true, canCastWithSlots: true, freeLevel: grant.freeCast ? 1 : null, resourceId: grant.freeCast ? `${grant.owner}:${metadata.ref ? metadata.name : grant.id}` : null, slotLevel: classCasting && metadata.level <= levelRule.slotLevel ? levelRule.slotLevel : null});
+		if (grant.freeCast) resource({id: `${grant.owner}:${metadata.name}`, name: metadata.name, maxUses: 1, recovery: {long: "all"}, spellId: grant.id, freeLevel: 1, spellcastingAbility: grant.ability});
 	}
 	for (const grant of species.spells) {
 		addSpell(grant.id, {...speciesCasting, kind: "species", label: "Species", alwaysPrepared: grant.alwaysPrepared, canCastWithSlots: grant.canCastWithSlots, resourceId: grant.resourceId, freeLevel: grant.resourceId ? grant.level : null, slotLevel: classCasting && grant.canCastWithSlots && grant.level <= levelRule.slotLevel ? levelRule.slotLevel : null});
