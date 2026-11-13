@@ -75,12 +75,12 @@ describe("Reviewed general feats", () => {
 		const list = getWarlockChoiceDescriptors(levelFive(), catalog, context);
 		const feat = list.find(entry => entry.id === `${owner}:level-4-feat`);
 		expect(feat.options.map(option => option.id)).toEqual([
-			"ability-score-improvement|xphb", "actor|xphb", "athlete|xphb", "charger|xphb", "crossbow-expert|xphb", "crusher|xphb",
+			"ability-score-improvement|xphb", "actor|xphb", "athlete|xphb", "charger|xphb", "chef|xphb", "crossbow-expert|xphb", "crusher|xphb",
 			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "grappler|xphb", "great-weapon-master|xphb",
-			"heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "lightly-armored|xphb", "mage-slayer|xphb",
-			"martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "piercer|xphb",
-			"polearm-master|xphb", "sentinel|xphb", "sharpshooter|xphb", "shield-master|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb",
-			"spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
+			"heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "keen-mind|xphb", "lightly-armored|xphb", "mage-slayer|xphb",
+			"martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "observant|xphb",
+			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "sentinel|xphb", "sharpshooter|xphb", "shield-master|xphb", "skulker|xphb",
+			"slasher|xphb", "speedy|xphb", "spell-sniper|xphb", "war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -145,6 +145,48 @@ describe("Reviewed general feats", () => {
 		const model = createCharacterSheetModel(withFeat("skulker|xphb"), catalog, context);
 		expect(model.status).toBe("complete");
 		expect(model.defenses).toContainEqual(expect.objectContaining({type: "blindsight", range: 10, provenance: "Skulker"}));
+	});
+
+	describe("proficiency-granting general feats", () => {
+		const withChoice = (featId, ability, proficiencies) => {
+			let document = withFeat(featId, ability);
+			if (proficiencies) document.build.choices.push({id: `${owner}:level-4-feat-proficiency`, selected: proficiencies});
+			return document;
+		};
+		// Keen Mind needs Intelligence 13+; swap the reference build's Int and Cha,
+		// which keeps the same standard array.
+		const keenMind = (proficiencies) => {
+			const document = withChoice("keen-mind|xphb", undefined, proficiencies);
+			document.build.abilities.scores = {...document.build.abilities.scores, int: 15, cha: 12};
+			return document;
+		};
+
+		it("grants Chef's cook's utensils", () => {
+			const model = createCharacterSheetModel(withChoice("chef|xphb", "con"), catalog, context);
+			expect(model.issues).toEqual([]);
+			expect(model.training).toContain("Cook's Utensils");
+		});
+
+		it("grants the Poisoner's Kit", () => {
+			const model = createCharacterSheetModel(withChoice("poisoner|xphb", "dex"), catalog, context);
+			expect(model.issues).toEqual([]);
+			expect(model.training).toContain("Poisoner's Kit");
+		});
+
+		it("offers Keen Mind's five skills and applies the chosen one", () => {
+			const document = keenMind(["skill:nature"]);
+			const descriptor = getWarlockChoiceDescriptors(document, catalog, context).find(entry => entry.id === `${owner}:level-4-feat-proficiency`);
+			expect(descriptor.options).toHaveLength(5);
+			const model = createCharacterSheetModel(document, catalog, context);
+			expect(model.issues).toEqual([]);
+			expect(model.abilities.flatMap(ability => ability.skills).find(skill => skill.id === "nature").proficient).toBe(true);
+		});
+
+		it("rejects a Keen Mind skill the build already has", () => {
+			const model = createCharacterSheetModel(keenMind(["skill:religion"]), catalog, context);
+			expect(model.status).toBe("incomplete");
+			expect(model.issues).toContainEqual(expect.objectContaining({id: `${owner}:level-4-feat-proficiency`}));
+		});
 	});
 
 	it("checks an armor-proficiency prerequisite against the character's training", () => {

@@ -13,7 +13,7 @@
 			"url": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
 		}
 	],
-	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Aasimar, Dragonborn (five ancestry resistances), Dwarf, Elf (three lineages and a reviewed Wizard cantrip for High Elf), Gnome, Goliath (six Giant Ancestries), Halfling, Orc, or Tiefling, with the species skill choice where one exists, all 16 XPHB backgrounds, and the class's own equipment package plus the background's granted gear; all 10 XPHB Origin feats with their spell, skill, and tool choices; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld because it grants a free choice of any Origin feat, which needs its own reviewed choice. Ability Score Improvement at levels 4/8/12/16 is joined by 31 reviewed general feats whose ability increases, armor/weapon training, and blindsight are applied and whose level, ability, spellcasting, and armor-proficiency prerequisites are enforced against the class's armor training plus the training granted by earlier feats, and by the level-19 Epic Boon slot with all 12 reviewed XPHB boons (plus the general feats), whose ability increase may raise a score to 30 and whose truesight is applied; other boon effects stay narrative. General feats that also grant skill or tool proficiencies, saving throws, or spells are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
+	"coverage": "Single-class Fighter (Champion) levels 1–5 and Warlock levels 1–20 with all four XPHB patrons (Archfey, Celestial, Fiend, Great Old One); any reviewed combination of Aasimar, Dragonborn (five ancestry resistances), Dwarf, Elf (three lineages and a reviewed Wizard cantrip for High Elf), Gnome, Goliath (six Giant Ancestries), Halfling, Orc, or Tiefling, with the species skill choice where one exists, all 16 XPHB backgrounds, and the class's own equipment package plus the background's granted gear; all 10 XPHB Origin feats with their spell, skill, and tool choices; explicitly selected reference feats and spells, all 28 reviewed Eldritch Invocations with their level and prerequisite checks, Pact of the Blade with a chosen Pact Weapon that attacks and damages with Charisma, and Pact of the Tome with three cantrips and two rituals chosen from the reviewed catalog. Patron expanded spell lists are derived from the class source records, patron innate free casts and limited-use pools (Healing Light, Dark One's Own Luck, Misty Escape, Hurl Through Hell) are tracked as resources, and patron damage resistances, condition immunities, and telepathy senses are applied; remaining patron features that need conditional or rest-time choices stay incomplete. Lessons of the First Ones stays withheld because it grants a free choice of any Origin feat, which needs its own reviewed choice. Ability Score Improvement at levels 4/8/12/16 is joined by 35 reviewed general feats whose ability increases, armor/weapon training, blindsight, and tool or skill proficiencies are applied and whose level, ability, spellcasting, and armor-proficiency prerequisites are enforced against the class's armor training plus the training granted by earlier feats, and by the level-19 Epic Boon slot with all 12 reviewed XPHB boons (plus the general feats), whose ability increase may raise a score to 30 and whose truesight is applied; other boon effects stay narrative. Feats that also grant saving throws, expertise, or spells are not modelled yet. Fixed-average hit points. Other decisions remain incomplete.",
 	"standardLanguages": {
 		"common": "Common",
 		"common-sign-language": "Common Sign Language",
@@ -975,6 +975,52 @@
 			"spells": [
 				"spell:shield|xphb"
 			]
+		},
+		"chef|xphb": {
+			"name": "Chef",
+			"record": {
+				"name": "Chef",
+				"source": "XPHB"
+			}
+		},
+		"keen-mind|xphb": {
+			"name": "Keen Mind",
+			"record": {
+				"name": "Keen Mind",
+				"source": "XPHB"
+			},
+			"proficiencyChoice": {
+				"count": 1,
+				"skills": [
+					"arcana",
+					"history",
+					"investigation",
+					"nature",
+					"religion"
+				]
+			}
+		},
+		"observant|xphb": {
+			"name": "Observant",
+			"record": {
+				"name": "Observant",
+				"source": "XPHB"
+			},
+			"proficiencyChoice": {
+				"count": 1,
+				"skills": [
+					"insight",
+					"investigation",
+					"perception"
+				]
+			}
+		},
+		"poisoner|xphb": {
+			"name": "Poisoner",
+			"record": {
+				"name": "Poisoner",
+				"source": "XPHB"
+			}
 		}
 	},
 	"tools": {
@@ -1117,6 +1163,7 @@
 				"actor|xphb",
 				"athlete|xphb",
 				"charger|xphb",
+				"chef|xphb",
 				"crossbow-expert|xphb",
 				"crusher|xphb",
 				"defensive-duelist|xphb",
@@ -1128,13 +1175,16 @@
 				"heavily-armored|xphb",
 				"heavy-armor-master|xphb",
 				"inspiring-leader|xphb",
+				"keen-mind|xphb",
 				"lightly-armored|xphb",
 				"mage-slayer|xphb",
 				"martial-weapon-training|xphb",
 				"medium-armor-master|xphb",
 				"moderately-armored|xphb",
 				"mounted-combatant|xphb",
+				"observant|xphb",
 				"piercer|xphb",
+				"poisoner|xphb",
 				"polearm-master|xphb",
 				"sentinel|xphb",
 				"sharpshooter|xphb",
