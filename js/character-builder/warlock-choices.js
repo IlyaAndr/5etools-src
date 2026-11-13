@@ -296,6 +296,12 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 			help: "Choose the damage type you resist. You can change it whenever you finish a Short or Long Rest.",
 		});
 	}
+	for (const arcanum of warlock.arcana || []) {
+		result.push({
+			...descriptor(`${owner}:arcanum-${arcanum.spellLevel}`, `Mystic Arcanum (Level ${arcanum.spellLevel})`, 1, getSpellQueryOptions(spellCatalog, arcanum.query), arcanum.minimumLevel),
+			help: `Choose one level ${arcanum.spellLevel} Warlock spell. You can cast it once without a spell slot, and you regain the use when you finish a Long Rest.`,
+		});
+	}
 	for (const featLevel of warlock.featLevels || []) {
 		const featOptions = [
 			option("ability-score-improvement|xphb", "Ability Score Improvement"),

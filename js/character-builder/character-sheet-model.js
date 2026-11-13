@@ -37,6 +37,14 @@ function checkRules (rules, document) {
 			|| record.featLevels.some(level => !Number.isSafeInteger(level) || level < 1 || level > 20)
 			|| new Set(record.featLevels).size !== record.featLevels.length)) throw new TypeError("sheetRules.classes: unsupported feat levels");
 		if (record.epicBoonLevel !== undefined && (!Number.isSafeInteger(record.epicBoonLevel) || record.epicBoonLevel < 1 || record.epicBoonLevel > 20)) throw new TypeError("sheetRules.classes: unsupported epic boon level");
+		if (record.arcana !== undefined) {
+			if (!Array.isArray(record.arcana) || !record.arcana.length
+				|| record.arcana.some(entry => !entry || typeof entry !== "object" || Array.isArray(entry)
+					|| !Number.isSafeInteger(entry.minimumLevel) || entry.minimumLevel < 1 || entry.minimumLevel > 20
+					|| !Number.isSafeInteger(entry.spellLevel) || entry.spellLevel < 6 || entry.spellLevel > 9
+					|| typeof entry.query !== "string" || !entry.query.trim())
+				|| new Set(record.arcana.map(entry => entry.spellLevel)).size !== record.arcana.length) throw new TypeError("sheetRules.classes: unsupported arcanum list");
+		}
 		if (record.generalFeats !== undefined && (!Array.isArray(record.generalFeats) || !record.generalFeats.length
 			|| record.generalFeats.some(id => typeof id !== "string" || !rules.feats[id])
 			|| new Set(record.generalFeats).size !== record.generalFeats.length)) throw new TypeError("sheetRules.classes: unsupported general feats");
@@ -448,6 +456,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	let prepared = [];
 	const invocationCantrips = new Map();
 	const tomeSpells = [];
+	const arcana = [];
 	let initiateAbility;
 	let initiateCantrips = [];
 	let initiateSpell;
@@ -498,6 +507,13 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 				const options = getSpellQueryOptions(spellCatalog, choice.query).map(entry => entry.id);
 				for (const spellId of select(`${classOwner}:${choice.id}`, options, choice.count, choice.label)) tomeSpells.push({id: spellId, label: invocation.name});
 			}
+		}
+		// Mystic Arcanum slots exist from level 11, so only listed ones are demanded.
+		for (const arcanum of (classRule.arcana || []).filter(entry => build.level >= entry.minimumLevel)) {
+			const label = `Mystic Arcanum (Level ${arcanum.spellLevel})`;
+			const options = spellCatalog ? getSpellQueryOptions(spellCatalog, arcanum.query).map(entry => entry.id) : [];
+			const [spellId] = select(`${classOwner}:arcanum-${arcanum.spellLevel}`, options, 1, label);
+			if (spellId) arcana.push({spellId, spellLevel: arcanum.spellLevel, label});
 		}
 	}
 	// Devouring Blade replaces the extra attack of Thirsting Blade with two
@@ -784,6 +800,18 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		for (const {id, label} of tomeSpells) {
 			const metadata = spellIndex.get(id);
 			addSpell(id, {...classCasting, kind: "invocation", label, alwaysPrepared: metadata.level > 0, canCastWithSlots: metadata.level > 0, slotLevel: metadata.level > 0 ? levelRule.slotLevel : null});
+		}
+		// An arcanum is cast once per Long Rest without a spell slot, and it is above
+		// the Pact Magic slot level, so it never joins the slot-casting list.
+		for (const arcanum of arcana) {
+			const metadata = spellIndex.get(arcanum.spellId);
+			if (!metadata || metadata.level !== arcanum.spellLevel) {
+				issue(`${classOwner}:arcanum-${arcanum.spellLevel}`, `${arcanum.label}: choose a level ${arcanum.spellLevel} Warlock spell.`);
+				continue;
+			}
+			const resourceId = `${classOwner}:arcanum-${arcanum.spellLevel}`;
+			addSpell(arcanum.spellId, {...classCasting, kind: "arcanum", label: arcanum.label, alwaysPrepared: true, canCastWithSlots: false, resourceId, freeLevel: arcanum.spellLevel, slotLevel: null});
+			resource({id: resourceId, name: metadata.name, maxUses: 1, recovery: {long: "all"}, spellId: arcanum.spellId, freeLevel: arcanum.spellLevel, spellcastingAbility: rawClass.spellcastingAbility});
 		}
 		if (classRule.subclasses && spellCatalog) {
 			const subclassRule = classRule.subclasses.find(value => value.name === model.subclassName);

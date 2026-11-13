@@ -529,6 +529,7 @@ describe("Reviewed character sheet calculations", () => {
 		choice(document, ":cantrips").selected.push("spell:prestidigitation|xphb");
 		choice(document, ":prepared-spells").selected.push("spell:bane|xphb", "spell:charm-person|xphb", "spell:comprehend-languages|xphb", "spell:detect-magic|xphb", "spell:fear|xphb");
 		document.build.choices.push({id: "class:warlock|xphb:pact-weapon", selected: ["longsword|xphb"]});
+		document.build.choices.push({id: "class:warlock|xphb:arcanum-6", selected: ["spell:arcane-gate|xphb"]});
 		const model = project(document);
 		expect(model.issues).toEqual([]);
 		expect(model.attacks[0]).toMatchObject({name: "Longsword", count: 3, unit: "attacks"});

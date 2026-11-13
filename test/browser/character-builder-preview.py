@@ -729,6 +729,10 @@ def main():
             # The Epic Boon slot appears at level 19 with the reviewed boons and
             # hides again below that level.
             editor.get_by_label('Level', exact=True).select_option('19')
+            # Mystic Arcanum slots appear from level 11 and list the reviewed
+            # Warlock spells for their level.
+            assert 'Arcane Gate' in group_text(page, editor, 'Mystic Arcanum (Level 6)')
+            assert 'Foresight' in group_text(page, editor, 'Mystic Arcanum (Level 9)')
             assert 'Boon of Combat Prowess' in group_text(page, editor, 'Epic Boon')
             editor.get_by_label('Epic Boon', exact=True).select_option('boon-of-truesight|xphb')
             assert editor.get_by_label('Boon of Truesight Ability', exact=True).count() == 1
