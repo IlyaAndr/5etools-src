@@ -64,7 +64,7 @@ describe("XPHB Warlock patrons", () => {
 		expect(fiend.innate).toEqual([]);
 		expect(celestial.innate).toEqual([]);
 		expect(getSubclassSpellGrants(subclass("Archfey"), spellCatalog).innate).toEqual([
-			{minimumLevel: 3, spellId: "spell:misty-step|xphb", uses: 1, ability: "cha"},
+			{minimumLevel: 3, spellId: "spell:misty-step|xphb", uses: {ability: "cha"}, ability: "cha"},
 		]);
 		expect(getSubclassSpellGrants(subclass("Great Old One"), spellCatalog).innate).toEqual([
 			{minimumLevel: 10, spellId: "spell:hex|xphb", uses: 1, ability: null},
@@ -75,7 +75,8 @@ describe("XPHB Warlock patrons", () => {
 		const document = setCharacterChoice(levelThree(), subclassId, ["archfey|xphb"]);
 		const model = createCharacterSheetModel(document, catalog, context);
 		const resource = model.resources.find(candidate => candidate.spellId === "spell:misty-step|xphb");
-		expect(resource).toMatchObject({maxUses: 1, freeLevel: 2, spellcastingAbility: "cha", recovery: {long: "all"}});
+		// Steps of the Fey allows a number of free casts equal to the Charisma modifier (minimum of one).
+		expect(resource).toMatchObject({maxUses: 3, freeLevel: 2, spellcastingAbility: "cha", recovery: {long: "all"}});
 		const spell = model.spells.find(candidate => candidate.id === "spell:misty-step|xphb");
 		expect(spell.sources.some(source => source.resourceId === resource.id && source.freeLevel === 2)).toBe(true);
 	});
@@ -173,9 +174,11 @@ describe("XPHB Warlock patrons", () => {
 		const records = sources.warlock.subclassFeature;
 		for (const [id, patron, level] of [
 			["celestial-healing-light", "celestial|xphb", 3],
-			["fiend-dark-ones-own-luck", "fiend|xphb", 6],
 			["archfey-misty-escape", "archfey|xphb", 6],
+			["fiend-dark-ones-own-luck", "fiend|xphb", 6],
+			["great-old-one-clairvoyant-combatant", "great-old-one|xphb", 6],
 			["fiend-hurl-through-hell", "fiend|xphb", 14],
+			["celestial-searing-vengeance", "celestial|xphb", 14],
 		]) {
 			const annotation = context.rules.mechanics.find(entry => entry.id === id);
 			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
@@ -194,6 +197,38 @@ describe("XPHB Warlock patrons", () => {
 
 		const fiend = createCharacterSheetModel(levelSix("fiend|xphb"), catalog, context);
 		expect(fiend.resources.find(resource => resource.name === "Dark One's Own Luck").maxUses).toBeGreaterThanOrEqual(1);
+	});
+
+	it("declares the patron temporary hit points against unique source features", () => {
+		const fields = ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"];
+		const records = sources.warlock.subclassFeature;
+		for (const [id, patron, level] of [
+			["fiend-dark-ones-blessing", "fiend|xphb", 3],
+			["celestial-resilience", "celestial|xphb", 10],
+			["great-old-one-create-thrall", "great-old-one|xphb", 14],
+		]) {
+			const annotation = context.rules.mechanics.find(entry => entry.id === id);
+			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
+			expect(annotation.effects[0].type).toBe("temporaryHP");
+			expect(annotation.effects[0].value).toEqual({$ref: id === "fiend-dark-ones-blessing" ? "darkOnesBlessing" : "levelPlusCharisma"});
+			const matches = records.filter(candidate => fields.every(field => annotation.source[field] === undefined || annotation.source[field] === candidate[field]));
+			expect(matches).toHaveLength(1);
+		}
+		const blessing = context.rules.mechanics.find(entry => entry.id === "fiend-dark-ones-blessing");
+		expect(blessing.effects[0].value).toEqual({$ref: "darkOnesBlessing"});
+	});
+
+	it("shows the Fiend's temporary hit points as a calculated source", () => {
+		const model = createCharacterSheetModel(levelSix("fiend|xphb"), catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.temporaryHitPoints).toEqual([expect.objectContaining({
+			name: "Dark One's Blessing",
+			value: 10,
+			trigger: "When you or someone else reduces an enemy within 10 feet of you to 0 Hit Points.",
+			annotationId: "fiend-dark-ones-blessing",
+		})]);
+		const archfey = createCharacterSheetModel(levelSix("archfey|xphb"), catalog, context);
+		expect(archfey.temporaryHitPoints).toEqual([]);
 	});
 
 	it("declares the patron immunity and sense against unique source features", () => {

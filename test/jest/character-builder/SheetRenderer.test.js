@@ -141,6 +141,12 @@ describe("Calculated character sheet renderer", () => {
 		expect(warlock).not.toContain("<input");
 	});
 
+	it("shows the Fiend's triggered temporary hit points beside the trackers", () => {
+		const html = render(character("tiefling"));
+		expect(html).toContain("data-temporary-hp=\"fiend-dark-ones-blessing\"");
+		expect(html).toContain("9 Temporary Hit Points · When you or someone else reduces an enemy within 10 feet of you to 0 Hit Points.");
+	});
+
 	it("shows known HP and conditional armor without guessing current HP", () => {
 		const document = character("tiefling");
 		let html = render(document);

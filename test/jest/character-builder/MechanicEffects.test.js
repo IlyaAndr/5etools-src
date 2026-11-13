@@ -183,6 +183,32 @@ describe("Declarative character mechanics", () => {
 		expect(() => resolveMechanicEffects([input], context())).toThrow(TypeError);
 	});
 
+	it("resolves temporary hit points from a reviewed value and keeps the trigger", () => {
+		const rule = annotation();
+		rule.effects = [{type: "temporaryHP", value: {$ref: "characterLevel"}, trigger: "When you reduce an enemy to 0 Hit Points."}];
+		expect(resolveMechanicEffects([rule], context())).toEqual([{
+			type: "temporaryHP",
+			value: 3,
+			trigger: "When you reduce an enemy to 0 Hit Points.",
+			source,
+			annotationId: "test:sample-feature",
+		}]);
+		rule.effects = [{type: "temporaryHP", value: 4, trigger: "When you finish a Short Rest.", note: "Allies gain half as much."}];
+		expect(resolveMechanicEffects([rule], context())[0]).toMatchObject({value: 4, note: "Allies gain half as much."});
+	});
+
+	it("rejects a temporary hit point effect without a positive value, a trigger, or a usable note", () => {
+		const rule = annotation();
+		rule.effects = [{type: "temporaryHP", value: 0, trigger: "Always"}];
+		expect(() => resolveMechanicEffects([rule], context())).toThrow(/temporary hit point/);
+		rule.effects = [{type: "temporaryHP", value: 3, trigger: "  "}];
+		expect(() => resolveMechanicEffects([rule], context())).toThrow(/temporary hit point/);
+		rule.effects = [{type: "temporaryHP", value: 3, trigger: "Always", note: ""}];
+		expect(() => resolveMechanicEffects([rule], context())).toThrow(/temporary hit point/);
+		rule.effects = [{type: "temporaryHP", value: 3, trigger: "Always", value2: 1}];
+		expect(() => resolveMechanicEffects([rule], context())).toThrow(TypeError);
+	});
+
 	it("rejects a source reference that does not resolve to the checked source", () => {
 		const input = annotation();
 		input.source.name = "Different Feature";

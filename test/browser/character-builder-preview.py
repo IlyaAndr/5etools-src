@@ -739,6 +739,11 @@ def main():
             editor.get_by_label('Epic Boon', exact=True).select_option('')
             editor.get_by_label('Level', exact=True).select_option('5')
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            # The Fiend's Dark One's Blessing shows the temporary hit points it
+            # grants when an enemy drops to 0 Hit Points.
+            temporary = page.locator('[data-temporary-hp="fiend-dark-ones-blessing"]')
+            assert temporary.count() == 1
+            assert 'Temporary Hit Points' in temporary.inner_text()
             warlock_pdf = output / 'created-warlock.pdf'
             export_pdf(page, warlock_pdf)
             pdf_text = re.sub(r'\s+', ' ', subprocess.check_output(['pdftotext', str(warlock_pdf), '-'], text=True))
