@@ -94,7 +94,6 @@ function checkRules (rules, document) {
 			|| !Number.isSafeInteger(invocation.minimumLevel) || invocation.minimumLevel < 1 || invocation.minimumLevel > 20) throw new TypeError(`sheetRules.invocations.${id}: unsupported invocation annotation`);
 		if (invocation.requires !== undefined && (!Array.isArray(invocation.requires) || !invocation.requires.length
 			|| invocation.requires.some(value => typeof value !== "string" || value === id || !rules.invocations[value]))) throw new TypeError(`sheetRules.invocations.${id}: unsupported prerequisite`);
-		if (invocation.unsupported !== undefined && (typeof invocation.unsupported !== "string" || !invocation.unsupported.trim())) throw new TypeError(`sheetRules.invocations.${id}: unsupported invocation reason`);
 		if (invocation.repeatable !== undefined && typeof invocation.repeatable !== "boolean") throw new TypeError(`sheetRules.invocations.${id}: unsupported repeatable flag`);
 		if (invocation.cantripChoice !== undefined && (typeof invocation.cantripChoice !== "string" || !invocation.cantripChoice.trim()
 			|| !Array.isArray(invocation.cantripOptions) || !invocation.cantripOptions.length || invocation.cantripOptions.some(value => typeof value !== "string"))) throw new TypeError(`sheetRules.invocations.${id}: unsupported cantrip choice`);
@@ -107,8 +106,7 @@ function checkRules (rules, document) {
 			if (!choice || typeof choice !== "object" || Array.isArray(choice)
 				|| !Array.isArray(choice.options) || !choice.options.length
 				|| choice.options.some(value => typeof value !== "string" || !rules.feats[value])
-				|| new Set(choice.options).size !== choice.options.length
-				|| (choice.withheld !== undefined && (typeof choice.withheld !== "string" || !choice.withheld.trim()))) throw new TypeError(`sheetRules.invocations.${id}: unsupported feat choice`);
+				|| new Set(choice.options).size !== choice.options.length) throw new TypeError(`sheetRules.invocations.${id}: unsupported feat choice`);
 		}
 		if (invocation.tomeChoices !== undefined) {
 			if (!Array.isArray(invocation.tomeChoices) || !invocation.tomeChoices.length) throw new TypeError(`sheetRules.invocations.${id}: unsupported tome choices`);
@@ -475,10 +473,6 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		prepared = select(`${classOwner}:prepared-spells`, null, null, "Prepared Warlock spells");
 		const selectedInvocations = decisions.get(`${classOwner}:invocations`) || [];
 		invocations = select(`${classOwner}:invocations`, getAvailableInvocations(rules, build.level, selectedInvocations).map(([id]) => id), levelRule.invocations, "Eldritch Invocations");
-		for (const id of selectedInvocations) {
-			const annotation = rules.invocations[id];
-			if (annotation?.unsupported) issue(`${classOwner}:invocations`, `${annotation.name}: ${annotation.unsupported}`);
-		}
 		for (const id of invocations) {
 			const invocation = rules.invocations[id];
 			if (!invocation.cantripChoice) continue;
