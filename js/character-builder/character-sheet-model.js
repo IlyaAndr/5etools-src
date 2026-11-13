@@ -179,6 +179,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		resources: [],
 		features: [],
 		defenses: [],
+		temporaryHitPoints: [],
 		training: [],
 		gear: [],
 		languages: [],
@@ -584,7 +585,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		wearingArmor: equipment.armor.worn !== false,
 		choices: decisions,
 		hasSource: source => (originalSources[source.type] || []).filter(candidate => ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"].every(field => source[field] === undefined || source[field] === candidate[field])).length === 1,
-		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, healingLight: build.level + 1, darkOnesLuck: Math.max(1, mods.cha), initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
+		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, healingLight: build.level + 1, darkOnesLuck: Math.max(1, mods.cha), darkOnesBlessing: Math.max(1, build.level + mods.cha), levelPlusCharisma: build.level + mods.cha, initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
 	});
 	const effectsOf = type => effects.filter(effect => effect.type === type);
 	const saveProficiencies = new Set([...classSavingThrows, ...featSaves]);
@@ -767,6 +768,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const effect of effectsOf("resistance")) model.defenses.push({type: "resistance", damageType: effect.damageType, ...(effect.condition ? {condition: effect.condition} : {}), provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("conditionImmunity")) model.defenses.push({type: "conditionImmunity", condition: effect.condition, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("telepathy")) model.defenses.push({type: "telepathy", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("temporaryHP")) model.temporaryHitPoints.push({name: effect.source.name, value: effect.value, trigger: effect.trigger, ...(effect.note ? {note: effect.note} : {}), provenance: effect.source, annotationId: effect.annotationId});
 	for (const sense of featSenses) model.defenses.push({type: sense.type, range: sense.range, provenance: sense.label});
 	for (const effect of effectsOf("vision")) model.defenses.push({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("swimSpeed")) model.defenses.push({type: "swim", name: effect.value.name, feet: model.speed, breatheUnderwater: effect.value.breatheUnderwater, provenance: effect.source, annotationId: effect.annotationId});
@@ -798,7 +800,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 					if (!metadata) continue;
 					const resourceId = `${castingId}:${grant.spellId.slice("spell:".length).split("|")[0]}`;
 					addSpell(grant.spellId, {...classCasting, id: castingId, kind: "subclass", label: subclassRule.name, alwaysPrepared: true, canCastWithSlots: true, resourceId, freeLevel: metadata.level, slotLevel: levelRule.slotLevel});
-					resource({id: resourceId, name: metadata.ref?.name || metadata.name, maxUses: grant.uses === "proficiencyBonus" ? pb : grant.uses, recovery: {long: "all"}, spellId: grant.spellId, freeLevel: metadata.level, spellcastingAbility: grant.ability || rawClass.spellcastingAbility});
+					resource({id: resourceId, name: metadata.ref?.name || metadata.name, maxUses: grant.uses === "proficiencyBonus" ? pb : (grant.uses?.ability ? Math.max(1, mods[grant.uses.ability]) : grant.uses), recovery: {long: "all"}, spellId: grant.spellId, freeLevel: metadata.level, spellcastingAbility: grant.ability || rawClass.spellcastingAbility});
 				}
 			}
 		}

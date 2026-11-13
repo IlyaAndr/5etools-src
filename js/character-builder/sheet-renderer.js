@@ -184,7 +184,8 @@ function resources (model, hasDifferentCasting) {
 	const hitDiceRecovery = Object.entries(model.hitDice.recovery).map(([rest, amount]) => `${title(rest)} Rest: ${amount === "all" ? "all uses" : `${amount} uses`}`).join(" · ");
 	const hitDice = `<div class="cb-resource"><div><strong>Hit Dice ${model.hitDice.count}d${escape(model.hitDice.die)}</strong><p class="cb-resource-detail">Recovery: ${escape(hitDiceRecovery)}${model.hitDice.note ? ` · ${escape(model.hitDice.note)}` : ""}</p></div>${checks(model.hitDice.count, `${model.hitDice.count} blank Hit Die boxes`)}</div>`;
 	const survival = `<div class="cb-survival-trackers"><div class="cb-death-saves"><span class="cb-field-label">Death saves</span><span>Success</span>${checks(3, "3 blank death-save success boxes")}<span>Failure</span>${checks(3, "3 blank death-save failure boxes")}</div><div class="cb-inspiration"><span class="cb-field-label">Heroic Inspiration</span>${checks(1, "Blank Heroic Inspiration box")}</div></div>`;
-	return block("Resources & trackers · calculated", content + hitDice + survival, "cb-resource-block");
+	const temporary = model.temporaryHitPoints.length ? `<p class="cb-rest-label">Temporary Hit Points · calculated</p>${model.temporaryHitPoints.map(entry => `<div class="cb-resource" data-temporary-hp="${escape(entry.annotationId)}"><div><strong>${text(entry.name)}</strong><p class="cb-resource-detail">${escape(`${entry.value} Temporary Hit Points · ${entry.trigger}${entry.note ? ` · ${entry.note}` : ""}`)}</p></div></div>`).join("")}` : "";
+	return block("Resources & trackers · calculated", content + temporary + hitDice + survival, "cb-resource-block");
 }
 
 function vitals (model) {

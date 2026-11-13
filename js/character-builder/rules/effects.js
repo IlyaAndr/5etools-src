@@ -3,7 +3,7 @@ import {ABILITY_IDS} from "../character-document.js";
 /** Evaluate reviewed, declarative mechanics without inspecting rule descriptions. */
 const EFFECT_TYPES = new Set([
 	"resource", "savingThrowAdvantage", "skillAdvantage", "initiativeAdvantage",
-	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus", "resistance", "conditionImmunity", "telepathy",
+	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus", "resistance", "conditionImmunity", "telepathy", "temporaryHP",
 ]);
 const CONDITION_KEYS = new Set(["classId", "backgroundId", "subclassId", "minimumLevel", "invocation", "knownSpell", "choice", "wearingArmor"]);
 
@@ -41,6 +41,7 @@ const EFFECT_FIELDS = {
 	resistance: ["type", "damageType", "condition"],
 	conditionImmunity: ["type", "condition"],
 	telepathy: ["type", "range"],
+	temporaryHP: ["type", "value", "trigger", "note"],
 };
 const nonempty = value => typeof value === "string" && !!value.trim();
 const integer = (value, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(value) && value >= min && value <= max;
@@ -117,6 +118,9 @@ function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 		case "resistance": if (!nonempty(effect.damageType) || (effect.condition != null && !nonempty(effect.condition))) throw new TypeError("Invalid resistance mechanic."); break;
 		case "conditionImmunity": if (!nonempty(effect.condition)) throw new TypeError("Invalid condition immunity mechanic."); break;
 		case "telepathy": if (!integer(effect.range, 1)) throw new TypeError("Invalid telepathy mechanic."); break;
+		case "temporaryHP":
+			if (!validInt(effect.value, 1) || !validText(effect.trigger) || (effect.note !== undefined && !validText(effect.note))) throw new TypeError("Invalid temporary hit point mechanic.");
+			break;
 		default: throw new TypeError(`Unsupported mechanics effect: ${effect.type}.`);
 	}
 }
