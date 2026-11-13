@@ -317,6 +317,22 @@
 	font-weight: 700;
 	margin-bottom: 4px;
 }
+.cb-control--check {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.cb-control--check label {
+	margin-bottom: 0;
+}
+.cb-control--check input {
+	width: auto;
+	min-width: 0;
+}
+.cb-page-count {
+	font-weight: 700;
+}
 .cb-control input,
 .cb-control select {
 	width: 100%;
@@ -1020,6 +1036,40 @@
 	.cb-page-head,
 	.cb-section-title {
 		break-after: avoid;
+	}
+	/* Keep a resource, rider, attack, or spell card in one piece across pages. */
+	.cb-resource,
+	.cb-attack-panel,
+	.cb-spell,
+	.cb-riders li,
+	.cb-feature-reference {
+		break-inside: avoid;
+	}
+	.cb-rest-label {
+		break-after: avoid;
+	}
+	.cb-spell-body,
+	.cb-notes {
+		orphans: 2;
+		widows: 2;
+	}
+	/* Compact print tightens spacing but never hides a description. */
+	.cb-compact .cb-page {
+		font-size: 8.6pt;
+	}
+	.cb-compact .cb-block {
+		margin-bottom: 0.6mm;
+	}
+	.cb-compact .cb-character-sheet .cb-abilities td,
+	.cb-compact .cb-resource {
+		padding-top: 0.3mm;
+		padding-bottom: 0.3mm;
+	}
+	.cb-compact .cb-spell {
+		padding: 1mm 1.6mm;
+	}
+	.cb-compact .cb-spell-body {
+		font-size: 8.2pt;
 	}
 	.cb-page a {
 		color: inherit;
