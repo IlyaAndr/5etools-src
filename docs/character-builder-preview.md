@@ -136,7 +136,11 @@ for Magic Initiate, its own spellcasting ability, cantrips, level-1 spell, and
 free cast, so all ten Origin feats are offered in that slot.
 Their traits render as features on the sheet.
 Imported characters retain their explicit choices; previously selected different
-abilities remain visible and each source's values are displayed separately.
+abilities remain visible and each source's values are displayed separately. A
+completion sweep builds a whole Warlock from the editor's own reviewed
+descriptors — levels 1 and 2 without a patron, and levels 3, 5, 9, 11, 14, 17,
+19, and 20 for each of the four patrons — and requires a complete sheet with no
+open questions in every case.
 Species-only reference fixtures also verify that rules permit independent
 choices.
 

@@ -7,7 +7,7 @@ import {createSheetExamples} from "../../../js/character-builder/sheet-examples.
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "../../../js/character-builder/warlock-choices.js";
 import {getBackgroundSourceChoices} from "../../../js/character-builder/source-choices.js";
-import {addArcanumChoices, addFeatChoices} from "./test-documents.js";
+import {addArcanumChoices, addFeatChoices, completeWarlock} from "./test-documents.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
@@ -30,22 +30,6 @@ const context = {
 	},
 };
 const descriptors = document => getWarlockChoiceDescriptors(document, catalog, context);
-// Fill every available reviewed choice so a high-level build can be calculated.
-function autoComplete (document) {
-	let current = document;
-	for (let pass = 0; pass < 12; pass += 1) {
-		const available = getWarlockChoiceDescriptors(current, catalog, context).filter(entry => entry.available);
-		let changed = false;
-		for (const entry of available) {
-			if (entry.selected.length === entry.count) continue;
-			const chosen = entry.options.map(option => option.id).filter(id => !entry.selected.includes(id)).slice(0, entry.count);
-			current = setCharacterChoice(current, entry.id, chosen);
-			changed = true;
-		}
-		if (!changed) break;
-	}
-	return current;
-}
 const choice = (document, suffix) => descriptors(document).find(value => value.id.endsWith(suffix));
 
 describe("Warlock editor choices", () => {
@@ -247,8 +231,8 @@ describe("Warlock editor choices", () => {
 			expect(descriptor.options.length).toBeGreaterThan(0);
 			expect(descriptor.options.every(option => option.spell.level === spellLevel)).toBe(true);
 		}
-		let document = autoComplete({...draft, build: {...draft.build, level: 11}});
-		document = autoComplete(setCharacterChoice(document, "class:warlock|xphb:subclass", ["fiend|xphb"]));
+		let document = completeWarlock({...draft, build: {...draft.build, level: 11}}, catalog, context);
+		document = completeWarlock(setCharacterChoice(document, "class:warlock|xphb:subclass", ["fiend|xphb"]), catalog, context);
 		const model = createCharacterSheetModel(document, catalog, context);
 		expect(model.issues).toEqual([]);
 		const chosen = document.build.choices.find(entry => entry.id === "class:warlock|xphb:arcanum-6").selected[0];
@@ -264,7 +248,7 @@ describe("Warlock editor choices", () => {
 	it("rejects an arcanum list outside the reviewed shape", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
-		const document = autoComplete({...draft, build: {...draft.build, level: 11}});
+		const document = completeWarlock({...draft, build: {...draft.build, level: 11}}, catalog, context);
 		const rules = structuredClone(context.rules);
 		rules.classes["warlock|xphb"].arcana[0].spellLevel = 5;
 		expect(() => createCharacterSheetModel(document, catalog, {...context, rules})).toThrow(/arcanum list/);
@@ -273,9 +257,9 @@ describe("Warlock editor choices", () => {
 	it("grants Contact Patron's prepared spell and free cast from level 9", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
-		const before = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 8}}), catalog, context);
+		const before = createCharacterSheetModel(completeWarlock({...draft, build: {...draft.build, level: 8}}, catalog, context), catalog, context);
 		expect(before.spells.some(entry => entry.id === "spell:contact-other-plane|xphb")).toBe(false);
-		const model = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 9}}), catalog, context);
+		const model = createCharacterSheetModel(completeWarlock({...draft, build: {...draft.build, level: 9}}, catalog, context), catalog, context);
 		expect(model.issues).toEqual([]);
 		const spell = model.spells.find(entry => entry.id === "spell:contact-other-plane|xphb");
 		expect(spell.level).toBe(5);
@@ -286,11 +270,11 @@ describe("Warlock editor choices", () => {
 	it("lets Eldritch Master replace Magical Cunning's recovery instead of adding a second pool", () => {
 		const draft = createWarlockDraft(catalog.dataset);
 		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
-		const early = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 5}}), catalog, context);
+		const early = createCharacterSheetModel(completeWarlock({...draft, build: {...draft.build, level: 5}}, catalog, context), catalog, context);
 		const earlyPool = early.resources.filter(resource => resource.id === "class:warlock|xphb:magical-cunning");
 		expect(earlyPool).toHaveLength(1);
 		expect(earlyPool[0].note).toContain("half your maximum");
-		const late = createCharacterSheetModel(autoComplete({...draft, build: {...draft.build, level: 20}}), catalog, context);
+		const late = createCharacterSheetModel(completeWarlock({...draft, build: {...draft.build, level: 20}}, catalog, context), catalog, context);
 		expect(late.issues).toEqual([]);
 		const latePool = late.resources.filter(resource => resource.id === "class:warlock|xphb:magical-cunning");
 		expect(latePool).toHaveLength(1);
