@@ -653,6 +653,8 @@ def main():
             assert 'Strength' in group_text(page, editor, 'Resilient Ability')
             editor.get_by_label('Level 4 Feat', exact=True).select_option('telepathic|xphb')
             assert editor.get_by_label('Telepathic Ability', exact=True).count() == 1
+            editor.get_by_label('Level 4 Feat', exact=True).select_option('fey-touched|xphb')
+            assert 'Charm Person' in group_text(page, editor, 'Fey-Touched Spell')
             editor.get_by_label('Level 4 Feat', exact=True).select_option('ability-score-improvement|xphb')
             editor.get_by_label('Level 4 Ability Increases', exact=True).select_option('con-1.cha-1')
             # Spell lists expose the same filter once they grow, and level and

@@ -308,6 +308,12 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
 				});
 			}
+			if (featRule.spellChoice) {
+				result.push({
+					...descriptor(`${owner}:level-${featLevel}-feat-spell`, featRule.spellChoice.label, featRule.spellChoice.count, getSpellQueryOptions(spellCatalog, featRule.spellChoice.query), featLevel),
+					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
+				});
+			}
 			if (featRule.expertiseChoice) {
 				result.push({
 					...descriptor(`${owner}:level-${featLevel}-feat-expertise`, `${featRule.name} Expertise`, 1, skillGroups.flatMap(group => group.skills.map(skill => option(skill.id, skill.name))), featLevel),

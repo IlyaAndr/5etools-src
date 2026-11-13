@@ -76,12 +76,12 @@ describe("Reviewed general feats", () => {
 		const feat = list.find(entry => entry.id === `${owner}:level-4-feat`);
 		expect(feat.options.map(option => option.id)).toEqual([
 			"ability-score-improvement|xphb", "actor|xphb", "athlete|xphb", "charger|xphb", "chef|xphb", "crossbow-expert|xphb", "crusher|xphb",
-			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "grappler|xphb", "great-weapon-master|xphb",
-			"heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "keen-mind|xphb", "lightly-armored|xphb", "mage-slayer|xphb",
-			"martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "observant|xphb",
-			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "resilient|xphb", "sentinel|xphb", "sharpshooter|xphb",
-			"shield-master|xphb", "skill-expert|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb", "spell-sniper|xphb",
-			"telekinetic|xphb", "telepathic|xphb", "war-caster|xphb", "weapon-master|xphb",
+			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "fey-touched|xphb", "grappler|xphb",
+			"great-weapon-master|xphb", "heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "keen-mind|xphb", "lightly-armored|xphb",
+			"mage-slayer|xphb", "martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "observant|xphb",
+			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "resilient|xphb", "sentinel|xphb", "shadow-touched|xphb",
+			"sharpshooter|xphb", "shield-master|xphb", "skill-expert|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb",
+			"spell-sniper|xphb", "telekinetic|xphb", "telepathic|xphb", "war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -238,6 +238,24 @@ describe("Reviewed general feats", () => {
 			expect(model.issues).toEqual([]);
 			expect(model.spells.some(entry => entry.id === "spell:detect-thoughts|xphb")).toBe(true);
 			expect(model.resources.find(resource => resource.name === "Detect Thoughts")).toMatchObject({maxUses: 1, freeLevel: 1, spellcastingAbility: "wis"});
+		});
+
+		it("adds Fey-Touched's Misty Step and a chosen Enchantment or Divination spell", () => {
+			const document = withChoice("fey-touched|xphb", "wis");
+			document.build.choices.push({id: `${owner}:level-4-feat-spell`, selected: ["spell:charm-person|xphb"]});
+			const descriptor = getWarlockChoiceDescriptors(document, catalog, context).find(entry => entry.id === `${owner}:level-4-feat-spell`);
+			expect(descriptor.options.every(option => ["E", "D"].includes(option.spell?.school))).toBe(true);
+			expect(descriptor.options.map(option => option.id)).toContain("spell:charm-person|xphb");
+			const model = createCharacterSheetModel(document, catalog, context);
+			expect(model.issues).toEqual([]);
+			expect(model.spells.map(entry => entry.id)).toEqual(expect.arrayContaining(["spell:misty-step|xphb", "spell:charm-person|xphb"]));
+			expect(model.resources.filter(resource => ["Misty Step", "Charm Person"].includes(resource.name)).map(resource => resource.name).sort()).toEqual(["Charm Person", "Misty Step"]);
+		});
+
+		it("offers Shadow-Touched only Illusion and Necromancy spells", () => {
+			const descriptor = getWarlockChoiceDescriptors(withChoice("shadow-touched|xphb", "int"), catalog, context).find(entry => entry.id === `${owner}:level-4-feat-spell`);
+			expect(descriptor.options.length).toBeGreaterThan(0);
+			expect(descriptor.options.every(option => ["I", "N"].includes(option.spell?.school))).toBe(true);
 		});
 	});
 
