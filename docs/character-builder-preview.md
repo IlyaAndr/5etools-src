@@ -1,10 +1,11 @@
 # Online draft sheet and PDF preview
 
 `characterbuilder.html` composes independent species, background, origin-feat,
-class, and equipment choices and displays six calculated Forest Gnome/Fighter and
-Infernal Tiefling/Warlock reference builds at levels 1, 3, and 5. Any reviewed
-combination of Gnome or Tiefling, Fighter or Warlock, and Soldier or Acolyte can
-be created. The page also imports and exports v1 character JSON files.
+class, and equipment choices and displays calculated reference builds. Any
+reviewed combination of the ten XPHB species, the Warlock or Fighter, and any of
+the 16 XPHB backgrounds can be created; the Warlock is complete from level 1 to
+20 for all four patrons, and the Fighter covers levels 1–5. The page also imports
+and exports v1 character JSON files.
 
 ## Run locally
 
@@ -39,10 +40,11 @@ build. Gnomish Cunning is annotated alongside the relevant saving throws.
 All 18 skills are shown. Known current and temporary HP are displayed from the
 imported session.
 
-The editors support every combination of Gnome or Tiefling, Fighter or Warlock,
-and Soldier or Acolyte, including Champion and all four XPHB Warlock patrons
-(Archfey, Celestial, Fiend, Great Old One), with the explicitly listed options.
-The Warlock editor covers levels 1–20 and the Fighter editor levels 1–5. They do
+The editors support every combination of the ten XPHB species, the Warlock or
+Fighter, and any of the 16 XPHB backgrounds, including Champion and all four XPHB
+Warlock patrons (Archfey, Celestial, Fiend, Great Old One), with the explicitly
+listed options. The Warlock editor is complete for levels 1–20 and the Fighter
+editor covers levels 1–5. They do
 not offer every legal class, spell,
 feat, equipment, or invocation choice. Choices and their validation use the same
 reviewed catalog; skill associations come from 2024 `data/skills.json`, ability
