@@ -4,6 +4,7 @@ import {createSpeciesCatalog} from "../../../js/character-builder/species-catalo
 import {projectSpecies} from "../../../js/character-builder/species-projection.js";
 import {getSpeciesChoiceDescriptors} from "../../../js/character-builder/species-choices.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
+import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -107,6 +108,55 @@ describe("Species-wide cantrips with a fixed ability", () => {
 		expect(model.defenses.filter(defense => defense.type === "resistance").map(defense => defense.damageType).sort()).toEqual(["necrotic", "radiant"]);
 		expect(model.darkvision).toBe(60);
 		expect(model.spellcasting.find(profile => profile.label === "Species").ability).toBe("cha");
+	});
+});
+
+describe("Elven lineages and the Keen Senses skill", () => {
+	const elf = (lineage, cantrip) => {
+		const document = speciesCharacter("Elf");
+		document.build.choices.push(
+			{id: "species:elf|xphb:lineage", selected: [lineage]},
+			{id: "species:elf|xphb:spellcasting-ability", selected: ["cha"]},
+			{id: "species:elf|xphb:skill", selected: ["perception"]},
+		);
+		if (cantrip) document.build.choices.push({id: "species:elf|xphb:high-elf:cantrip", selected: [cantrip]});
+		return document;
+	};
+
+	it.each([
+		["drow", ["Dancing Lights", "Darkness", "Faerie Fire"]],
+		["wood-elf", ["Druidcraft", "Longstrider", "Pass without Trace"]],
+	])("projects the %s lineage's spells", (lineage, names) => {
+		const projection = projectSpecies(elf(lineage), catalog);
+		expect(projection.spells.map(spell => spell.ref.name).sort()).toEqual(names);
+		expect(projection.unresolvedChoices).toEqual([]);
+	});
+
+	it("offers the High Elf cantrip from the reviewed Wizard list", () => {
+		const document = elf("high-elf");
+		const descriptors = getSpeciesChoiceDescriptors(document, catalog, {sources});
+		const cantrip = descriptors.find(descriptor => descriptor.id === "species:elf|xphb:high-elf:cantrip");
+		expect(cantrip.options).toHaveLength(20);
+		expect(cantrip.options.map(option => option.id)).toEqual(expect.arrayContaining(["spell:fire-bolt|xphb", "spell:minor-illusion|xphb"]));
+		expect(descriptors.find(descriptor => descriptor.id === "species:elf|xphb:skill").options.map(option => option.id)).toEqual(["insight", "perception", "survival"]);
+		expect(projectSpecies(document, catalog).unresolvedChoices).toEqual([expect.objectContaining({id: "species:elf|xphb:high-elf:cantrip"})]);
+	});
+
+	it("adds the chosen High Elf cantrip, the lineage spells, and the skill", () => {
+		const model = createCharacterSheetModel(elf("high-elf", "spell:fire-bolt|xphb"), catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.status).toBe("complete");
+		expect(model.spells.map(spell => spell.ref.name)).toEqual(expect.arrayContaining(["Fire Bolt", "Detect Magic", "Misty Step"]));
+		expect(model.abilities.flatMap(ability => ability.skills).find(skill => skill.id === "perception").proficient).toBe(true);
+		expect(model.spellcasting.find(profile => profile.label === "Species").ability).toBe("cha");
+	});
+
+	it("rejects a species skill that repeats a background or class proficiency", () => {
+		// Insight is both a Keen Senses option and the Acolyte's own proficiency.
+		const swapped = setCharacterChoice(elf("drow"), "species:elf|xphb:skill", ["insight"]);
+		const model = createCharacterSheetModel(swapped, catalog, context);
+		expect(model.status).toBe("incomplete");
+		expect(model.issues).toContainEqual(expect.objectContaining({id: "species:elf|xphb:skill"}));
 	});
 });
 

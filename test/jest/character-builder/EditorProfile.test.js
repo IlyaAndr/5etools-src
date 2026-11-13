@@ -65,7 +65,7 @@ function completeDocument (document) {
 describe("Independent editor composition", () => {
 	it("lists independent species, class, and background sources", () => {
 		const available = getEditorCombinations({catalog, rules: context.rules});
-		expect(available.species).toEqual([ref("Aasimar"), ref("Dragonborn"), ref("Dwarf"), ref("Gnome"), ref("Goliath"), ref("Halfling"), ref("Orc"), ref("Tiefling")]);
+		expect(available.species).toEqual([ref("Aasimar"), ref("Dragonborn"), ref("Dwarf"), ref("Elf"), ref("Gnome"), ref("Goliath"), ref("Halfling"), ref("Orc"), ref("Tiefling")]);
 		expect(available.classes).toEqual([ref("Fighter"), ref("Warlock")]);
 		expect(available.backgrounds).toEqual([
 			ref("Acolyte"), ref("Artisan"), ref("Charlatan"), ref("Criminal"), ref("Entertainer"), ref("Farmer"), ref("Guard"), ref("Guide"),

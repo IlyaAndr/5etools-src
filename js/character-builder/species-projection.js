@@ -10,7 +10,8 @@ export function projectSpecies (document, catalog) {
 	if (matches.length !== 1) throw new TypeError("character.build.species: unsupported or ambiguous species reference");
 	const species = matches[0];
 	const choices = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));
-	const permittedIds = [species.lineageChoiceId, species.abilityChoiceId, species.sizeChoiceId].filter(Boolean);
+	const permittedIds = [species.lineageChoiceId, species.abilityChoiceId, species.sizeChoiceId, species.skillChoiceId].filter(Boolean);
+	for (const lineage of species.lineages) for (const choice of lineage.choices || []) permittedIds.push(choice.id);
 	for (const id of choices.keys()) {
 		if (id.startsWith(`${species.id}:`) && !permittedIds.includes(id)) throw new TypeError(`character.build.choices: unknown species choice ${id}`);
 	}
@@ -30,8 +31,14 @@ export function projectSpecies (document, catalog) {
 	const abilityOptions = lineage?.abilityOptions || [...new Set(species.lineages.flatMap(candidate => candidate.abilityOptions))];
 	const ability = species.abilityChoiceId ? select(species.abilityChoiceId, abilityOptions) : species.spellcastingAbility;
 	const size = species.sizeChoiceId ? select(species.sizeChoiceId, species.sizes) : species.sizes[0];
+	const skill = species.skillChoiceId ? select(species.skillChoiceId, species.skillOptions) : null;
 	const proficiencyBonus = 2 + Math.floor((document.build.level - 1) / 4);
 	const grants = [...species.baseGrants, ...(lineage?.grants || [])].filter(grant => grant.minimumCharacterLevel <= document.build.level);
+	for (const choice of lineage?.choices || []) {
+		if (choice.count !== 1) throw new TypeError(`species ${species.id}: unsupported choice count`);
+		const selected = select(choice.id, choice.options);
+		if (selected) grants.push({spellId: selected, minimumCharacterLevel: choice.minimumCharacterLevel, alwaysPrepared: false, canCastWithSlots: false, resource: null});
+	}
 	const spells = grants.map(grant => {
 		const spell = catalog.spells.find(candidate => candidate.id === grant.spellId);
 		if (!spell) throw new TypeError(`catalog.spells: unresolved spell ${grant.spellId}`);
@@ -58,6 +65,7 @@ export function projectSpecies (document, catalog) {
 		savingThrowAdvantages: species.savingThrowAdvantages.map(advantage => ({...advantage})),
 		resistances: [...new Set([...species.resistances, ...(lineage?.resistances || [])])],
 		hpPerLevel: species.hpPerLevel,
+		skills: skill ? [skill] : [],
 		spellcastingAbility: ability,
 		spells,
 		resources: grants.filter(grant => grant.resource).map(grant => ({
