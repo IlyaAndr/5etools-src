@@ -144,7 +144,9 @@ export function getSubclassSpellGrants (subclass, spellCatalog) {
 			if (minimumLevel === null || minimumLevel > 20) throw new TypeError(`Unsupported ${subclass.name} innate spell level ${levelKey}.`);
 			const addInnate = (uid, uses, ability) => innate.push({minimumLevel, spellId: subclassSpellId(uid, spellCatalog).id, uses, ability});
 			if (Array.isArray(entry)) {
-				entry.forEach(uid => addInnate(uid, 1, null));
+				// The reviewed source lists these spells without a use limit, so they are
+				// always available rather than a tracked per-rest pool.
+				entry.forEach(uid => addInnate(uid, null, null));
 				continue;
 			}
 			if (!entry || typeof entry !== "object") throw new TypeError(`Unsupported ${subclass.name} innate spells.`);
