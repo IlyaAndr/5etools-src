@@ -124,6 +124,22 @@ export function getFeatTraining (featRecord) {
 	];
 }
 
+/** Read the fixed tool proficiencies a feat grants, as raw tool names. */
+export function getFeatFixedTools (featRecord) {
+	const entries = featRecord?.toolProficiencies;
+	if (entries === undefined) return [];
+	if (!Array.isArray(entries)) throw new TypeError(`Unsupported ${featRecord.name} tool proficiencies.`);
+	const tools = [];
+	for (const entry of entries) {
+		if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new TypeError(`Unsupported ${featRecord.name} tool proficiencies.`);
+		for (const [key, value] of Object.entries(entry)) {
+			if (value !== true) throw new TypeError(`Unsupported ${featRecord.name} tool choice ${key}.`);
+			if (!tools.includes(key)) tools.push(key);
+		}
+	}
+	return tools;
+}
+
 /** Read the senses (blindsight or truesight) a feat grants. */
 export function getFeatSenses (featRecord) {
 	const senses = featRecord?.senses;
@@ -212,7 +228,16 @@ export function getFeatProficiencyOptions (annotation, rules, skillGroups) {
 	const choice = annotation?.proficiencyChoice;
 	if (!choice) return null;
 	const options = [];
-	if (choice.skills) for (const group of skillGroups) for (const skill of group.skills) options.push({id: `skill:${skill.id}`, label: skill.name});
+	const skills = skillGroups.flatMap(group => group.skills);
+	if (choice.skills === true) {
+		for (const skill of skills) options.push({id: `skill:${skill.id}`, label: skill.name});
+	} else if (Array.isArray(choice.skills)) {
+		for (const id of choice.skills) {
+			const skill = skills.find(candidate => candidate.id === id);
+			if (!skill) throw new TypeError(`${annotation.name}: unknown skill ${id}.`);
+			options.push({id: `skill:${skill.id}`, label: skill.name});
+		}
+	}
 	for (const toolId of choice.tools || []) options.push({id: `tool:${toolId}`, label: rules.tools[toolId]});
 	if (options.length < choice.count) throw new TypeError(`${annotation.name}: not enough reviewed proficiencies.`);
 	return {count: choice.count, options};

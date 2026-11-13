@@ -10,7 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyGrants, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatFixedTools, getFeatProficiencyGrants, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -51,10 +51,11 @@ function checkRules (rules, document) {
 			const choice = feat.proficiencyChoice;
 			if (!choice || typeof choice !== "object" || Array.isArray(choice)
 				|| !Number.isSafeInteger(choice.count) || choice.count < 1 || choice.count > 5
-				|| (choice.skills !== undefined && typeof choice.skills !== "boolean")
+				|| (choice.skills !== undefined && typeof choice.skills !== "boolean" && (!Array.isArray(choice.skills) || !choice.skills.length || choice.skills.some(skill => typeof skill !== "string" || !skill.trim())))
 				|| (choice.tools !== undefined && (!Array.isArray(choice.tools) || choice.tools.some(tool => typeof tool !== "string" || !rules.tools[tool])))
-				|| (!choice.skills && !choice.tools?.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported proficiency choice`);
+				|| ((!choice.skills || (Array.isArray(choice.skills) && !choice.skills.length)) && !choice.tools?.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported proficiency choice`);
 		}
+		if (feat.tools !== undefined && (!Array.isArray(feat.tools) || !feat.tools.length || feat.tools.some(tool => typeof tool !== "string" || !rules.tools[tool]))) throw new TypeError(`sheetRules.feats.${id}: unsupported tool training`);
 	}
 	for (const [id, tool] of Object.entries(rules.tools)) {
 		if (typeof tool !== "string" || !tool.trim()) throw new TypeError(`sheetRules.tools.${id}: unsupported tool annotation`);
@@ -314,6 +315,21 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			const grants = getFeatProficiencyGrants(featData);
 			for (const armor of grants.armor) proficiencies.armor.add(armor);
 			featTraining.push(...getFeatTraining(featData));
+			for (const name of getFeatFixedTools(featData)) {
+				const toolId = `${name.toLowerCase().replaceAll("'", "").replaceAll(" ", "-")}|xphb`;
+				if (!rules.tools[toolId]) throw new TypeError(`${featRule.name}: unknown tool ${name}.`);
+				featTraining.push(rules.tools[toolId]);
+			}
+			if (featRule.proficiencyChoice) {
+				const picked = select(`${slot.choiceId}-proficiency`, null, null, `${featRule.name} proficiencies`);
+				for (const value of picked) {
+					if (value.startsWith("skill:")) {
+						const skill = value.slice("skill:".length);
+						if (skillProficiencies.has(skill)) issue(`${slot.choiceId}-proficiency`, `${featRule.name}: that skill is already granted; replacement choices are outside this subset.`);
+						else skillProficiencies.add(skill);
+					} else featTraining.push(rules.tools[value.slice("tool:".length)]);
+				}
+			}
 			featSenses.push(...getFeatSenses(featData).map(sense => ({...sense, label: featRule.name})));
 			const ability = getFeatAbilityChoice(featData);
 			if (!ability) continue;

@@ -5,7 +5,7 @@ import {createCharacterDraft, getEditorAbilities} from "./editor-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getClassSkillChoices, getSourceRecord} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatProficiencyOptions} from "./feat-choices.js";
 
 /** The filter expressions the reviewed class table applies to its spell columns. */
 const SPELL_LIST_LABELS = Object.freeze({
@@ -202,7 +202,8 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	const progression = sourceChoices.progression(document.build.level);
 	const abilities = getEditorAbilities(sources);
 	const abilityName = id => abilities.find(ability => ability.id === id)?.label || id;
-	const skillNames = new Map(createSkillCatalog(sources?.skills, sources?.abilityNames).flatMap(ability => ability.skills).map(skill => [skill.id, skill.name]));
+	const skillGroups = createSkillCatalog(sources?.skills, sources?.abilityNames);
+	const skillNames = new Map(skillGroups.flatMap(ability => ability.skills).map(skill => [skill.id, skill.name]));
 	const decisions = new Map(document.build.choices.map(choice => [choice.id, choice.selected]));
 	const descriptor = (id, label, count, options, minimumLevel = 1, available = true) => ({
 		id, label, count, options, selected: [...(decisions.get(id) || [])], available: document.build.level >= minimumLevel && available, minimumLevel,
@@ -275,10 +276,18 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 		);
 		const featRule = featId && featId !== "ability-score-improvement|xphb" ? rules.feats[featId] : null;
 		if (featRule) {
-			const ability = getFeatAbilityChoice(findFeatRecord(sources, featRule));
+			const featRecord = findFeatRecord(sources, featRule);
+			const ability = getFeatAbilityChoice(featRecord);
 			if (ability?.options) {
 				result.push({
 					...descriptor(`${owner}:level-${featLevel}-feat-ability`, `${featRule.name} Ability`, 1, ability.options.map(id => option(id, abilityName(id))), featLevel),
+					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
+				});
+			}
+			if (featRule.proficiencyChoice) {
+				const choice = getFeatProficiencyOptions(featRule, rules, skillGroups);
+				result.push({
+					...descriptor(`${owner}:level-${featLevel}-feat-proficiency`, `${featRule.name} Proficiencies`, choice.count, choice.options, featLevel),
 					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
 				});
 			}
