@@ -154,10 +154,29 @@ describe("XPHB Warlock patrons", () => {
 		]) {
 			const annotation = context.rules.mechanics.find(entry => entry.id === id);
 			expect(annotation.when).toEqual({subclassId: patron, minimumLevel: level});
-			expect(annotation.effects).toEqual([{type: "resistance", damageType}]);
+			expect(annotation.effects[0]).toEqual({type: "resistance", damageType});
+			expect(annotation.effects.slice(1).every(effect => effect.type === "damageRider")).toBe(true);
 			const matches = records.filter(candidate => fields.every(field => annotation.source[field] === undefined || annotation.source[field] === candidate[field]));
 			expect(matches).toHaveLength(1);
 		}
+	});
+
+	it("applies the Celestial's once-per-turn Radiant Soul damage rider", () => {
+		const document = setCharacterChoice(levelFive(), subclassId, ["celestial|xphb"]);
+		document.build.level = 6;
+		document.build.choices.find(choice => choice.id.endsWith(":prepared-spells")).selected.push("spell:charm-person|xphb");
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		expect(model.damageRiders).toEqual([expect.objectContaining({
+			name: "Radiant Soul",
+			amount: 4,
+			damageTypes: ["radiant", "fire"],
+			frequency: "Once per turn",
+			appliesTo: "a spell's damage roll",
+			annotationId: "celestial-radiant-soul",
+		})]);
+		const fiend = createCharacterSheetModel(levelSix("fiend|xphb"), catalog, context);
+		expect(fiend.damageRiders).toEqual([]);
 	});
 
 	it("grants the Celestial radiant resistance from level 6", () => {

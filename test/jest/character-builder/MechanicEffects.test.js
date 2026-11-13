@@ -217,6 +217,31 @@ describe("Declarative character mechanics", () => {
 		expect(() => resolveMechanicEffects([input], context())).toThrow(TypeError);
 	});
 
+	it("resolves a damage rider from a computed amount and keeps its damage types", () => {
+		const rule = annotation();
+		rule.effects = [{type: "damageRider", name: "Radiant Soul", amount: {$ref: "characterLevel"}, damageTypes: ["radiant", "fire"], frequency: "Once per turn", appliesTo: "a spell's damage roll"}];
+		expect(resolveMechanicEffects([rule], context())).toEqual([{
+			type: "damageRider",
+			name: "Radiant Soul",
+			amount: 3,
+			damageTypes: ["radiant", "fire"],
+			frequency: "Once per turn",
+			appliesTo: "a spell's damage roll",
+			source,
+			annotationId: "test:sample-feature",
+		}]);
+	});
+
+	it("rejects a damage rider outside the reviewed damage types", () => {
+		const rule = annotation();
+		for (const damageTypes of [["radiant", "radiant"], ["holy"], [], "radiant"]) {
+			rule.effects = [{type: "damageRider", name: "Radiant Soul", amount: 1, damageTypes, frequency: "Once per turn", appliesTo: "a spell's damage roll"}];
+			expect(() => resolveMechanicEffects([rule], context())).toThrow(/damage rider/);
+		}
+		rule.effects = [{type: "damageRider", name: "Radiant Soul", amount: 1, damageTypes: ["radiant"], frequency: " ", appliesTo: "a spell's damage roll"}];
+		expect(() => resolveMechanicEffects([rule], context())).toThrow(/damage rider/);
+	});
+
 	it("rejects a source reference that does not resolve to the checked source", () => {
 		const input = annotation();
 		input.source.name = "Different Feature";

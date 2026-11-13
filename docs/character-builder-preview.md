@@ -59,7 +59,10 @@ patron's expanded spell list is derived from its subclass record, patron innate
 free casts and limited-use pools are tracked as resources, patron damage
 resistances, condition immunities, and senses apply, and the temporary hit
 points Dark One's Blessing, Celestial Resilience, and Create Thrall grant appear
-beside the sheet's trackers with the trigger that grants them.
+beside the sheet's trackers with the trigger that grants them. Damage riders
+that add a computed bonus on a trigger — the Celestial's Radiant Soul is the
+first — render as their own calculated line with the amount, the damage types,
+and the frequency.
 Equipment and
 invocation choice lists use reviewed annotations; Warlock spell lists and Magic
 Initiate cantrips come from the same 5etools filter expressions the site uses,

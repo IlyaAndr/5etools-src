@@ -3,7 +3,7 @@ import {ABILITY_IDS} from "../character-document.js";
 /** Evaluate reviewed, declarative mechanics without inspecting rule descriptions. */
 const EFFECT_TYPES = new Set([
 	"resource", "savingThrowAdvantage", "skillAdvantage", "initiativeAdvantage",
-	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus", "resistance", "conditionImmunity", "telepathy", "temporaryHP",
+	"armorBonus", "armorOverride", "criticalRange", "vision", "swimSpeed", "truesight", "spellGrant", "spellAttack", "spellDamageBonus", "resistance", "conditionImmunity", "telepathy", "temporaryHP", "damageRider",
 ]);
 const CONDITION_KEYS = new Set(["classId", "backgroundId", "subclassId", "minimumLevel", "invocation", "knownSpell", "choice", "wearingArmor"]);
 
@@ -42,7 +42,9 @@ const EFFECT_FIELDS = {
 	conditionImmunity: ["type", "condition"],
 	telepathy: ["type", "range"],
 	temporaryHP: ["type", "value", "trigger", "note"],
+	damageRider: ["type", "name", "amount", "damageTypes", "frequency", "appliesTo", "note"],
 };
+const DAMAGE_TYPES = new Set(["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"]);
 const nonempty = value => typeof value === "string" && !!value.trim();
 const integer = (value, min = 0, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(value) && value >= min && value <= max;
 const plainObject = value => value && typeof value === "object" && !Array.isArray(value);
@@ -118,6 +120,13 @@ function validateEffect (effect, {allowReferences = false, skillIds} = {}) {
 		case "resistance": if (!nonempty(effect.damageType) || (effect.condition != null && !nonempty(effect.condition))) throw new TypeError("Invalid resistance mechanic."); break;
 		case "conditionImmunity": if (!nonempty(effect.condition)) throw new TypeError("Invalid condition immunity mechanic."); break;
 		case "telepathy": if (!integer(effect.range, 1)) throw new TypeError("Invalid telepathy mechanic."); break;
+		case "damageRider": {
+			const types = effect.damageTypes;
+			if (!nonempty(effect.name) || !validInt(effect.amount, -100, 100) || !Array.isArray(types) || !types.length
+				|| types.some(type => !DAMAGE_TYPES.has(type)) || new Set(types).size !== types.length
+				|| !nonempty(effect.frequency) || !nonempty(effect.appliesTo) || (effect.note !== undefined && !nonempty(effect.note))) throw new TypeError("Invalid damage rider mechanic.");
+			break;
+		}
 		case "temporaryHP":
 			if (!validInt(effect.value, 1) || !validText(effect.trigger) || (effect.note !== undefined && !validText(effect.note))) throw new TypeError("Invalid temporary hit point mechanic.");
 			break;
