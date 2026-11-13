@@ -56,6 +56,7 @@ function checkRules (rules, document) {
 				|| ((!choice.skills || (Array.isArray(choice.skills) && !choice.skills.length)) && !choice.tools?.length)) throw new TypeError(`sheetRules.feats.${id}: unsupported proficiency choice`);
 		}
 		if (feat.tools !== undefined && (!Array.isArray(feat.tools) || !feat.tools.length || feat.tools.some(tool => typeof tool !== "string" || !rules.tools[tool]))) throw new TypeError(`sheetRules.feats.${id}: unsupported tool training`);
+		for (const flag of ["savingThrow", "expertiseChoice"]) if (feat[flag] !== undefined && typeof feat[flag] !== "boolean") throw new TypeError(`sheetRules.feats.${id}: unsupported ${flag} flag`);
 	}
 	for (const [id, tool] of Object.entries(rules.tools)) {
 		if (typeof tool !== "string" || !tool.trim()) throw new TypeError(`sheetRules.tools.${id}: unsupported tool annotation`);
@@ -289,8 +290,12 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const classArmor = classRecord?.startingProficiencies?.armor ?? [];
 	if (!Array.isArray(classArmor) || classArmor.some(armor => !["light", "medium", "heavy", "shield"].includes(armor))) throw new TypeError(`Unsupported ${build.class.name} armor proficiencies.`);
 	const proficiencies = {armor: new Set(classArmor)};
+	const classSaves = Array.isArray(classRecord?.proficiency) ? classRecord.proficiency : [];
 	const featTraining = [];
 	const featSenses = [];
+	const featSaves = [];
+	const featExpertise = new Set();
+	const allSkillIds = () => createSkillCatalog(sources?.skills, sources?.abilityNames).flatMap(group => group.skills.map(skill => skill.id));
 	const featSlots = (classRule.featLevels || [])
 		.filter(level => build.level >= level)
 		.map(level => ({
@@ -349,6 +354,18 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 				if (!abilityId) continue;
 				if (scores[abilityId] + ability.amount > ability.max) issue(slot.abilityId, `${featRule.name}: the ability score cannot exceed ${ability.max}.`);
 				else scores[abilityId] += ability.amount;
+			}
+			if (featRule.expertiseChoice) {
+				const [skillId] = select(`${slot.choiceId}-expertise`, allSkillIds(), 1, `${featRule.name} expertise`);
+				if (skillId && !skillProficiencies.has(skillId)) issue(`${slot.choiceId}-expertise`, `${featRule.name}: expertise requires a skill you are proficient in.`);
+				else if (skillId) featExpertise.add(skillId);
+			}
+			if (featRule.savingThrow) {
+				const abilityId = ability.fixed ?? (decisions.get(slot.abilityId) || [])[0] ?? null;
+				if (abilityId) {
+					if (classSaves.includes(abilityId) || featSaves.includes(abilityId)) issue(slot.choiceId, `${featRule.name}: that saving throw is already proficient.`);
+					else featSaves.push(abilityId);
+				}
 			}
 			continue;
 		}
@@ -526,15 +543,16 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, healingLight: build.level + 1, darkOnesLuck: Math.max(1, mods.cha), initiateSpell, initiateAbility, initiateModifier: initiateAbility ? mods[initiateAbility] : null},
 	});
 	const effectsOf = type => effects.filter(effect => effect.type === type);
+	const saveProficiencies = new Set([...classSavingThrows, ...featSaves]);
 	model.abilities = abilityGroups.map(({id, name, skills}) => ({
 		id,
 		name,
 		score: scores[id],
 		modifier: mods[id],
-		save: mods[id] + (classSavingThrows.includes(id) ? pb : 0),
-		saveProficient: classSavingThrows.includes(id),
+		save: mods[id] + (saveProficiencies.has(id) ? pb : 0),
+		saveProficient: saveProficiencies.has(id),
 		savingThrowAdvantages: species.savingThrowAdvantages.filter(advantage => advantage.ability === id).map(advantage => ({...advantage})),
-		skills: skills.map(({id: skillId, name: skillName}) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb : 0), proficient: skillProficiencies.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
+		skills: skills.map(({id: skillId, name: skillName}) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb * (featExpertise.has(skillId) ? 2 : 1) : 0), proficient: skillProficiencies.has(skillId), expertise: featExpertise.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
 	}));
 	for (const effect of effectsOf("savingThrowAdvantage")) {
 		const ability = model.abilities.find(candidate => candidate.id === effect.ability);
@@ -576,7 +594,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		if (healingModifier === undefined) throw new TypeError(`Unknown Hit Point Die healing ability: ${lifedrinkerHealing.ability}.`);
 		model.hitDice.note = `${pactLifedrinkerRule.name}: expend one to regain ${lifedrinkerHealing.dice}d${classHitDie} ${signed(healingModifier)} HP (minimum ${lifedrinkerHealing.minimum})`;
 	}
-	model.concentration = {modifier: mods.con + (classSavingThrows.includes("con") ? pb : 0), advantage: effectsOf("savingThrowAdvantage").some(effect => effect.ability === "con" && effect.concentration)};
+	model.concentration = {modifier: mods.con + (saveProficiencies.has("con") ? pb : 0), advantage: effectsOf("savingThrowAdvantage").some(effect => effect.ability === "con" && effect.concentration)};
 	function expandReferences (value, seen = new Set()) {
 		if (Array.isArray(value)) return value.map(item => expandReferences(item, seen));
 		if (!value || typeof value !== "object") return value;

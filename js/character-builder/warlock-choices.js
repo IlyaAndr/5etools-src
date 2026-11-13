@@ -308,6 +308,13 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
 				});
 			}
+			if (featRule.expertiseChoice) {
+				result.push({
+					...descriptor(`${owner}:level-${featLevel}-feat-expertise`, `${featRule.name} Expertise`, 1, skillGroups.flatMap(group => group.skills.map(skill => option(skill.id, skill.name))), featLevel),
+					help: "Choose a skill in which you are already proficient.",
+					dependsOn: {choice: `${owner}:level-${featLevel}-feat`, option: featId},
+				});
+			}
 		}
 	}
 	if (warlock.epicBoonLevel !== undefined) {
