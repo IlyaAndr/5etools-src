@@ -10,7 +10,7 @@ import {getEditorChoiceDescriptors} from "./editor-profile.js";
 import {resolveStartingEquipment} from "./equipment-choices.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 import {getSpellQueryOptions, resolveSpellCatalog} from "./spell-catalog.js";
-import {findFeatRecord, getFeatAbilityChoice, getFeatFixedTools, getFeatProficiencyGrants, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
+import {findFeatRecord, getFeatAbilityChoice, getFeatFixedTools, getFeatProficiencyGrants, getFeatSenses, getFeatSpellChoiceCount, getFeatTraining, meetsFeatPrerequisites} from "./feat-choices.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const key = ref => `${ref.name.toLowerCase().replaceAll(" ", "-")}|${ref.source.toLowerCase()}`;
@@ -64,7 +64,9 @@ function checkRules (rules, document) {
 			const choice = feat.spellChoice;
 			if (!choice || typeof choice !== "object" || Array.isArray(choice)
 				|| typeof choice.label !== "string" || !choice.label.trim()
-				|| !Number.isSafeInteger(choice.count) || choice.count < 1 || choice.count > 5
+				|| (choice.count === undefined) === (choice.levels === undefined)
+				|| (choice.count !== undefined && (!Number.isSafeInteger(choice.count) || choice.count < 1 || choice.count > 5))
+				|| (choice.levels !== undefined && (!Array.isArray(choice.levels) || !choice.levels.length))
 				|| typeof choice.query !== "string" || !choice.query.trim()) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choice`);
 		}
 	}
@@ -381,7 +383,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			}
 			if (featRule.spellChoice) {
 				const options = spellCatalog ? getSpellQueryOptions(spellCatalog, featRule.spellChoice.query).map(entry => entry.id) : [];
-				for (const spellId of select(`${slot.choiceId}-spell`, options, featRule.spellChoice.count, featRule.spellChoice.label)) featSpells.push({id: spellId, owner: slot.choiceId, label: featRule.name, ability: chosenAbility, freeCast: featRule.freeCast === true});
+				const count = getFeatSpellChoiceCount(featRule.spellChoice, build.level);
+				for (const spellId of select(`${slot.choiceId}-spell`, options, count, featRule.spellChoice.label)) featSpells.push({id: spellId, owner: slot.choiceId, label: featRule.name, ability: chosenAbility, freeCast: featRule.freeCast === true});
 			}
 			continue;
 		}

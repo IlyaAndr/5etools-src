@@ -124,6 +124,24 @@ export function getFeatTraining (featRecord) {
 	];
 }
 
+/** Count the spell picks a feat grants at one character level. */
+export function getFeatSpellChoiceCount (choice, level) {
+	if (!choice || typeof choice !== "object") throw new TypeError("feat spell choice: expected an annotation");
+	if (choice.count !== undefined) {
+		if (!Number.isSafeInteger(choice.count) || choice.count < 1) throw new TypeError("feat spell choice: unsupported count");
+		return choice.count;
+	}
+	if (!Array.isArray(choice.levels) || !choice.levels.length) throw new TypeError("feat spell choice: missing levels");
+	let total = 0;
+	let previous = 0;
+	for (const entry of choice.levels) {
+		if (!Number.isSafeInteger(entry.level) || entry.level <= previous || entry.level > 20 || !Number.isSafeInteger(entry.count) || entry.count < 1) throw new TypeError("feat spell choice: unsupported level grants");
+		previous = entry.level;
+		if (level >= entry.level) total += entry.count;
+	}
+	return total;
+}
+
 /** Read the fixed tool proficiencies a feat grants, as raw tool names. */
 export function getFeatFixedTools (featRecord) {
 	const entries = featRecord?.toolProficiencies;

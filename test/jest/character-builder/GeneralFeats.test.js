@@ -79,9 +79,9 @@ describe("Reviewed general feats", () => {
 			"defensive-duelist|xphb", "dual-wielder|xphb", "durable|xphb", "elemental-adept|xphb", "fey-touched|xphb", "grappler|xphb",
 			"great-weapon-master|xphb", "heavily-armored|xphb", "heavy-armor-master|xphb", "inspiring-leader|xphb", "keen-mind|xphb", "lightly-armored|xphb",
 			"mage-slayer|xphb", "martial-weapon-training|xphb", "medium-armor-master|xphb", "moderately-armored|xphb", "mounted-combatant|xphb", "observant|xphb",
-			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "resilient|xphb", "sentinel|xphb", "shadow-touched|xphb",
-			"sharpshooter|xphb", "shield-master|xphb", "skill-expert|xphb", "skulker|xphb", "slasher|xphb", "speedy|xphb",
-			"spell-sniper|xphb", "telekinetic|xphb", "telepathic|xphb", "war-caster|xphb", "weapon-master|xphb",
+			"piercer|xphb", "poisoner|xphb", "polearm-master|xphb", "resilient|xphb", "ritual-caster|xphb", "sentinel|xphb",
+			"shadow-touched|xphb", "sharpshooter|xphb", "shield-master|xphb", "skill-expert|xphb", "skulker|xphb", "slasher|xphb",
+			"speedy|xphb", "spell-sniper|xphb", "telekinetic|xphb", "telepathic|xphb", "war-caster|xphb", "weapon-master|xphb",
 		]);
 		expect(list.find(entry => entry.id === `${owner}:level-4-ability-increases`).available).toBe(true);
 		const crusher = getWarlockChoiceDescriptors(withFeat("crusher|xphb"), catalog, context);
@@ -256,6 +256,20 @@ describe("Reviewed general feats", () => {
 			const descriptor = getWarlockChoiceDescriptors(withChoice("shadow-touched|xphb", "int"), catalog, context).find(entry => entry.id === `${owner}:level-4-feat-spell`);
 			expect(descriptor.options.length).toBeGreaterThan(0);
 			expect(descriptor.options.every(option => ["I", "N"].includes(option.spell?.school))).toBe(true);
+		});
+
+		it("scales Ritual Caster's ritual picks with the character level", () => {
+			const document = withChoice("ritual-caster|xphb", "int");
+			const levelFive = getWarlockChoiceDescriptors(document, catalog, context).find(entry => entry.id === `${owner}:level-4-feat-spell`);
+			expect(levelFive.count).toBe(3);
+			expect(levelFive.options.every(option => option.spell?.level === 1 && option.spell?.ritual === true)).toBe(true);
+			const levelFour = {...document, build: {...document.build, level: 4}};
+			expect(getWarlockChoiceDescriptors(levelFour, catalog, context).find(entry => entry.id === `${owner}:level-4-feat-spell`).count).toBe(2);
+			document.build.choices.push({id: `${owner}:level-4-feat-spell`, selected: ["spell:detect-magic|xphb", "spell:find-familiar|xphb", "spell:identify|xphb"]});
+			const model = createCharacterSheetModel(document, catalog, context);
+			expect(model.issues).toEqual([]);
+			expect(model.spells.map(entry => entry.id)).toEqual(expect.arrayContaining(["spell:detect-magic|xphb", "spell:find-familiar|xphb", "spell:identify|xphb"]));
+			expect(model.resources.some(resource => ["Detect Magic", "Find Familiar", "Identify"].includes(resource.name))).toBe(false);
 		});
 	});
 
