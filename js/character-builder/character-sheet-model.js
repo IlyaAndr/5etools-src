@@ -741,8 +741,16 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const boonRule = boonId ? rules.feats[boonId] : null;
 		if (boonRule) feature(record(sources.feats.feat, boonRule.record.name, "feat"), "Epic Boon", "feat");
 	}
+	/**
+	 * A resource is keyed by its reviewed ID, so a later annotation (a higher-level
+	 * feature that improves the same pool) replaces the earlier definition instead
+	 * of adding a second row for one pool.
+	 */
 	function resource (definition) {
-		model.resources.push({...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0});
+		const entry = {...definition, spent: session.resources.find(candidate => candidate.id === definition.id)?.spent || 0};
+		const existing = model.resources.findIndex(candidate => candidate.id === definition.id);
+		if (existing === -1) model.resources.push(entry);
+		else model.resources[existing] = entry;
 	}
 	function casting (id, label, ability) {
 		const value = {id, label, ability, modifier: mods[ability], attack: pb + mods[ability], dc: 8 + pb + mods[ability]};

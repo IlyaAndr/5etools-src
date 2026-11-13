@@ -209,6 +209,14 @@ describe("Declarative character mechanics", () => {
 		expect(() => resolveMechanicEffects([rule], context())).toThrow(TypeError);
 	});
 
+	it("keeps an always-prepared spell grant that can still use spell slots", () => {
+		const input = annotation();
+		input.effects = [{type: "spellGrant", spellId: "spell:contact-other-plane|xphb", casterId: "class:warlock|xphb", value: {id: "class:warlock|xphb", kind: "class", label: "Contact Patron", alwaysPrepared: true, canCastWithSlots: true, slotLevel: 5, freeLevel: 5, resourceId: "class:warlock|xphb:contact-patron"}}];
+		expect(resolveMechanicEffects([input], context())[0].value).toMatchObject({alwaysPrepared: true, canCastWithSlots: true, slotLevel: 5});
+		input.effects[0].value.alwaysPrepared = "yes";
+		expect(() => resolveMechanicEffects([input], context())).toThrow(TypeError);
+	});
+
 	it("rejects a source reference that does not resolve to the checked source", () => {
 		const input = annotation();
 		input.source.name = "Different Feature";
