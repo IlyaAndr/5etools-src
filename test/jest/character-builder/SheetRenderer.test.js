@@ -142,6 +142,17 @@ describe("Calculated character sheet renderer", () => {
 		expect(warlock).not.toContain("<input");
 	});
 
+	it("shows the Celestial's once-per-turn damage rider with its computed amount", () => {
+		const document = character("tiefling");
+		document.build.level = 6;
+		document.build.choices.find(choice => choice.id.endsWith(":subclass")).selected = ["celestial|xphb"];
+		document.build.choices.find(choice => choice.id.endsWith(":prepared-spells")).selected.push("spell:charm-person|xphb");
+		expect(project(document).issues).toEqual([]);
+		const html = render(document);
+		expect(html).toContain("data-rider=\"celestial-radiant-soul\"");
+		expect(html).toContain("Radiant Soul:</strong> Once per turn · +4 to a spell&#39;s damage roll · Radiant or Fire");
+	});
+
 	it("shows the Fiend's triggered temporary hit points beside the trackers", () => {
 		const html = render(character("tiefling"));
 		expect(html).toContain("data-temporary-hp=\"fiend-dark-ones-blessing\"");

@@ -720,6 +720,12 @@ def main():
             contact = page.locator('.cb-resource').filter(has_text='Contact Patron')
             assert contact.count() == 1
             assert 'Contact Other Plane' in contact.inner_text()
+            # The Celestial's Radiant Soul adds the Charisma modifier once per turn.
+            editor.get_by_label('Subclass', exact=True).select_option('celestial|xphb')
+            rider = page.locator('[data-rider="celestial-radiant-soul"]')
+            assert rider.count() == 1
+            assert 'Once per turn' in rider.inner_text() and 'Radiant or Fire' in rider.inner_text()
+            editor.get_by_label('Subclass', exact=True).select_option('fiend|xphb')
             editor.get_by_label('Lifedrinker', exact=True).uncheck()
             editor.get_by_label('Pact of the Blade', exact=True).uncheck()
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:

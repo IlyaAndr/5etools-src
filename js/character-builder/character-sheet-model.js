@@ -188,6 +188,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		features: [],
 		defenses: [],
 		temporaryHitPoints: [],
+		damageRiders: [],
 		training: [],
 		gear: [],
 		languages: [],
@@ -793,6 +794,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	for (const effect of effectsOf("conditionImmunity")) model.defenses.push({type: "conditionImmunity", condition: effect.condition, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("telepathy")) model.defenses.push({type: "telepathy", range: effect.range, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("temporaryHP")) model.temporaryHitPoints.push({name: effect.source.name, value: effect.value, trigger: effect.trigger, ...(effect.note ? {note: effect.note} : {}), provenance: effect.source, annotationId: effect.annotationId});
+	for (const effect of effectsOf("damageRider")) model.damageRiders.push({name: effect.name, amount: effect.amount, damageTypes: [...effect.damageTypes], frequency: effect.frequency, appliesTo: effect.appliesTo, ...(effect.note ? {note: effect.note} : {}), provenance: effect.source, annotationId: effect.annotationId});
 	for (const sense of featSenses) model.defenses.push({type: sense.type, range: sense.range, provenance: sense.label});
 	for (const effect of effectsOf("vision")) model.defenses.push({...effect.value, provenance: effect.source, annotationId: effect.annotationId});
 	for (const effect of effectsOf("swimSpeed")) model.defenses.push({type: "swim", name: effect.value.name, feet: model.speed, breatheUnderwater: effect.value.breatheUnderwater, provenance: effect.source, annotationId: effect.annotationId});

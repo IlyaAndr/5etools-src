@@ -205,6 +205,15 @@ function attacks (model) {
 	return main + secondary;
 }
 
+function riders (model) {
+	if (!model.damageRiders.length) return "";
+	const rows = model.damageRiders.map(rider => {
+		const detail = [rider.frequency, `${signed(rider.amount)} to ${rider.appliesTo}`, rider.damageTypes.map(title).join(" or ")].join(" · ");
+		return `<li data-rider="${escape(rider.annotationId)}"><strong>${text(rider.name)}:</strong> ${escape(detail)}${rider.note ? ` · ${escape(rider.note)}` : ""}</li>`;
+	}).join("");
+	return block("Damage riders · calculated", `<ul class="cb-riders">${rows}</ul>`, "cb-rider-block");
+}
+
 function features (model) {
 	return block("Features & choices", `<div class="cb-features">${model.features.map(feature => `<span>${text(feature.name)}</span>`).join(" · ")}</div>`);
 }
@@ -287,7 +296,7 @@ export function renderCharacterSheet (model, catalog) {
 	});
 	const defenses = block("Defenses & senses", `<p><strong>AC ${model.armorClass.value}:</strong> ${text(model.armorClass.condition)}.</p>${defenseValues.length ? `<p>${defenseValues.map(escape).join(" · ")}</p>` : ""}${model.armorClass.detail ? `<p>${text(model.armorClass.detail)}</p>` : ""}${model.armorClass.fallback !== undefined && model.armorClass.fallback !== null ? `<p>Without Mage Armor: AC ${model.armorClass.fallback}.</p>` : ""}`);
 	const notes = document.session.notes ? block("Notes", `<div class="cb-notes">${escape(document.session.notes)}</div>`, "cb-notes-block") : "";
-	const main = `<section class="cb-page cb-character-sheet" data-sheet-status="complete">${header(document, subtitle, heading)}${abilityTable(model)}${constants}${strip}${spellcastingDifferences}<div class="cb-columns"><div class="cb-column">${resources(model, hasDifferentCasting)}${features(model)}</div><div class="cb-column">${vitals(model)}${attacks(model)}${defenses}${equipment}${conditions(model)}</div></div>${notes}${footer(document, catalog)}</section>`;
+	const main = `<section class="cb-page cb-character-sheet" data-sheet-status="complete">${header(document, subtitle, heading)}${abilityTable(model)}${constants}${strip}${spellcastingDifferences}<div class="cb-columns"><div class="cb-column">${resources(model, hasDifferentCasting)}${riders(model)}${features(model)}</div><div class="cb-column">${vitals(model)}${attacks(model)}${defenses}${equipment}${conditions(model)}</div></div>${notes}${footer(document, catalog)}</section>`;
 	const featureNames = new Map(model.features.map(feature => [feature.name.toLowerCase(), feature.name]));
 	const featureCards = model.features.map(feature => {
 		const selection = feature.selection ? `<p class="cb-feature-selection"><strong>${text(feature.selection.label)}: ${text(feature.selection.value)}.</strong> The original description below may include other options.</p>` : "";
