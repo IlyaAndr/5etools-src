@@ -1,8 +1,33 @@
 # D&D 2024 Character Builder Development Plan
 
-Status: PRs #1–#5 are merged, covering the draft save format, reviewed species catalog, early online sheet and PDF preview, initial Fighter editor, and Tiefling Warlock editor. The current work replaces preset coupling with independent species, background, feat, class, and equipment choice providers. The development and review process is described in [character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs target `character-builder` and are merged after user review.
+Status: PRs #1–#49 are merged. The XPHB Warlock is **complete from level 1 to 20**
+for all four patrons, and the Fighter covers levels 1–5. All ten XPHB species, all
+16 backgrounds, all 10 Origin feats, all 42 general feats, and all 12 Epic Boons
+are reviewed. The development and review process is described in
+[character-builder-workflow.md](character-builder-workflow.md). Subsequent PRs
+target `character-builder` and are merged after user review.
 
-The first six reference cases cover two selected Fighter and Warlock builds at levels 1/3/5. The current prototype calculates their sheets from saved decisions and provides editors for limited options; broader build coverage remains later work. See [character-builder-reference-results.md](character-builder-reference-results.md) for the primary-rule expectations and [character-builder-preview.md](character-builder-preview.md) for current editor scope.
+The reference cases cover Fighter and Warlock builds at levels 1/3/5, and a
+completion sweep now builds a whole Warlock for every patron at levels 1, 2, 3,
+5, 9, 11, 14, 17, 19, and 20 without an open question. See
+[character-builder-reference-results.md](character-builder-reference-results.md)
+for the primary-rule expectations and
+[character-builder-preview.md](character-builder-preview.md) for current editor
+scope.
+
+## Completion Status (2026-11-13)
+
+| Area | Coverage |
+| --- | --- |
+| Warlock (XPHB) | **Complete, levels 1–20.** Patron choice, expanded spell lists, innate free casts, limited-use pools, temporary hit points, damage riders, resistances, condition immunities, senses, Fiendish Resilience, all 28 Eldritch Invocations with prerequisites, Pact of the Blade/Tome/Chain effects, Eldritch Smite and Lifedrinker riders, Mystic Arcanum slots, Contact Patron, Magical Cunning, and Eldritch Master. |
+| Fighter (XPHB) | Champion, levels 1–5: Fighting Style, Weapon Mastery, Action Surge, Second Wind, Remarkable Athlete, and Improved Critical. |
+| Species (XPHB) | All ten, including Dragonborn ancestry resistances, Elf lineages, Goliath ancestries, Aasimar transforms, Human's Versatile feat slot, Dwarf/Halfling/Orc traits, and Tiefling legacies. |
+| Backgrounds and feats (XPHB) | All 16 backgrounds with their ability, skill, tool, gear, and gold; all 10 Origin feats with their spell, skill, and tool choices; all 42 general feats; all 12 Epic Boons at level 19. |
+| Equipment | Class starting packages and background gear inside the reviewed budget, with Weapon Mastery and Pact Weapon attacks. |
+| Known narrative-only gaps | Epic Boon riders other than their ability increase and truesight, and subclass riders that need per-turn bookkeeping the sheet does not track (for example Psychic Spells' component and damage-type options). Their source text is still printed on the reference pages. |
+
+Next in the sequence: Fighter 6–20, then the remaining classes in the order in
+"Expand Class and Content Coverage" below.
 
 ## Goal and Initial Release
 
@@ -179,7 +204,7 @@ This order tests new families of mechanics; implementations need not be entirely
 
 Expand PHB 2024 backgrounds and feats using the already verified interaction rules for species. Separately test more complex subclasses such as Battle Master and Eldritch Knight: maneuver choices, resources, and subclass spellcasting must remain represented beyond the class name.
 
-Initially, verified classes support levels 1–5. Then extend class and species progressions through level 20, including higher-level feats, resource changes, and permitted replacements. Check PB increases and species progression boundaries, such as Dragonborn breath damage at levels 5/11/17 and the Dwarf HP increase at every level. Full PHB 2024 support is complete only after all selected entities and levels are covered, rather than merely listed in the catalog.
+Initially, verified classes support levels 1–5. Then extend class and species progressions through level 20, including higher-level feats, resource changes, and permitted replacements. The XPHB Warlock reached level 20 in PRs #20–#49, including its feats, Epic Boons, Mystic Arcanum, and patron resources; the Fighter follows next from level 6. Check PB increases and species progression boundaries, such as Dragonborn breath damage at levels 5/11/17 and the Dwarf HP increase at every level. Full PHB 2024 support is complete only after all selected entities and levels are covered, rather than merely listed in the catalog.
 
 ### 9. Reliable Release and Future Features
 
