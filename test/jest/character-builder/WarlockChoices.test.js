@@ -7,7 +7,7 @@ import {createSheetExamples} from "../../../js/character-builder/sheet-examples.
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 import {createWarlockDraft, getWarlockChoiceDescriptors, getWarlockSourceChoices, isSupportedWarlockDocument} from "../../../js/character-builder/warlock-choices.js";
 import {getBackgroundSourceChoices} from "../../../js/character-builder/source-choices.js";
-import {addFeatChoices} from "./test-documents.js";
+import {addArcanumChoices, addFeatChoices} from "./test-documents.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const spells = readJson("../../../data/spells/spells-xphb.json");
@@ -30,6 +30,22 @@ const context = {
 	},
 };
 const descriptors = document => getWarlockChoiceDescriptors(document, catalog, context);
+// Fill every available reviewed choice so a high-level build can be calculated.
+function autoComplete (document) {
+	let current = document;
+	for (let pass = 0; pass < 12; pass += 1) {
+		const available = getWarlockChoiceDescriptors(current, catalog, context).filter(entry => entry.available);
+		let changed = false;
+		for (const entry of available) {
+			if (entry.selected.length === entry.count) continue;
+			const chosen = entry.options.map(option => option.id).filter(id => !entry.selected.includes(id)).slice(0, entry.count);
+			current = setCharacterChoice(current, entry.id, chosen);
+			changed = true;
+		}
+		if (!changed) break;
+	}
+	return current;
+}
 const choice = (document, suffix) => descriptors(document).find(value => value.id.endsWith(suffix));
 
 describe("Warlock editor choices", () => {
@@ -218,6 +234,42 @@ describe("Warlock editor choices", () => {
 		expect(model.resources.find(resource => resource.name === "Cure Wounds")).toMatchObject({maxUses: 1, spellcastingAbility: "wis", healing: {dice: "2d8"}});
 	});
 
+	it("offers a Mystic Arcanum slot at each reviewed level and tracks one free cast", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
+		const arcanum = (level, spellLevel) => getWarlockChoiceDescriptors({...draft, build: {...draft.build, level}}, catalog, context).find(entry => entry.id === `class:warlock|xphb:arcanum-${spellLevel}`);
+		for (const [spellLevel, minimumLevel] of [[6, 11], [7, 13], [8, 15], [9, 17]]) {
+			expect(arcanum(minimumLevel - 1, spellLevel).available).toBe(false);
+			const descriptor = arcanum(minimumLevel, spellLevel);
+			expect(descriptor.available).toBe(true);
+			expect(descriptor.count).toBe(1);
+			expect(descriptor.minimumLevel).toBe(minimumLevel);
+			expect(descriptor.options.length).toBeGreaterThan(0);
+			expect(descriptor.options.every(option => option.spell.level === spellLevel)).toBe(true);
+		}
+		let document = autoComplete({...draft, build: {...draft.build, level: 11}});
+		document = autoComplete(setCharacterChoice(document, "class:warlock|xphb:subclass", ["fiend|xphb"]));
+		const model = createCharacterSheetModel(document, catalog, context);
+		expect(model.issues).toEqual([]);
+		const chosen = document.build.choices.find(entry => entry.id === "class:warlock|xphb:arcanum-6").selected[0];
+		expect(chosen.slice(0, "spell:".length)).toBe("spell:");
+		expect(model.resources.find(resource => resource.id === "class:warlock|xphb:arcanum-6")).toMatchObject({spellId: chosen, maxUses: 1, recovery: {long: "all"}, freeLevel: 6, spellcastingAbility: "cha"});
+		const spell = model.spells.find(entry => entry.id === chosen);
+		expect(spell.level).toBe(6);
+		expect(spell.sources.some(source => source.kind === "arcanum" && source.canCastWithSlots === false && source.freeLevel === 6)).toBe(true);
+		const wrongLevel = setCharacterChoice(document, "class:warlock|xphb:arcanum-6", ["spell:hex|xphb"]);
+		expect(createCharacterSheetModel(wrongLevel, catalog, context).issues).toContainEqual(expect.objectContaining({id: "class:warlock|xphb:arcanum-6"}));
+	});
+
+	it("rejects an arcanum list outside the reviewed shape", () => {
+		const draft = createWarlockDraft(catalog.dataset);
+		draft.build.abilities.scores = {str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15};
+		const document = autoComplete({...draft, build: {...draft.build, level: 11}});
+		const rules = structuredClone(context.rules);
+		rules.classes["warlock|xphb"].arcana[0].spellLevel = 5;
+		expect(() => createCharacterSheetModel(document, catalog, {...context, rules})).toThrow(/arcanum list/);
+	});
+
 	it("matches the reviewed invocations to the original Eldritch Invocation records", () => {
 		const records = context.sources.optionalFeatures.optionalfeature.filter(record => record.source === "XPHB" && (record.featureType || []).includes("EI"));
 		const annotations = Object.entries(context.rules.invocations);
@@ -256,6 +308,7 @@ describe("Warlock editor choices", () => {
 		const owner = "class:warlock|xphb";
 		document.build.level = 20;
 		addFeatChoices(document, owner, 20);
+		addArcanumChoices(document, owner, 20);
 		const saved = id => document.build.choices.find(value => value.id === `${owner}:${id}`).selected;
 		saved("invocations").splice(
 			0,

@@ -5,7 +5,7 @@ import {createCharacterSheetModel} from "../../../js/character-builder/character
 import {setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createSheetExamples} from "../../../js/character-builder/sheet-examples.js";
 import {getFeatAbilityChoice, getFeatProficiencyGrants, getFeatSenses, getFeatTraining, meetsFeatPrerequisites} from "../../../js/character-builder/feat-choices.js";
-import {addFeatChoices} from "./test-documents.js";
+import {addArcanumChoices, addFeatChoices} from "./test-documents.js";
 import {getWarlockChoiceDescriptors} from "../../../js/character-builder/warlock-choices.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -45,6 +45,7 @@ const levelNineteen = () => {
 	const document = levelFive();
 	document.build.level = 19;
 	addFeatChoices(document, owner, 19);
+	addArcanumChoices(document, owner, 19);
 	const saved = id => document.build.choices.find(value => value.id === `${owner}:${id}`).selected;
 	saved("invocations").splice(
 		0,
