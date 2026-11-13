@@ -60,6 +60,13 @@ function checkRules (rules, document) {
 		if (feat.spells !== undefined || feat.freeCast !== undefined) {
 			if (!Array.isArray(feat.spells) || !feat.spells.length || feat.spells.some(spell => typeof spell !== "string" || !spell.startsWith("spell:"))) throw new TypeError(`sheetRules.feats.${id}: unsupported feat spells`);
 		}
+		if (feat.spellChoice !== undefined) {
+			const choice = feat.spellChoice;
+			if (!choice || typeof choice !== "object" || Array.isArray(choice)
+				|| typeof choice.label !== "string" || !choice.label.trim()
+				|| !Number.isSafeInteger(choice.count) || choice.count < 1 || choice.count > 5
+				|| typeof choice.query !== "string" || !choice.query.trim()) throw new TypeError(`sheetRules.feats.${id}: unsupported spell choice`);
+		}
 	}
 	for (const [id, tool] of Object.entries(rules.tools)) {
 		if (typeof tool !== "string" || !tool.trim()) throw new TypeError(`sheetRules.tools.${id}: unsupported tool annotation`);
@@ -371,6 +378,10 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 			}
 			if (featRule.spells) {
 				for (const spellId of featRule.spells) featSpells.push({id: spellId, owner: slot.choiceId, label: featRule.name, ability: chosenAbility, freeCast: featRule.freeCast === true});
+			}
+			if (featRule.spellChoice) {
+				const options = spellCatalog ? getSpellQueryOptions(spellCatalog, featRule.spellChoice.query).map(entry => entry.id) : [];
+				for (const spellId of select(`${slot.choiceId}-spell`, options, featRule.spellChoice.count, featRule.spellChoice.label)) featSpells.push({id: spellId, owner: slot.choiceId, label: featRule.name, ability: chosenAbility, freeCast: featRule.freeCast === true});
 			}
 			continue;
 		}
