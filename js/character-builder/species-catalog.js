@@ -2,7 +2,7 @@ export const SPECIES_CATALOG_VERSION = 1;
 
 const SIZES = {S: "small", M: "medium"};
 const ABILITIES = ["int", "wis", "cha"];
-const SUPPORTED_REFS = ["aasimar|xphb", "dragonborn|xphb", "dwarf|xphb", "gnome|xphb", "goliath|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
+const SUPPORTED_REFS = ["aasimar|xphb", "dragonborn|xphb", "elf|xphb", "dwarf|xphb", "gnome|xphb", "goliath|xphb", "halfling|xphb", "orc|xphb", "tiefling|xphb"];
 
 function fail (path, message) { throw new TypeError(`${path}: ${message}`); }
 function copy (value) { return JSON.parse(JSON.stringify(value)); }
@@ -64,7 +64,7 @@ function spellMetadata (raw, key) {
 	for (const field of ["savingThrow", "spellAttack", "entriesHigherLevel", "damageInflict"]) {
 		if (raw[field] !== undefined) array(raw[field], `spell ${key}.${field}`);
 	}
-	if (raw.scalingLevelDice !== undefined) object(raw.scalingLevelDice, `spell ${key}.scalingLevelDice`);
+	if (raw.scalingLevelDice !== undefined && (!raw.scalingLevelDice || typeof raw.scalingLevelDice !== "object")) fail(`spell ${key}.scalingLevelDice`, "expected a scaling object or list");
 	return copy(Object.fromEntries([
 		"school", "page", "time", "range", "components", "duration", "entries", "meta",
 		"savingThrow", "spellAttack", "entriesHigherLevel", "scalingLevelDice", "damageInflict",
@@ -89,7 +89,7 @@ function validateRules (rules) {
 	array(rules.species, "rules.species");
 	const refs = new Set();
 	for (const rule of rules.species) {
-		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel", "spellcastingAbility"]);
+		object(rule, "rules.species", ["ref", "provenance", "lineageChoice", "lineageLabel", "commonSpells", "savingThrowAdvantages", "leveledSpellPolicy", "lineages", "resistances", "hpPerLevel", "spellcastingAbility", "skillChoice"]);
 		reference(rule.ref, "rules.species.ref");
 		const key = refKey(rule.ref);
 		if (!SUPPORTED_REFS.includes(key) || refs.has(key)) fail("rules.species", `unsupported or duplicate species ${key}`);
@@ -116,6 +116,12 @@ function validateRules (rules) {
 			if (new Set(rule.resistances).size !== rule.resistances.length) fail("rules.species.resistances", "duplicate resistance");
 		}
 		if (rule.hpPerLevel !== undefined) integer(rule.hpPerLevel, "rules.species.hpPerLevel", 0, 10);
+		if (rule.skillChoice !== undefined) {
+			array(rule.skillChoice, "rules.species.skillChoice");
+			if (!rule.skillChoice.length) fail("rules.species.skillChoice", "missing skill options");
+			rule.skillChoice.forEach(skill => string(skill, "rules.species.skillChoice"));
+			if (new Set(rule.skillChoice).size !== rule.skillChoice.length) fail("rules.species.skillChoice", "duplicate skill option");
+		}
 		if (rule.spellcastingAbility !== undefined) {
 			if (!ABILITIES.includes(rule.spellcastingAbility)) fail("rules.species.spellcastingAbility", "unsupported ability");
 			if (spellLineages.length) fail("rules.species.spellcastingAbility", "fixed ability with lineage spellcasting");
@@ -135,7 +141,7 @@ function validateRules (rules) {
 		const lineageIds = new Set();
 		const lineageNames = new Set();
 		for (const lineage of lineages) {
-			object(lineage, "rules.species.lineages", ["id", "additionalSpellsName", "name", "resistance", "notes"]);
+			object(lineage, "rules.species.lineages", ["id", "additionalSpellsName", "name", "resistance", "notes", "cantripOptions"]);
 			if (typeof lineage.id !== "string" || !/^[a-z][a-z-]*$/.test(lineage.id) || lineageIds.has(lineage.id)) fail("rules.species.lineages.id", "invalid or duplicate lineage ID");
 			if (lineage.additionalSpellsName === null) {
 				if (lineage.name === undefined) fail("rules.species.lineages.name", "missing lineage name");
@@ -147,6 +153,12 @@ function validateRules (rules) {
 				if (lineage.name !== undefined) string(lineage.name, "rules.species.lineages.name");
 			}
 			if (lineage.resistance !== null && !["poison", "necrotic", "fire", "acid", "cold", "lightning"].includes(lineage.resistance)) fail("rules.species.lineages.resistance", "unsupported resistance");
+			if (lineage.cantripOptions !== undefined) {
+				array(lineage.cantripOptions, "rules.species.lineages.cantripOptions");
+				if (!lineage.cantripOptions.length) fail("rules.species.lineages.cantripOptions", "missing cantrip options");
+				lineage.cantripOptions.forEach(uid => string(uid, "rules.species.lineages.cantripOptions"));
+				if (new Set(lineage.cantripOptions).size !== lineage.cantripOptions.length) fail("rules.species.lineages.cantripOptions", "duplicate cantrip option");
+			}
 			array(lineage.notes, "rules.species.lineages.notes");
 			lineage.notes.forEach(note => string(note, "rules.species.lineages.notes"));
 			lineageIds.add(lineage.id);
@@ -155,12 +167,13 @@ function validateRules (rules) {
 	if (refs.size !== SUPPORTED_REFS.length) fail("rules.species", "missing supported species annotations");
 }
 
-function normalizeGrants (group, lineage, ownerId, policy, spellIndex, collectedSpells) {
+function normalizeGrants (group, lineage, ownerId, policy, spellIndex, collectedSpells, cantripOptions) {
 	object(group, "additionalSpells", ["name", "ability", "known", "innate"]);
 	object(group.ability, "additionalSpells.ability", ["choose"]);
 	array(group.ability.choose, "additionalSpells.ability.choose");
 	if (group.ability.choose.length !== 3 || new Set(group.ability.choose).size !== 3 || group.ability.choose.some(ability => !ABILITIES.includes(ability))) fail("additionalSpells.ability", "unsupported spellcasting ability choices");
 	const grants = [];
+	const choices = [];
 	const grantIds = new Set();
 	function addGrant (uid, minimumCharacterLevel, uses) {
 		if (typeof uid !== "string") fail("additionalSpells", "unsupported spell reference");
@@ -198,8 +211,33 @@ function normalizeGrants (group, lineage, ownerId, policy, spellIndex, collected
 		}
 	}
 	progression(group.known, "additionalSpells.known", (entries, level) => {
-		array(entries, "additionalSpells.known");
-		entries.forEach(uid => addGrant(uid, level, null));
+		let list = entries;
+		if (list && typeof list === "object" && !Array.isArray(list)) {
+			object(list, "additionalSpells.known", ["_"]);
+			list = list._;
+		}
+		array(list, "additionalSpells.known");
+		for (const entry of list) if (typeof entry === "string") addGrant(entry, level, null);
+		const chosen = list.filter(entry => typeof entry !== "string");
+		if (chosen.length > 1) fail("additionalSpells.known", "unsupported spell choices");
+		for (const entry of chosen) {
+			object(entry, "additionalSpells.known", ["choose", "count"]);
+			if (typeof entry.choose !== "string" || !entry.choose.trim()) fail("additionalSpells.known.choose", "unsupported spell filter");
+			if (entry.count !== undefined && (!Number.isSafeInteger(entry.count) || entry.count < 1)) fail("additionalSpells.known.count", "unsupported spell count");
+			if (!Array.isArray(cantripOptions) || !cantripOptions.length) fail(`additionalSpells.known`, `unreviewed spell choice for ${lineage.id}`);
+			const byId = new Map([...spellIndex.values()].map(raw => [`spell:${slug(raw.name)}|${raw.source.toLowerCase()}`, raw]));
+			const options = cantripOptions.map(uid => {
+				if (typeof uid !== "string" || !uid.trim()) fail(`species ${lineage.id}.cantripOptions`, "unsupported spell reference");
+				const raw = uid.startsWith("spell:") ? byId.get(uid.toLowerCase()) : spellIndex.get(uid.toLowerCase());
+				if (!raw || raw.level !== 0) fail(`species ${lineage.id}.cantripOptions`, `unsupported cantrip ${uid}`);
+				const id = `spell:${slug(raw.name)}|${raw.source.toLowerCase()}`;
+				const key = `${raw.name.toLowerCase()}|${raw.source.toLowerCase()}`;
+				if (!collectedSpells.has(id)) collectedSpells.set(id, {id, ref: {name: raw.name, source: raw.source}, level: raw.level, ...spellMetadata(raw, key)});
+				return id;
+			});
+			if (new Set(options).size !== options.length) fail(`species ${lineage.id}.cantripOptions`, "duplicate cantrip");
+			choices.push({id: `${ownerId}:${lineage.id}:cantrip`, options: [...options], count: entry.count ?? 1, minimumCharacterLevel: level, abilityOptions: [...group.ability.choose]});
+		}
 	});
 	if (group.innate !== undefined) {
 		progression(group.innate, "additionalSpells.innate", (entry, level) => {
@@ -214,7 +252,7 @@ function normalizeGrants (group, lineage, ownerId, policy, spellIndex, collected
 			}
 		});
 	}
-	return {abilityOptions: [...group.ability.choose], grants};
+	return {abilityOptions: [...group.ability.choose], grants, choices};
 }
 
 /** Normalize the reviewed Gnome/Tiefling subset from parsed 5etools JSON. */
@@ -292,7 +330,7 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 				name: lineage.name ?? lineage.additionalSpellsName,
 				resistances: lineage.resistance === null ? [] : [lineage.resistance],
 				notes: [...lineage.notes],
-				...normalizeGrants(group, lineage, id, rule.leveledSpellPolicy, spellIndex, collectedSpells),
+				...normalizeGrants(group, lineage, id, rule.leveledSpellPolicy, spellIndex, collectedSpells, lineage.cantripOptions),
 			};
 		});
 		const baseGrants = rule.commonSpells.map(uid => {
@@ -322,6 +360,8 @@ export function createSpeciesCatalog ({races, spells, rules}) {
 			abilityChoiceId: grantsSpells && rule.spellcastingAbility === undefined ? `${id}:spellcasting-ability` : null,
 			spellcastingAbility: rule.spellcastingAbility ?? null,
 			sizeChoiceId: raw.size.length > 1 ? `${id}:size` : null,
+			skillChoiceId: rule.skillChoice === undefined ? null : `${id}:skill`,
+			skillOptions: rule.skillChoice === undefined ? [] : [...rule.skillChoice],
 			savingThrowAdvantages: copy(rule.savingThrowAdvantages),
 			resistances: [...fixedResistances],
 			hpPerLevel: rule.hpPerLevel ?? 0,

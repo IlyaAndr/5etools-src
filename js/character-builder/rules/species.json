@@ -113,6 +113,74 @@
 		},
 		{
 			"ref": {
+				"name": "Elf",
+				"source": "XPHB"
+			},
+			"provenance": {
+				"sourceId": "xphb",
+				"pages": [
+					189
+				]
+			},
+			"lineageChoice": "lineage",
+			"lineageLabel": "Elven Lineage",
+			"commonSpells": [],
+			"savingThrowAdvantages": [],
+			"skillChoice": [
+				"insight",
+				"perception",
+				"survival"
+			],
+			"leveledSpellPolicy": {
+				"alwaysPrepared": true,
+				"canCastWithSlots": true,
+				"reset": "long"
+			},
+			"lineages": [
+				{
+					"id": "drow",
+					"additionalSpellsName": "Drow",
+					"resistance": null,
+					"notes": []
+				},
+				{
+					"id": "high-elf",
+					"additionalSpellsName": "High Elf",
+					"resistance": null,
+					"cantripOptions": [
+						"spell:acid-splash|xphb",
+						"spell:blade-ward|xphb",
+						"spell:chill-touch|xphb",
+						"spell:dancing-lights|xphb",
+						"spell:elementalism|xphb",
+						"spell:fire-bolt|xphb",
+						"spell:friends|xphb",
+						"spell:light|xphb",
+						"spell:mage-hand|xphb",
+						"spell:mending|xphb",
+						"spell:message|xphb",
+						"spell:mind-sliver|xphb",
+						"spell:minor-illusion|xphb",
+						"spell:poison-spray|xphb",
+						"spell:prestidigitation|xphb",
+						"spell:ray-of-frost|xphb",
+						"spell:shocking-grasp|xphb",
+						"spell:thunderclap|xphb",
+						"spell:toll-the-dead|xphb",
+						"spell:true-strike|xphb"
+					],
+					"notes": []
+				},
+				{
+					"id": "wood-elf",
+					"additionalSpellsName": "Wood Elf",
+					"resistance": null,
+					"notes": []
+				}
+			]
+		},
+		{
+			"ref": {
 				"name": "Gnome",
 				"source": "XPHB"
 			},

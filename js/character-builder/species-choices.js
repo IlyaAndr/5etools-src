@@ -20,9 +20,10 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) 
 	const abilityName = id => abilities.find(ability => ability.id === id)?.name || id;
 	const descriptor = describeChoices(document);
 	const result = [];
+	let selectedLineage = null;
 	if (species.lineages.length) {
 		const [lineageId] = selectedIds(document, species.lineageChoiceId);
-		const selectedLineage = species.lineages.find(lineage => lineage.id === lineageId);
+		selectedLineage = species.lineages.find(lineage => lineage.id === lineageId);
 		const abilityOptions = selectedLineage?.abilityOptions || [...new Set(species.lineages.flatMap(lineage => lineage.abilityOptions))];
 		result.push(descriptor(species.lineageChoiceId, species.lineageLabel, 1, species.lineages.map(lineage => option(lineage.id, lineage.name))));
 		if (species.abilityChoiceId) {
@@ -38,6 +39,27 @@ export function getSpeciesChoiceDescriptors (document, catalog, {sources} = {}) 
 			...descriptor(species.sizeChoiceId, "Size", 1, species.sizes.map((id, index) => option(id, sizeLabels[index]))),
 			help: `The 2024 ${document.build.species.name} entry lists ${sizeLabels.join(" or ")}, so either is legal at character creation.`,
 		});
+	}
+	if (species.skillChoiceId) {
+		const skills = abilities.flatMap(group => group.skills);
+		result.push({
+			...descriptor(species.skillChoiceId, "Skill", 1, species.skillOptions.map(id => {
+				const skill = skills.find(candidate => candidate.id === id);
+				if (!skill) throw new TypeError(`species ${species.id}: unknown skill ${id}`);
+				return option(id, skill.name);
+			})),
+			help: `The 2024 ${document.build.species.name} entry grants one of these skill proficiencies.`,
+		});
+	}
+	if (selectedLineage) {
+		for (const choice of selectedLineage.choices || []) {
+			const spellName = id => {
+				const match = catalog?.spells?.find(candidate => candidate.id === id);
+				if (!match) throw new TypeError(`species ${species.id}: unknown cantrip ${id}`);
+				return match.ref.name;
+			};
+			result.push(descriptor(choice.id, `${document.build.species.name} Cantrip`, choice.count, choice.options.map(id => option(id, spellName(id)))));
+		}
 	}
 	return result;
 }

@@ -146,7 +146,7 @@ describe("Species-only sheet contributions", () => {
 		const document = character("Gnome", "forest");
 		document.build.species.source = "PHB";
 		expect(() => projectSpecies(document, catalog)).toThrow("unsupported or ambiguous species");
-		document.build.species = {name: "Elf", source: "XPHB"};
+		document.build.species = {name: "Human", source: "XPHB"};
 		expect(() => projectSpecies(document, catalog)).toThrow("unsupported or ambiguous species");
 	});
 });

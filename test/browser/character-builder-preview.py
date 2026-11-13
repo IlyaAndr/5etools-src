@@ -798,6 +798,15 @@ def main():
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             assert 'Medium' in group_text(page, editor, 'Size')
             assert 'Small' in group_text(page, editor, 'Size')
+            # Elf picks a lineage and one Keen Senses skill; High Elf also picks a
+            # cantrip from the reviewed Wizard list.
+            page.select_option('#new-species', 'Elf|XPHB')
+            page.click('#new-character')
+            assert 'Wood Elf' in group_text(page, editor, 'Elven Lineage')
+            assert 'Survival' in group_text(page, editor, 'Skill')
+            assert editor.get_by_label('Elf Cantrip', exact=True).count() == 0
+            editor.get_by_label('Elven Lineage', exact=True).select_option('high-elf')
+            assert 'Minor Illusion' in group_text(page, editor, 'Elf Cantrip')
             assert not errors, errors
         finally:
             browser.close()

@@ -258,7 +258,8 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	const featProficiencies = featRule.proficiencyChoice ? select(`${featOwner}:proficiencies`, null, null, `${featRule.name} proficiencies`) : [];
 	const featSkills = featProficiencies.filter(value => value.startsWith("skill:")).map(value => value.slice("skill:".length));
 	const featTools = featProficiencies.filter(value => value.startsWith("tool:")).map(value => rules.tools[value.slice("tool:".length)]);
-	const skillProficiencies = new Set([...backgroundSkills, ...classSkills, ...featSkills]);
+	const skillProficiencies = new Set([...backgroundSkills, ...classSkills, ...species.skills, ...featSkills]);
+	for (const skill of species.skills) if (backgroundSkills.includes(skill) || classSkills.includes(skill)) issue(`${species.speciesId}:skill`, "The species skill must differ from the background and class proficiencies; replacement choices are outside this subset.");
 	for (const skill of featSkills) if (backgroundSkills.includes(skill) || classSkills.includes(skill)) issue(`${featOwner}:proficiencies`, `${featRule.name}: that skill is already granted; replacement choices are outside this subset.`);
 	const languages = select("character:languages", Object.keys(rules.standardLanguages), 3, "Languages");
 	if (!languages.includes("common")) issue("character:languages", "Common and two other Standard languages are required.");
