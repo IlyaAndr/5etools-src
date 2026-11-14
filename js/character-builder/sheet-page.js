@@ -16,7 +16,7 @@ const newCharacterButton = document.getElementById("new-character");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
-const selectionInfo = document.getElementById("new-character-info");
+const selectionInfo = new Map([...document.querySelectorAll(".cb-selection-info[data-info]")].map(slot => [slot.dataset.info, slot]));
 const compactToggle = document.getElementById("compact-sheet");
 const pageCount = document.getElementById("sheet-pages");
 const listElements = {
@@ -105,24 +105,26 @@ function showSelectionInfo () {
 		const [name, source] = `${value}`.split("|");
 		return name && source ? {name, source} : null;
 	};
-	const sections = [
+	for (const [kind, label, value] of [
 		["species", "Species", read(selection.species)],
 		["class", "Class", read(selection.class)],
 		["background", "Background", read(selection.background)],
-	].map(([kind, label, selection]) => {
-		if (!selection) return "";
+	]) {
+		const slot = selectionInfo.get(kind);
+		if (!slot) continue;
 		let info = null;
-		try {
-			info = renderSelectionInfo(sheetContext.sources, kind, selection);
-		} catch (error) {
-			showError(`Could not show the ${kind} text. ${error.message}`);
-			return "";
+		if (value) {
+			try {
+				info = renderSelectionInfo(sheetContext.sources, kind, value);
+			} catch (error) {
+				showError(`Could not show the ${kind} text. ${error.message}`);
+			}
 		}
-		if (!info) return "";
-		return `<details class="cb-selection-info__entry" open data-info="${kind}"><summary>${label}: <strong>${escapeHtml(info.name)}</strong></summary><div class="cb-selection-info__text">${info.html}</div></details>`;
-	}).join("");
-	selectionInfo.innerHTML = sections;
-	selectionInfo.hidden = !sections;
+		slot.innerHTML = info
+			? `<details class="cb-selection-info__entry" open><summary>${label}: <strong>${escapeHtml(info.name)}</strong></summary><div class="cb-selection-info__text">${info.html}</div></details>`
+			: "";
+		slot.hidden = !info;
+	}
 }
 
 async function fetchJson (path) {

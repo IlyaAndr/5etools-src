@@ -83,21 +83,27 @@
 			<input id="character-name" type="text" maxlength="200" autocomplete="off" spellcheck="false" placeholder="Name your character" disabled>
 		</div>
 		<div class="cb-start">
-			<div class="cb-start__lists">
+			<div class="cb-start__row">
 				<fieldset class="cb-picker">
 					<legend>Species</legend>
 					<div id="species-list" class="cb-picker__list" role="listbox" aria-label="Species"></div>
 				</fieldset>
+				<div class="cb-selection-info" data-info="species" aria-live="polite" hidden></div>
+			</div>
+			<div class="cb-start__row">
 				<fieldset class="cb-picker">
 					<legend>Class</legend>
 					<div id="class-list" class="cb-picker__list" role="listbox" aria-label="Class"></div>
 				</fieldset>
+				<div class="cb-selection-info" data-info="class" aria-live="polite" hidden></div>
+			</div>
+			<div class="cb-start__row">
 				<fieldset class="cb-picker">
 					<legend>Background</legend>
 					<div id="background-list" class="cb-picker__list" role="listbox" aria-label="Background"></div>
 				</fieldset>
+				<div class="cb-selection-info" data-info="background" aria-live="polite" hidden></div>
 			</div>
-			<div id="new-character-info" class="cb-selection-info" aria-live="polite"></div>
 		</div>
 		<div class="cb-controls">
 			<div class="cb-actions">

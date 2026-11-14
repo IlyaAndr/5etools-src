@@ -879,39 +879,59 @@ def main():
             assert retained_warlock['session'] == mixed_warlock['session']
 
             # Compose a cross-preset character through the independent selectors.
-            # Each selection shows its original 5etools text beside the controls.
-            info = page.locator('#new-character-info')
-            assert info.is_visible()
+            # Each selection sits in its own row, with its original 5etools text
+            # in the column beside it.
+            species_info = page.locator('.cb-selection-info[data-info="species"]')
+            class_info = page.locator('.cb-selection-info[data-info="class"]')
+            background_info = page.locator('.cb-selection-info[data-info="background"]')
             pick(page, 'species', 'Tiefling|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
-            assert 'Fiendish Legacy' in info.inner_text()
-            assert 'Creature Type' in info.inner_text()
-            assert 'Speed:' in info.inner_text()
-            assert 'Core Traits' in info.inner_text()
-            assert 'Primary Ability' in info.inner_text()
-            assert 'Multiclassing' in info.inner_text()
-            assert 'Source:' in info.inner_text()
-            assert 'Pact Magic' in info.inner_text()
-            assert 'Action Surge' not in info.inner_text()
+            assert 'Fiendish Legacy' in species_info.inner_text()
+            assert 'Creature Type' in species_info.inner_text()
+            assert 'Speed:' in species_info.inner_text()
+            assert 'Ability Scores' in background_info.inner_text()
+            assert 'Core Traits' in class_info.inner_text()
+            assert 'Primary Ability' in class_info.inner_text()
+            assert 'Multiclassing' in class_info.inner_text()
+            assert 'Source:' in class_info.inner_text()
+            assert 'Pact Magic' in class_info.inner_text()
+            assert 'Action Surge' not in class_info.inner_text()
+            # The three rows share one grid, so every description starts in the
+            # same column, level with its own list.
+            layout = page.locator('.cb-start__row').evaluate_all('''rows => rows.map(row => {
+                const picker = row.querySelector('.cb-picker').getBoundingClientRect();
+                const info = row.querySelector('.cb-selection-info');
+                const box = info.getBoundingClientRect();
+                return {
+                    pickerRight: Math.round(picker.right),
+                    pickerTop: Math.round(picker.top),
+                    infoLeft: Math.round(box.left),
+                    infoTop: Math.round(box.top),
+                };
+            })''')
+            assert len(layout) == 3, layout
+            assert len({item['infoLeft'] for item in layout}) == 1, layout
+            assert all(item['infoLeft'] >= item['pickerRight'] for item in layout), layout
+            assert all(abs(item['infoTop'] - item['pickerTop']) <= 2 for item in layout), layout
             pick(page, 'species', 'Aasimar|XPHB')
-            aasimar = info.locator('[data-info="species"]').inner_text()
+            aasimar = species_info.inner_text()
             assert 'Creature Type' in aasimar and 'Size:' in aasimar and 'Speed:' in aasimar
             pick(page, 'species', 'Gnome|XPHB')
-            assert 'Gnomish Lineage' in info.inner_text()
+            assert 'Gnomish Lineage' in species_info.inner_text()
             pick(page, 'class', 'Fighter|XPHB')
-            assert 'Action Surge' in info.inner_text()
+            assert 'Action Surge' in class_info.inner_text()
             pick(page, 'class', 'Warlock|XPHB')
             # Every reviewed selection renders its own source text.
             for value in page.locator('#species-list .cb-picker__option').evaluate_all("buttons => buttons.map(button => button.dataset.value)"):
                 pick(page, 'species', value)
-                assert info.locator('[data-info="species"]').inner_text().strip()
+                assert species_info.inner_text().strip()
             for value in page.locator('#class-list .cb-picker__option').evaluate_all("buttons => buttons.map(button => button.dataset.value)"):
                 pick(page, 'class', value)
-                assert info.locator('[data-info="class"]').inner_text().strip()
+                assert class_info.inner_text().strip()
             for value in page.locator('#background-list .cb-picker__option').evaluate_all("buttons => buttons.map(button => button.dataset.value)"):
                 pick(page, 'background', value)
-                assert info.locator('[data-info="background"]').inner_text().strip()
+                assert background_info.inner_text().strip()
             pick(page, 'species', 'Gnome|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Soldier|XPHB')

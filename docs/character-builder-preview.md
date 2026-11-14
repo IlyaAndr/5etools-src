@@ -115,7 +115,11 @@ silently replaced. Common is required for languages, is included automatically,
 and is explained by the rules text; the player chooses two further Standard
 languages. Rare languages are not offered yet.
 
-Species, background, origin-feat, class, and equipment choices are supplied by
+The starting area keeps one row per selection: the Species, Class, and Background
+lists share a column on the left, and each row's original 5etools text sits in the
+column beside it, so the three descriptions line up with the lists that produce
+them. A row stacks the two when the page is narrow, and a description stays hidden
+until its list has a selection. Species, background, origin-feat, class, and equipment choices are supplied by
 independent providers and composed by shared code. All 16 XPHB backgrounds are
 reviewed: each brings its source ability list, two fixed skills, its tool (fixed,
 or one of every reviewed artisan's tool, musical instrument, or gaming set), its
