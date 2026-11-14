@@ -333,6 +333,36 @@
 .cb-page-count {
 	font-weight: 700;
 }
+.cb-selection-info {
+	display: grid;
+	gap: 10px;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	margin: 0 0 12px;
+}
+.cb-selection-info__entry {
+	border: 1px solid var(--cb-border, #c8c2b4);
+	border-radius: 6px;
+	background: var(--cb-surface, #fffdf6);
+	padding: 6px 10px;
+	max-height: 18rem;
+	overflow: auto;
+}
+.cb-selection-info__entry > summary {
+	cursor: pointer;
+	font-weight: 700;
+}
+.cb-selection-info__text {
+	font-size: 0.86rem;
+	line-height: 1.35;
+}
+.cb-selection-info__text h4 {
+	margin: 8px 0 2px;
+	font-size: 0.9rem;
+}
+.cb-selection-info__text p,
+.cb-selection-info__text ul {
+	margin: 4px 0;
+}
 .cb-control input,
 .cb-control select {
 	width: 100%;
@@ -986,6 +1016,7 @@
 	.cb-toolbar,
 	.cb-editor,
 	.cb-site-header,
+	.cb-selection-info,
 	.cb-spell-reference .cb-page-footer {
 		display: none;
 	}

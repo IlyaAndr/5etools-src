@@ -1,10 +1,11 @@
 import {parseCharacterDocument, serializeCharacterDocument} from "./character-document.js";
 import {createSpeciesCatalog} from "./species-catalog.js";
-import {renderCharacterSheet} from "./sheet-renderer.js";
+import {escapeHtml, renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createSheetExamples} from "./sheet-examples.js";
 import {createCharacterEditor} from "./character-editor.js";
 import {createEditorProfiles, getEditorCombinations} from "./editor-profile.js";
+import {renderSelectionInfo} from "./source-info.js";
 
 const exampleSelect = document.getElementById("example-select");
 const importInput = document.getElementById("character-import");
@@ -22,6 +23,7 @@ const backgroundSelect = document.getElementById("new-background");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
+const selectionInfo = document.getElementById("new-character-info");
 const compactToggle = document.getElementById("compact-sheet");
 const pageCount = document.getElementById("sheet-pages");
 
@@ -62,6 +64,33 @@ function showDocument (character, exampleId = "") {
 	preview.setAttribute("aria-busy", "false");
 	clearError();
 	return model.status;
+}
+
+/** Show the original text of the species, class, and background being chosen. */
+function showSelectionInfo () {
+	if (!sheetContext) return;
+	const read = value => {
+		const [name, source] = `${value}`.split("|");
+		return name && source ? {name, source} : null;
+	};
+	const sections = [
+		["species", "Species", read(speciesSelect.value)],
+		["class", "Class", read(classSelect.value)],
+		["background", "Background", read(backgroundSelect.value)],
+	].map(([kind, label, selection]) => {
+		if (!selection) return "";
+		let info = null;
+		try {
+			info = renderSelectionInfo(sheetContext.sources, kind, selection);
+		} catch (error) {
+			showError(`Could not show the ${kind} text. ${error.message}`);
+			return "";
+		}
+		if (!info) return "";
+		return `<details class="cb-selection-info__entry" open data-info="${kind}"><summary>${label}: <strong>${escapeHtml(info.name)}</strong></summary><div class="cb-selection-info__text">${info.html}</div></details>`;
+	}).join("");
+	selectionInfo.innerHTML = sections;
+	selectionInfo.hidden = !sections;
 }
 
 async function fetchJson (path) {
@@ -137,6 +166,7 @@ async function loadData () {
 		newWarlockButton.disabled = false;
 		newCharacterButton.disabled = false;
 		for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = false;
+		showSelectionInfo();
 		status.textContent = "Reference character ready. Choose another example or open a saved character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -146,6 +176,8 @@ async function loadData () {
 		retryButton.hidden = false;
 	}
 }
+
+for (const select of [speciesSelect, classSelect, backgroundSelect]) select.addEventListener("change", showSelectionInfo);
 
 exampleSelect.addEventListener("change", () => {
 	const example = examples.find(candidate => candidate.id === exampleSelect.value);

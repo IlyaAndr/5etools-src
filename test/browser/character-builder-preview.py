@@ -813,6 +813,30 @@ def main():
             assert retained_warlock['session'] == mixed_warlock['session']
 
             # Compose a cross-preset character through the independent selectors.
+            # Each selection shows its original 5etools text beside the controls.
+            info = page.locator('#new-character-info')
+            assert info.is_visible()
+            page.select_option('#new-species', 'Tiefling|XPHB')
+            page.select_option('#new-class', 'Warlock|XPHB')
+            page.select_option('#new-background', 'Soldier|XPHB')
+            assert 'Fiendish Legacy' in info.inner_text()
+            assert 'Pact Magic' in info.inner_text()
+            assert 'Action Surge' not in info.inner_text()
+            page.select_option('#new-species', 'Gnome|XPHB')
+            assert 'Gnomish Lineage' in info.inner_text()
+            page.select_option('#new-class', 'Fighter|XPHB')
+            assert 'Action Surge' in info.inner_text()
+            page.select_option('#new-class', 'Warlock|XPHB')
+            # Every reviewed selection renders its own source text.
+            for value in page.locator('#new-species option').evaluate_all("options => options.map(option => option.value)"):
+                page.select_option('#new-species', value)
+                assert info.locator('[data-info="species"]').inner_text().strip()
+            for value in page.locator('#new-class option').evaluate_all("options => options.map(option => option.value)"):
+                page.select_option('#new-class', value)
+                assert info.locator('[data-info="class"]').inner_text().strip()
+            for value in page.locator('#new-background option').evaluate_all("options => options.map(option => option.value)"):
+                page.select_option('#new-background', value)
+                assert info.locator('[data-info="background"]').inner_text().strip()
             page.select_option('#new-species', 'Gnome|XPHB')
             page.select_option('#new-class', 'Warlock|XPHB')
             page.select_option('#new-background', 'Soldier|XPHB')
