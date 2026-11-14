@@ -25,6 +25,7 @@ const listElements = {
 	background: document.getElementById("background-list"),
 };
 const selection = {species: "", class: "", background: ""};
+const characterName = document.getElementById("character-name");
 
 let catalog;
 let sheetContext;
@@ -47,6 +48,8 @@ function showDocument (character) {
 	const model = createCharacterSheetModel(character, catalog, sheetContext);
 	const html = renderCharacterSheet(model, catalog);
 	preview.innerHTML = html;
+	if (document.activeElement !== characterName) characterName.value = character.name;
+	characterName.disabled = false;
 	const pages = preview.querySelectorAll(".cb-page").length;
 	pageCount.textContent = pages ? `${pages} ${pages === 1 ? "page" : "pages"} to print.` : "";
 	document.title = `${character.name} — Character Builder`;
@@ -196,6 +199,26 @@ async function loadData () {
 		retryButton.hidden = false;
 	}
 }
+
+/** Rename the current character without leaving the page. */
+characterName.addEventListener("input", () => {
+	characterName.setCustomValidity("");
+	if (!currentCharacter) return;
+	const name = characterName.value.trim();
+	if (!name) return;
+	editor?.setName(name);
+	try {
+		const result = showDocument({...currentCharacter, name});
+		status.textContent = result === "complete" ? "Character sheet updated." : "Complete the choices in the editor to calculate the full sheet.";
+	} catch (error) {
+		showError(`Could not rename this character. ${error.message}`);
+	}
+});
+characterName.addEventListener("change", () => {
+	if (characterName.value.trim()) return;
+	characterName.setCustomValidity("Enter a character name.");
+	characterName.reportValidity();
+});
 
 importInput.addEventListener("change", async () => {
 	const file = importInput.files[0];

@@ -347,6 +347,35 @@
 .cb-page-count {
 	font-weight: 700;
 }
+.cb-name {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	max-width: 420px;
+	margin: 12px 0 0;
+}
+.cb-name label {
+	font-weight: 700;
+	white-space: nowrap;
+}
+.cb-name input {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 38px;
+	border: 1px solid var(--cb-line);
+	border-radius: 6px;
+	padding: 8px 12px;
+	font: inherit;
+	color: var(--cb-ink);
+	background: var(--cb-paper);
+}
+.cb-name input:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--cb-accent) 45%, transparent);
+	outline-offset: 2px;
+}
+.cb-name input:disabled {
+	opacity: 0.5;
+}
 .cb-start {
 	display: grid;
 	gap: 16px;

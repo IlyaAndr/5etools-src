@@ -492,26 +492,12 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		heading.append(title, close);
 		const intro = element("p", profile.intro, "cb-editor__intro");
 		const basic = element("div", null, "cb-editor__grid");
-		const name = element("input");
-		name.type = "text";
-		name.dataset.cbFocus = "character:name";
-		name.maxLength = 200;
-		name.value = character.name;
-		name.addEventListener("change", () => {
-			if (!name.value.trim()) {
-				name.setCustomValidity("Enter a character name.");
-				name.reportValidity();
-				return;
-			}
-			name.setCustomValidity("");
-			publish({...character, name: name.value}, false);
-		});
 		const level = select(Array.from({length: Math.max(1, maxLevelFor(character))}, (_, index) => ({id: `${index + 1}`, label: `Level ${index + 1}`})), `${character.build.level}`);
 		level.remove(0);
 		level.dataset.cbFocus = "character:level";
 		level.value = `${character.build.level}`;
 		level.addEventListener("change", () => updateBuild({level: Number(level.value)}));
-		basic.append(field("Character name", name), field("Level", level));
+		basic.append(field("Level", level));
 		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
 		const scores = renderScores(descriptors);
 		const choices = element("div", null, "cb-editor__choices");
@@ -566,5 +552,11 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			render();
 		},
 		close () { container.hidden = true; },
+		// The page owns the character name, so the editor only keeps its copy in step.
+		setName (name) {
+			if (!character || typeof name !== "string" || !name.trim() || character.name === name) return false;
+			character = {...character, name};
+			return true;
+		},
 	};
 }

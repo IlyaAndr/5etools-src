@@ -27,8 +27,9 @@ Pick one species, class, and background from the three lists, then select
 the current choice on the right — the race summary (creature type, size, speed)
 and traits, the class Core Traits and Multiclassing blocks with its features by
 level, and the background entry — so the options can be compared without leaving
-the page. Edit a supported imported build, open a saved character file, or import
-a reference build, then select **Print / Save PDF**.
+the page. The **character name** sits above the lists and renames the current
+character (and its sheet title) as you type. Edit a supported imported build, open
+a saved character file, or import a reference build, then select **Print / Save PDF**.
 Use A4 portrait, 100% scale, and disable browser headers and footers. A complete
 build produces a main sheet and separate references. Full descriptions and
 long imported notes may add pages; they are not clipped to fit one page.

@@ -361,8 +361,8 @@ def main():
             assert 'Chain Mail' in group_text(page, editor, 'Starting Equipment')
             assert 'Defense' in group_text(page, editor, 'Fighting Style')
             assert 'Dice Set' in group_text(page, editor, 'Background Tool')
-            editor.get_by_label('Character name').fill('Created fighter')
-            editor.get_by_label('Character name').press('Tab')
+            page.get_by_label('Character name').fill('Created fighter')
+            page.get_by_label('Character name').press('Tab')
             # The method decides the control: standard-array values are picked
             # from the ones no other ability uses, so duplicates cannot be
             # entered and the remaining values stay visible.
@@ -488,8 +488,8 @@ def main():
             page.wait_for_function("document.querySelector('#status').textContent.startsWith('Opened character.json')")
             page.click('#edit-fighter')
             assert 'custom:unknown-choice: custom-value' in editor.inner_text()
-            editor.get_by_label('Character name').fill('Edited fighter')
-            editor.get_by_label('Character name').press('Tab')
+            page.get_by_label('Character name').fill('Edited fighter')
+            page.get_by_label('Character name').press('Tab')
             with page.expect_download() as download_info:
                 page.click('#save-character')
             retained = json.loads(Path(download_info.value.path()).read_text())
@@ -548,13 +548,6 @@ def main():
                 window.testAcceptedCharacter = () => accepted;
             }''')
             transaction = page.locator('#transaction-test-editor')
-            rejected_name = transaction.get_by_label('Character name')
-            rejected_name.focus()
-            rejected_name.fill('Rejected edit')
-            rejected_name.dispatch_event('change')
-            assert transaction.get_by_label('Character name').input_value() == 'New Character'
-            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:name'
-            assert page.evaluate('window.testAcceptedCharacter().name') == 'New Character'
             rejected_score = transaction.get_by_label('Strength', exact=True)
             rejected_score.focus()
             rejected_score.select_option('15')
@@ -591,8 +584,8 @@ def main():
             assert any('Healing Word' in text for text in cleric_spells)
             assert len(cleric_spells) > 2
             assert 'Leather Armor' in group_text(page, editor, 'Starting Equipment')
-            editor.get_by_label('Character name').fill('Created warlock')
-            editor.get_by_label('Character name').press('Tab')
+            page.get_by_label('Character name').fill('Created warlock')
+            page.get_by_label('Character name').press('Tab')
             for ability, value in {'Strength': 8, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 15}.items():
                 editor.get_by_label(ability, exact=True).select_option(str(value))
             for label, value in {
