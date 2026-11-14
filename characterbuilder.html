@@ -76,41 +76,54 @@
 	<div class="cb-app">
 	<header class="cb-toolbar">
 		<p class="cb-toolbar__eyebrow">D&amp;D 2024 · Character Builder</p>
-		<h1 class="cb-toolbar__title">Your character, on paper.</h1>
+		<h1 class="cb-toolbar__title">Your character</h1>
 		<p class="cb-toolbar__intro">Create a character, review a sheet, and print it or save it as a PDF.</p>
+		<div class="cb-name">
+			<label for="character-name">Character name</label>
+			<input id="character-name" type="text" maxlength="200" autocomplete="off" spellcheck="false" placeholder="Name your character" disabled>
+		</div>
+		<div class="cb-start">
+			<div class="cb-start__row cb-editor__option-picker">
+				<fieldset class="cb-editor__group">
+					<legend>Species</legend>
+					<div id="species-list" class="cb-editor__options" role="radiogroup" aria-label="Species"></div>
+				</fieldset>
+				<div class="cb-editor__option-info" data-info="species" aria-live="polite" hidden></div>
+			</div>
+			<div class="cb-start__row cb-editor__option-picker">
+				<fieldset class="cb-editor__group">
+					<legend>Class</legend>
+					<div id="class-list" class="cb-editor__options" role="radiogroup" aria-label="Class"></div>
+				</fieldset>
+				<div class="cb-editor__option-info" data-info="class" aria-live="polite" hidden></div>
+			</div>
+			<div class="cb-start__row cb-editor__option-picker">
+				<fieldset class="cb-editor__group">
+					<legend>Background</legend>
+					<div id="background-list" class="cb-editor__options" role="radiogroup" aria-label="Background"></div>
+				</fieldset>
+				<div class="cb-editor__option-info" data-info="background" aria-live="polite" hidden></div>
+			</div>
+		</div>
 		<div class="cb-controls">
-			<button id="new-fighter" class="cb-button cb-button--primary" type="button" disabled>New Fighter</button>
-			<button id="new-warlock" class="cb-button cb-button--primary" type="button" disabled>New Warlock</button>
-			<div class="cb-control">
-				<label for="new-species">Species</label>
-				<select id="new-species" disabled></select>
+			<div class="cb-actions">
+				<button id="new-character" class="cb-button cb-button--primary" type="button" disabled>New character</button>
+				<button id="edit-fighter" class="cb-button" type="button" disabled>Edit character</button>
 			</div>
-			<div class="cb-control">
-				<label for="new-class">Class</label>
-				<select id="new-class" disabled></select>
+			<div class="cb-actions">
+				<label class="cb-button cb-button--file">
+					<span>Open character JSON</span>
+					<input id="character-import" class="cb-file-input" type="file" accept=".json,application/json" disabled>
+				</label>
+				<button id="save-character" class="cb-button" type="button" disabled>Save JSON</button>
 			</div>
-			<div class="cb-control">
-				<label for="new-background">Background</label>
-				<select id="new-background" disabled></select>
+			<div class="cb-actions">
+				<label class="cb-toggle" for="compact-sheet">
+					<input id="compact-sheet" type="checkbox">
+					<span>Compact print</span>
+				</label>
+				<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
 			</div>
-			<button id="new-character" class="cb-button cb-button--primary" type="button" disabled>New character</button>
-			<button id="edit-fighter" class="cb-button" type="button" disabled>Edit character</button>
-			<div class="cb-control">
-				<label for="example-select">Example character</label>
-				<select id="example-select" disabled>
-					<option value="">Choose an example</option>
-				</select>
-			</div>
-			<div class="cb-control">
-				<label for="character-import">Open character JSON</label>
-				<input id="character-import" type="file" accept=".json,application/json" disabled>
-			</div>
-			<div class="cb-control cb-control--check">
-				<label for="compact-sheet">Compact print</label>
-				<input id="compact-sheet" type="checkbox">
-			</div>
-			<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
-			<button id="save-character" class="cb-button" type="button" disabled>Save JSON</button>
 		</div>
 		<p id="status" class="cb-status" role="status" aria-live="polite">Loading character data…</p>
 		<p id="error-message" class="cb-error" role="alert" hidden></p>

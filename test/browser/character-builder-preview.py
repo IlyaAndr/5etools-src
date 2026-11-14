@@ -75,13 +75,16 @@ def upload(page, document, filename='character.json'):
     })
 
 
+def pick(page, kind, value):
+    page.click(f'#{kind}-list [data-value="{value}"]')
+
+
+def group(editor, page, label):
+    return editor.locator('fieldset').filter(has=page.locator(f'legend:text-is("{label}")'))
+
+
 def group_text(page, editor, label):
-    return editor.locator('fieldset').filter(
-        has=page.locator(f'legend:text-is("{label}")')).first.inner_text()
-
-
-def select_texts(editor, label):
-    return editor.get_by_label(label, exact=True).locator('option').all_inner_texts()
+    return group(editor, page, label).first.inner_text()
 
 
 def final_score(editor, label):
@@ -124,7 +127,7 @@ def main():
             player.locator(':scope > a').click()
             builder_link.locator('a').click()
             page.wait_for_url('**/characterbuilder.html')
-            page.wait_for_selector('.cb-character-sheet')
+            page.wait_for_selector('.cb-start-note')
             assert 've-active' in page.locator('#navbar li[data-page="characterbuilder.html"]').get_attribute('class')
             assert 've-active' in page.locator('#navbar > li.dropdown').filter(has=page.locator('li[data-page="characterbuilder.html"]')).get_attribute('class')
             page.set_viewport_size({'width': 390, 'height': 844})
@@ -135,14 +138,27 @@ def main():
             page.wait_for_url('**/statgen.html')
             page.set_viewport_size({'width': 1100, 'height': 1300})
             page.goto(url, wait_until='networkidle')
-            page.wait_for_selector('.cb-character-sheet')
-            assert page.locator('#print-sheet').is_enabled()
-            options = page.locator('#example-select option').evaluate_all(
-                'options => options.filter(option => option.value).map(option => ({value:option.value,label:option.textContent}))'
-            )
-            assert len(options) == 6, options
+            page.wait_for_selector('.cb-start-note')
+            assert page.locator('#print-sheet').is_disabled()
+            assert page.locator('#species-list .cb-editor__option').count() == 10
+            assert page.locator('#class-list .cb-editor__option').count() == 2
+            assert page.locator('#background-list .cb-editor__option').count() == 16
+            # The controls are grouped, and the file picker looks like a button.
+            assert page.locator('.cb-controls .cb-actions').count() == 3
+            assert page.locator('.cb-actions').last.locator('#print-sheet').count() == 1
+            assert page.locator('.cb-button--file').is_visible()
+            assert page.locator('.cb-toggle').is_visible()
+            page.wait_for_function("document.querySelector('#status').textContent.startsWith('Choose a species')")
+            examples = page.evaluate('''async () => {
+                const {createSheetExamples} = await import('/js/character-builder/sheet-examples.js');
+                const rules = await (await fetch('/js/character-builder/rules/character-sheet.json')).json();
+                return createSheetExamples(rules.dataset).map(example => ({id: example.id, document: example.document}));
+            }''')
+            assert len(examples) == 6, examples
+            options = [{'value': example['id'], 'document': example['document']} for example in examples]
             for option in options:
-                page.select_option('#example-select', option['value'])
+                upload(page, option['document'], f"{option['value']}.json")
+                page.wait_for_function(f"document.querySelector('#status').textContent.startsWith('Opened {option['value']}.json')")
                 page.wait_for_selector('.cb-spell-reference')
                 sheet = page.locator('.cb-character-sheet')
                 assert sheet.get_attribute('data-sheet-status') == 'complete'
@@ -194,13 +210,11 @@ def main():
                 page.set_viewport_size({'width': 1100, 'height': 1300})
 
             before = page.locator('#sheet-preview').inner_html()
-            selected = page.locator('#example-select').input_value()
             page.locator('#character-import').set_input_files({
                 'name': 'invalid.json', 'mimeType': 'application/json', 'buffer': b'{'
             })
             page.wait_for_function("document.querySelector('#error-message').textContent.toLowerCase().includes('invalid')")
             assert page.locator('#sheet-preview').inner_html() == before
-            assert page.locator('#example-select').input_value() == selected
 
             document = page.evaluate('''async () => {
                 const {createSheetExamples} = await import('/js/character-builder/sheet-examples.js');
@@ -253,22 +267,17 @@ def main():
             document['name'] = 'Delayed imported character'
             upload(page, document)
             page.wait_for_function("typeof window.previewResolveFile === 'function'")
-            page.evaluate('''() => {
-                const select = document.querySelector('#example-select');
-                select.value = '';
-                select.dispatchEvent(new Event('change'));
-            }''')
             page.evaluate('text => window.previewResolveFile(text)', json.dumps(document))
             page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Delayed imported character'")
             assert page.locator('#print-sheet').is_enabled()
 
-            # Selecting a real example cancels both stale successful and failed reads.
+            # Starting another character cancels both stale successful and failed reads.
             for reject in [False, True]:
                 page.evaluate('window.previewResolveFile=null; window.previewRejectFile=null')
                 document['name'] = 'Stale imported character'
                 upload(page, document)
                 page.wait_for_function("typeof window.previewResolveFile === 'function'")
-                page.select_option('#example-select', options[0]['value'])
+                page.click('#new-character')
                 expected_html = page.locator('#sheet-preview').inner_html()
                 page.evaluate('''async ({text, reject}) => {
                     if (reject) window.previewRejectFile(new Error('Stale file failure'));
@@ -319,11 +328,17 @@ def main():
             assert page.evaluate('window.previewPrintCalled') is True
 
             # Build and revise a character through the editor, then round-trip its save.
-            page.click('#new-fighter')
+            pick(page, 'species', 'Gnome|XPHB')
+            pick(page, 'class', 'Fighter|XPHB')
+            pick(page, 'background', 'Soldier|XPHB')
+            page.click('#new-character')
             with page.expect_download() as download_info:
                 page.click('#save-character')
             first_id = json.loads(Path(download_info.value.path()).read_text())['id']
-            page.click('#new-fighter')
+            pick(page, 'species', 'Gnome|XPHB')
+            pick(page, 'class', 'Fighter|XPHB')
+            pick(page, 'background', 'Soldier|XPHB')
+            page.click('#new-character')
             with page.expect_download() as download_info:
                 page.click('#save-character')
             assert json.loads(Path(download_info.value.path()).read_text())['id'] != first_id
@@ -345,8 +360,8 @@ def main():
             assert 'Chain Mail' in group_text(page, editor, 'Starting Equipment')
             assert 'Defense' in group_text(page, editor, 'Fighting Style')
             assert 'Dice Set' in group_text(page, editor, 'Background Tool')
-            editor.get_by_label('Character name').fill('Created fighter')
-            editor.get_by_label('Character name').press('Tab')
+            page.get_by_label('Character name').fill('Created fighter')
+            page.get_by_label('Character name').press('Tab')
             # The method decides the control: standard-array values are picked
             # from the ones no other ability uses, so duplicates cannot be
             # entered and the remaining values stay visible.
@@ -472,8 +487,8 @@ def main():
             page.wait_for_function("document.querySelector('#status').textContent.startsWith('Opened character.json')")
             page.click('#edit-fighter')
             assert 'custom:unknown-choice: custom-value' in editor.inner_text()
-            editor.get_by_label('Character name').fill('Edited fighter')
-            editor.get_by_label('Character name').press('Tab')
+            page.get_by_label('Character name').fill('Edited fighter')
+            page.get_by_label('Character name').press('Tab')
             with page.expect_download() as download_info:
                 page.click('#save-character')
             retained = json.loads(Path(download_info.value.path()).read_text())
@@ -532,13 +547,6 @@ def main():
                 window.testAcceptedCharacter = () => accepted;
             }''')
             transaction = page.locator('#transaction-test-editor')
-            rejected_name = transaction.get_by_label('Character name')
-            rejected_name.focus()
-            rejected_name.fill('Rejected edit')
-            rejected_name.dispatch_event('change')
-            assert transaction.get_by_label('Character name').input_value() == 'New Character'
-            assert page.evaluate("document.activeElement.dataset.cbFocus") == 'character:name'
-            assert page.evaluate('window.testAcceptedCharacter().name') == 'New Character'
             rejected_score = transaction.get_by_label('Strength', exact=True)
             rejected_score.focus()
             rejected_score.select_option('15')
@@ -552,7 +560,10 @@ def main():
 
             # Create a Warlock from scratch and verify level-based spell grants.
             page.locator('#transaction-test-editor').evaluate('(element) => element.remove()')
-            page.click('#new-warlock')
+            pick(page, 'species', 'Tiefling|XPHB')
+            pick(page, 'class', 'Warlock|XPHB')
+            pick(page, 'background', 'Acolyte|XPHB')
+            page.click('#new-character')
             editor = page.locator('#fighter-editor')
             assert 'Warlock editor' in editor.inner_text()
             # The class fixes Charisma, so every selected source allows exactly
@@ -568,24 +579,34 @@ def main():
             assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
             assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
             assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
-            cleric_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
-            assert any('Healing Word' in text for text in cleric_spells)
-            assert len(cleric_spells) > 2
-            assert 'Leather Armor' in group_text(page, editor, 'Starting Equipment')
-            editor.get_by_label('Character name').fill('Created warlock')
-            editor.get_by_label('Character name').press('Tab')
+            cleric_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Level 1 Spell")'))
+            assert cleric_group.locator('input[type=radio]').count() > 3
+            assert cleric_group.locator('select').count() == 0
+            assert cleric_group.get_by_label('Healing Word', exact=True).count() == 1
+            equipment_text = group_text(page, editor, 'Starting Equipment')
+            assert 'Leather Armor' in equipment_text
+            assert equipment_text.count('Leather Armor') == 1
+            assert editor.locator('legend:text-is("Warlock Skill Proficiencies")').count() == 1
+            page.get_by_label('Character name').fill('Created warlock')
+            page.get_by_label('Character name').press('Tab')
             for ability, value in {'Strength': 8, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 15}.items():
                 editor.get_by_label(ability, exact=True).select_option(str(value))
             for label, value in {
                 'Fiendish Legacy': 'infernal',
                 'Size': 'medium',
                 'Background Ability Increases': 'cha-2.wis-1',
-                'Eldritch Invocations': 'eldritch-mind|xphb',
             }.items():
                 editor.get_by_label(label, exact=True).select_option(value)
+            editor.get_by_label('Eldritch Mind', exact=True).check()
+            # An invocation choice shows the invocation's own text, so the
+            # player does not have to look the name up elsewhere.
+            invocation_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Eldritch Invocations")'))
+            assert invocation_group.locator('.cb-editor__option-picker').count() == 1
+            editor.get_by_label('Eldritch Mind', exact=True).focus()
+            assert 'Advantage on Constitution saving throws' in invocation_group.locator('.cb-editor__option-info').inner_text()
             # Magic Initiate's level-1 spell is a real choice, so the player
             # selects the spell the feat's free cast uses.
-            editor.get_by_label('Magic Initiate (Cleric) Level 1 Spell', exact=True).select_option('spell:healing-word|xphb')
+            editor.get_by_label('Healing Word', exact=True).check()
             # Long option lists can be narrowed by name. Filtering never changes
             # saved decisions; selected entries stay visible, and the query
             # survives an editor redraw.
@@ -606,6 +627,48 @@ def main():
             assert editor.locator('.cb-editor__filter-status').filter(has_text='No options match this filter').count() == 0
             for label in ['Draconic', 'Elvish', 'Arcana', 'Intimidation', 'Guidance', 'Light', 'Eldritch Blast', 'Mind Sliver', 'Armor of Agathys', 'Hex']:
                 editor.get_by_label(label, exact=True).check()
+            # Spell groups show the selected spell's text on the right.
+            cantrip_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Warlock Cantrips")'))
+            assert cantrip_group.locator('.cb-editor__option-picker').count() == 1
+            editor.get_by_label('Blade Ward', exact=True).hover()
+            assert 'attacker subtracts' in cantrip_group.locator('.cb-editor__option-info').inner_text()
+            editor.get_by_label('Eldritch Blast', exact=True).focus()
+            assert 'beam of crackling energy' in cantrip_group.locator('.cb-editor__option-info').inner_text()
+            # A preview repeats the site's stat block, not just the prose, and
+            # uses the same readable card as the species and background text.
+            magic_initiate = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Cantrips")'))
+            editor.get_by_label('Light', exact=True).focus()
+            light_text = magic_initiate.locator('.cb-editor__option-info').inner_text()
+            assert 'Evocation Cantrip' in light_text, light_text[:200]
+            assert 'Casting Time: Action' in light_text, light_text[:200]
+            assert 'Range: Touch' in light_text, light_text[:200]
+            assert 'Components: V, M (a firefly or phosphorescent moss)' in light_text, light_text[:200]
+            assert 'Duration: 1 hour' in light_text, light_text[:200]
+            card = magic_initiate.locator('.cb-editor__option-info').evaluate(
+                'el => ({size: parseFloat(getComputedStyle(el).fontSize), bg: getComputedStyle(el).backgroundColor})')
+            assert card['size'] >= 13, card
+            assert card['bg'] == page.locator('.cb-editor__option-info').first.evaluate(
+                'el => getComputedStyle(el).backgroundColor'), card
+            # The school keeps the site's own colour instead of plain ink.
+            school = magic_initiate.locator('.cb-editor__option-info span.ve-sp__school--v')
+            assert school.count() == 1
+            assert school.evaluate('el => getComputedStyle(el).color') != magic_initiate.locator(
+                '.cb-editor__option-info').evaluate('el => getComputedStyle(el).color')
+            prepared_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Prepared Warlock Spells")'))
+            assert 'curse on a creature' in prepared_group.locator('.cb-editor__option-info').inner_text()
+            # The list and its description share the group without spilling
+            # out, and the description keeps the larger half of a wide editor.
+            boxes = editor.locator('.cb-editor__option-picker').evaluate_all('''els => els.map(el => {
+                const info = el.querySelector('.cb-editor__option-info');
+                return {
+                    overflow: el.scrollWidth - el.clientWidth,
+                    info: Math.round(info.getBoundingClientRect().width),
+                    infoOverflow: info.scrollWidth - info.clientWidth,
+                };
+            })''')
+            assert boxes and not any(box['overflow'] or box['infoOverflow'] for box in boxes), boxes
+            assert min(box['info'] for box in boxes) > 300, boxes
+            assert editor.locator('.cb-editor__group--wide').count() >= 2
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 0
             assert page.locator('.cb-resource').filter(has_text='Pact Magic').count() == 1
@@ -720,8 +783,11 @@ def main():
             editor.get_by_label('Pact of the Blade', exact=True).check()
             editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
             editor.get_by_label('Lifedrinker', exact=True).check()
+            # Cleric spells such as Bane also appear in the Magic Initiate list,
+            # so these checks stay inside the prepared-spells group.
+            prepared = group(editor, page, 'Prepared Warlock Spells')
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
-                editor.get_by_label(label, exact=True).check()
+                prepared.get_by_label(label, exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert 'Lifedrinker: 1d6 Necrotic, Psychic, or Radiant' in page.locator('.cb-attack-panel').inner_text()
             assert 'expend one to regain 1d8' in page.locator('.cb-resource').filter(has_text='Hit Dice').inner_text()
@@ -738,7 +804,7 @@ def main():
             editor.get_by_label('Lifedrinker', exact=True).uncheck()
             editor.get_by_label('Pact of the Blade', exact=True).uncheck()
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
-                editor.get_by_label(label, exact=True).uncheck()
+                prepared.get_by_label(label, exact=True).uncheck()
             editor.get_by_label('Level', exact=True).select_option('5')
             # The level-8 slot no longer exists at level 5, so its saved choices
             # stay visible as surplus decisions until they are cleared.
@@ -813,9 +879,62 @@ def main():
             assert retained_warlock['session'] == mixed_warlock['session']
 
             # Compose a cross-preset character through the independent selectors.
-            page.select_option('#new-species', 'Gnome|XPHB')
-            page.select_option('#new-class', 'Warlock|XPHB')
-            page.select_option('#new-background', 'Soldier|XPHB')
+            # Each selection sits in its own row, with its original 5etools text
+            # in the column beside it.
+            species_info = page.locator('.cb-editor__option-info[data-info="species"]')
+            class_info = page.locator('.cb-editor__option-info[data-info="class"]')
+            background_info = page.locator('.cb-editor__option-info[data-info="background"]')
+            pick(page, 'species', 'Tiefling|XPHB')
+            pick(page, 'class', 'Warlock|XPHB')
+            pick(page, 'background', 'Soldier|XPHB')
+            assert 'Fiendish Legacy' in species_info.inner_text()
+            assert 'Creature Type' in species_info.inner_text()
+            assert 'Speed:' in species_info.inner_text()
+            assert 'Ability Scores' in background_info.inner_text()
+            assert 'Core Traits' in class_info.inner_text()
+            assert 'Primary Ability' in class_info.inner_text()
+            assert 'Multiclassing' in class_info.inner_text()
+            assert 'Source:' in class_info.inner_text()
+            assert 'Pact Magic' in class_info.inner_text()
+            assert 'Action Surge' not in class_info.inner_text()
+            # The three rows share one grid, so every description starts in the
+            # same column, level with its own list.
+            layout = page.locator('.cb-start__row').evaluate_all('''rows => rows.map(row => {
+                const picker = row.querySelector('.cb-editor__group').getBoundingClientRect();
+                const info = row.querySelector('.cb-editor__option-info');
+                const box = info.getBoundingClientRect();
+                return {
+                    pickerRight: Math.round(picker.right),
+                    pickerTop: Math.round(picker.top),
+                    infoLeft: Math.round(box.left),
+                    infoTop: Math.round(box.top),
+                };
+            })''')
+            assert len(layout) == 3, layout
+            assert len({item['infoLeft'] for item in layout}) == 1, layout
+            assert all(item['infoLeft'] >= item['pickerRight'] for item in layout), layout
+            assert all(abs(item['infoTop'] - item['pickerTop']) <= 2 for item in layout), layout
+            pick(page, 'species', 'Aasimar|XPHB')
+            aasimar = species_info.inner_text()
+            assert 'Creature Type' in aasimar and 'Size:' in aasimar and 'Speed:' in aasimar
+            pick(page, 'species', 'Gnome|XPHB')
+            assert 'Gnomish Lineage' in species_info.inner_text()
+            pick(page, 'class', 'Fighter|XPHB')
+            assert 'Action Surge' in class_info.inner_text()
+            pick(page, 'class', 'Warlock|XPHB')
+            # Every reviewed selection renders its own source text.
+            for value in page.locator('#species-list input').evaluate_all("inputs => inputs.map(input => input.dataset.value)"):
+                pick(page, 'species', value)
+                assert species_info.inner_text().strip()
+            for value in page.locator('#class-list input').evaluate_all("inputs => inputs.map(input => input.dataset.value)"):
+                pick(page, 'class', value)
+                assert class_info.inner_text().strip()
+            for value in page.locator('#background-list input').evaluate_all("inputs => inputs.map(input => input.dataset.value)"):
+                pick(page, 'background', value)
+                assert background_info.inner_text().strip()
+            pick(page, 'species', 'Gnome|XPHB')
+            pick(page, 'class', 'Warlock|XPHB')
+            pick(page, 'background', 'Soldier|XPHB')
             page.click('#new-character')
             editor = page.locator('#fighter-editor')
             assert 'Character editor' in editor.inner_text()
@@ -825,41 +944,41 @@ def main():
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
             # Every 2024 background is reviewed; Sage brings its own origin feat,
             # a fixed tool instead of a category choice, and the Wizard spell list.
-            page.select_option('#new-background', 'Sage|XPHB')
+            pick(page, 'background', 'Sage|XPHB')
             page.click('#new-character')
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Wizard) Spellcasting Ability')
-            wizard_spells = select_texts(editor, 'Magic Initiate (Wizard) Level 1 Spell')
-            assert any('Shield' in text for text in wizard_spells)
-            assert len(wizard_spells) > 2
+            wizard_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Wizard) Level 1 Spell")'))
+            assert wizard_group.get_by_label('Shield', exact=True).count() == 1
+            assert wizard_group.locator('input[type=radio]').count() > 3
             assert editor.get_by_label('Background Tool', exact=True).count() == 0
             # Dwarf and Halfling have no lineages and no species spells, so no
             # species spellcasting-ability group appears for them.
-            page.select_option('#new-species', 'Dwarf|XPHB')
-            page.select_option('#new-background', 'Soldier|XPHB')
+            pick(page, 'species', 'Dwarf|XPHB')
+            pick(page, 'background', 'Soldier|XPHB')
             page.click('#new-character')
             assert editor.get_by_label('Gnomish Lineage', exact=True).count() == 0
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             assert editor.get_by_label('Size', exact=True).count() == 0
             # Dragonborn and Goliath choose an ancestry that grants a resistance or
             # a trait, without any species spells.
-            page.select_option('#new-species', 'Dragonborn|XPHB')
+            pick(page, 'species', 'Dragonborn|XPHB')
             page.click('#new-character')
             assert editor.get_by_label('Draconic Ancestry', exact=True).count() == 1
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             for label in ['Acid', 'Cold', 'Fire', 'Lightning', 'Poison']:
                 assert label in group_text(page, editor, 'Draconic Ancestry')
-            page.select_option('#new-species', 'Goliath|XPHB')
+            pick(page, 'species', 'Goliath|XPHB')
             page.click('#new-character')
             assert "Storm's Thunder" in group_text(page, editor, 'Giant Ancestry')
             # Aasimar has no lineage or ability choice: only its size is asked.
-            page.select_option('#new-species', 'Aasimar|XPHB')
+            pick(page, 'species', 'Aasimar|XPHB')
             page.click('#new-character')
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             assert 'Medium' in group_text(page, editor, 'Size')
             assert 'Small' in group_text(page, editor, 'Size')
             # Elf picks a lineage and one Keen Senses skill; High Elf also picks a
             # cantrip from the reviewed Wizard list.
-            page.select_option('#new-species', 'Elf|XPHB')
+            pick(page, 'species', 'Elf|XPHB')
             page.click('#new-character')
             assert 'Wood Elf' in group_text(page, editor, 'Elven Lineage')
             assert 'Survival' in group_text(page, editor, 'Skill')
@@ -867,7 +986,7 @@ def main():
             editor.get_by_label('Elven Lineage', exact=True).select_option('high-elf')
             assert 'Minor Illusion' in group_text(page, editor, 'Elf Cantrip')
             # Human chooses any skill and an Origin feat from its species slot.
-            page.select_option('#new-species', 'Human|XPHB')
+            pick(page, 'species', 'Human|XPHB')
             page.click('#new-character')
             assert 'Medicine' in group_text(page, editor, 'Skill')
             assert 'Magic Initiate' in group_text(page, editor, 'Origin Feat')
@@ -877,9 +996,9 @@ def main():
             editor.get_by_label('Origin Feat', exact=True).select_option('magic-initiate-cleric|xphb')
             assert 'Sacred Flame' in group_text(page, editor, 'Magic Initiate (Cleric) Cantrips')
             assert 'Wisdom' in group_text(page, editor, 'Magic Initiate (Cleric) Spellcasting Ability')
-            slot_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
-            assert any('Healing Word' in text for text in slot_spells)
-            assert len(slot_spells) > 2
+            slot_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Level 1 Spell")'))
+            assert slot_group.get_by_label('Healing Word', exact=True).count() == 1
+            assert slot_group.locator('input[type=radio]').count() > 3
             assert not errors, errors
         finally:
             browser.close()

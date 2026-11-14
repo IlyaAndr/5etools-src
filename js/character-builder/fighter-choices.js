@@ -68,7 +68,7 @@ export function getFighterClassChoiceDescriptors (document, {rules, sources} = {
 	});
 	const masteryOptions = Object.entries(rules.weapons).map(([id, weapon]) => option(id, `${weapon.name} (${weapon.mastery})`));
 	const result = [
-		descriptor("class:fighter|xphb:skills", "Fighter Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => {
+		descriptor("class:fighter|xphb:skills", "Fighter Skill Proficiencies", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => {
 			if (!skills.has(id)) throw new TypeError(`Missing skill ${id} in the skills catalog.`);
 			return option(id, skills.get(id));
 		})),

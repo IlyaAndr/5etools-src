@@ -22,12 +22,16 @@ and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
 
-Select **New Fighter** or **New Warlock** for a reference preset, choose a
-species, class, and background and select **New character** for another
-combination, or edit a supported imported build.
-Choose an example or open a saved character file, then select **Print / Save PDF**.
-Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
-examples produce a main sheet and separate references. Full descriptions and
+Pick one species, class, and background from the three lists, then select
+**New character**; the lists sit on the left and the original 5etools blocks of
+the current choice on the right — the race summary (creature type, size, speed)
+and traits, the class Core Traits and Multiclassing blocks with its features by
+level, and the background entry — so the options can be compared without leaving
+the page. The **character name** sits above the lists and renames the current
+character (and its sheet title) as you type. Edit a supported imported build, open
+a saved character file, or import a reference build, then select **Print / Save PDF**.
+Use A4 portrait, 100% scale, and disable browser headers and footers. A complete
+build produces a main sheet and separate references. Full descriptions and
 long imported notes may add pages; they are not clipped to fit one page.
 
 ## Current scope
@@ -71,7 +75,19 @@ Equipment and
 invocation choice lists use reviewed annotations; Warlock spell lists and Magic
 Initiate cantrips come from the same 5etools filter expressions the site uses,
 evaluated against the pinned spell files, and single spell selects offer the
-site's filter search (`level=1 ritual`). An
+site's filter search (`level=1 ritual`). Spell groups show the chosen list on the
+left and the selected spell's full source text on the right: hovering, focusing,
+or selecting an entry previews it, and the preview stays on the spell you looked
+at through editor redraws. The preview repeats the site's stat block — level and
+school, casting time, range, components, and duration — above the entries, on the
+same card as the species and class text and at the same readable size (the page
+root is 10 px, so these texts use pixel sizes rather than rems). The school keeps
+the site's own colour (`ve-sp__school--*` from `css/main.css`). Such a group
+takes the full editor width, gives the text the larger share, and stacks the two
+above each other when it is narrow, so long descriptions are never clipped or
+pushed outside the box. A single-spell choice is the same list with radio rows
+and an explicit *No selection* row instead of a dropdown, and reviewed invocation
+options show the invocation's own text and prerequisite beside the list. An
 imported build with missing or unsupported choices produces an incomplete draft
 summary rather than invented statistics. Selections no longer available after a
 level change remain visible until the player explicitly removes them. Choice
@@ -99,7 +115,14 @@ silently replaced. Common is required for languages, is included automatically,
 and is explained by the rules text; the player chooses two further Standard
 languages. Rare languages are not offered yet.
 
-Species, background, origin-feat, class, and equipment choices are supplied by
+The starting area keeps one row per selection: the Species, Class, and Background
+lists share a column on the left, and each row's original 5etools text sits in the
+column beside it, so the three descriptions line up with the lists that produce
+them. These rows use the same option list and text card as the editor's choice
+groups — radio rows, the same borders and spacing, the same cream card at 14 px —
+so the start area and the editor read the same. A row stacks the two when the page
+is narrow, a description stays hidden until its list has a selection, and the start
+cards keep a 26 rem scroll limit because a class prints every feature it grants. Species, background, origin-feat, class, and equipment choices are supplied by
 independent providers and composed by shared code. All 16 XPHB backgrounds are
 reviewed: each brings its source ability list, two fixed skills, its tool (fixed,
 or one of every reviewed artisan's tool, musical instrument, or gaming set), its
@@ -226,9 +249,9 @@ resources, rests, and browser persistence belong to the later tracker PR.
 Import uses the existing document validator, reviewed species projector, and
 limited character-sheet model. Invalid documents and unsupported source pins
 produce an actionable error and keep the previous successful preview. Builds
-requiring unsupported or unfinished choices show a draft summary. A new example
-selection cancels an older pending file read. The current-character placeholder
-cannot leave the page stuck in a loading state.
+requiring unsupported or unfinished choices show a draft summary. Starting
+another character cancels an older pending file read. Importing never needs a
+placeholder document to stay usable.
 
 Names, notes, and source descriptions are escaped. Full ability and spell
 descriptions must retain the original 5etools content, with tags rendered as
@@ -256,7 +279,7 @@ Chrome/Chromium, plus `pdfinfo` and `pdftotext`. It starts a temporary server on
 Use `--browser /path/to/chrome` or `--output /path/to/artifacts` when needed.
 
 The check covers desktop and mobile navigation, character creation and edits,
-option filtering, JSON round-tripping, all six examples, 390-pixel mobile
+option filtering, JSON round-tripping, the six reference builds loaded through the import input, 390-pixel mobile
 layouts, A4 dimensions and page counts, invalid imports, delayed file-read
 races, pending choices, escaped HTML input, print-button behavior, and full long
 notes in the PDF.

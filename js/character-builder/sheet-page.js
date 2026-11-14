@@ -2,33 +2,33 @@ import {parseCharacterDocument, serializeCharacterDocument} from "./character-do
 import {createSpeciesCatalog} from "./species-catalog.js";
 import {renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
-import {createSheetExamples} from "./sheet-examples.js";
 import {createCharacterEditor} from "./character-editor.js";
 import {createEditorProfiles, getEditorCombinations} from "./editor-profile.js";
+import {renderSelectionInfo} from "./source-info.js";
 
-const exampleSelect = document.getElementById("example-select");
 const importInput = document.getElementById("character-import");
 const printButton = document.getElementById("print-sheet");
 const status = document.getElementById("status");
 const errorMessage = document.getElementById("error-message");
 const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
-const newFighterButton = document.getElementById("new-fighter");
-const newWarlockButton = document.getElementById("new-warlock");
 const newCharacterButton = document.getElementById("new-character");
-const speciesSelect = document.getElementById("new-species");
-const classSelect = document.getElementById("new-class");
-const backgroundSelect = document.getElementById("new-background");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
+const selectionInfo = new Map([...document.querySelectorAll(".cb-editor__option-info[data-info]")].map(slot => [slot.dataset.info, slot]));
 const compactToggle = document.getElementById("compact-sheet");
 const pageCount = document.getElementById("sheet-pages");
+const listElements = {
+	species: document.getElementById("species-list"),
+	class: document.getElementById("class-list"),
+	background: document.getElementById("background-list"),
+};
+const selection = {species: "", class: "", background: ""};
+const characterName = document.getElementById("character-name");
 
 let catalog;
 let sheetContext;
-let examples = [];
-let selectedExample = "";
 let hasPreview = false;
 let requestId = 0;
 let currentCharacter;
@@ -44,16 +44,16 @@ function showError (message) {
 	errorMessage.hidden = false;
 }
 
-function showDocument (character, exampleId = "") {
+function showDocument (character) {
 	const model = createCharacterSheetModel(character, catalog, sheetContext);
 	const html = renderCharacterSheet(model, catalog);
 	preview.innerHTML = html;
+	if (document.activeElement !== characterName) characterName.value = character.name;
+	characterName.disabled = false;
 	const pages = preview.querySelectorAll(".cb-page").length;
 	pageCount.textContent = pages ? `${pages} ${pages === 1 ? "page" : "pages"} to print.` : "";
 	document.title = `${character.name} — Character Builder`;
-	selectedExample = exampleId;
 	currentCharacter = character;
-	exampleSelect.value = exampleId;
 	hasPreview = true;
 	printButton.disabled = false;
 	saveButton.disabled = false;
@@ -64,6 +64,71 @@ function showDocument (character, exampleId = "") {
 	return model.status;
 }
 
+/**
+ * Render one picker list with the same rows the editor uses, so the starting
+ * choices read like the rest of the page; choosing a row is the selection.
+ */
+function renderList (kind, entries) {
+	listElements[kind].replaceChildren(...entries.map(entry => {
+		const row = document.createElement("label");
+		row.className = "cb-editor__option";
+		const input = document.createElement("input");
+		input.type = "radio";
+		input.name = kind;
+		input.value = `${entry.name}|${entry.source}`;
+		input.dataset.value = input.value;
+		input.setAttribute("aria-label", entry.name);
+		input.addEventListener("change", () => {
+			selection[kind] = input.value;
+			reflectSelection();
+			showSelectionInfo();
+		});
+		const name = document.createElement("span");
+		name.textContent = entry.name;
+		row.append(input, name);
+		return row;
+	}));
+}
+
+/** Mark the selected option in each list, so the choice is visible at a glance. */
+function reflectSelection () {
+	for (const [kind, container] of Object.entries(listElements)) {
+		for (const input of container.querySelectorAll("input")) input.checked = input.value === selection[kind];
+	}
+}
+
+/** The placeholder shown before the first character is created. */
+function startPrompt () {
+	return `<section class="cb-page cb-start-note"><h1>Choose a species, class, and background</h1><p>Pick one option in each list, then select <strong>New character</strong>. The calculated sheet appears here, ready to review, print, or save as a PDF.</p></section>`;
+}
+
+/** Show the original text of the species, class, and background being chosen. */
+function showSelectionInfo () {
+	if (!sheetContext) return;
+	const read = value => {
+		const [name, source] = `${value}`.split("|");
+		return name && source ? {name, source} : null;
+	};
+	for (const [kind, value] of [
+		["species", read(selection.species)],
+		["class", read(selection.class)],
+		["background", read(selection.background)],
+	]) {
+		const slot = selectionInfo.get(kind);
+		if (!slot) continue;
+		let info = null;
+		if (value) {
+			try {
+				info = renderSelectionInfo(sheetContext.sources, kind, value);
+			} catch (error) {
+				showError(`Could not show the ${kind} text. ${error.message}`);
+			}
+		}
+		slot.innerHTML = info ? info.html : "";
+		slot.hidden = !info;
+	}
+}
+
 async function fetchJson (path) {
 	const response = await fetch(new URL(path, import.meta.url));
 	if (!response.ok) throw new Error(`Data request failed (${response.status}).`);
@@ -72,12 +137,8 @@ async function fetchJson (path) {
 
 async function loadData () {
 	const currentRequest = ++requestId;
-	exampleSelect.disabled = true;
 	importInput.disabled = true;
-	newFighterButton.disabled = true;
-	newWarlockButton.disabled = true;
 	newCharacterButton.disabled = true;
-	for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = true;
 	editFighterButton.disabled = true;
 	saveButton.disabled = true;
 	printButton.disabled = true;
@@ -104,10 +165,13 @@ async function loadData () {
 		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
 		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, spellLookup, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
 		const combinations = getEditorCombinations({catalog, rules: characterSheetRules});
-		const fill = (select, entries) => select.replaceChildren(...entries.map(entry => new Option(entry.name, `${entry.name}|${entry.source}`)));
-		fill(speciesSelect, combinations.species);
-		fill(classSelect, combinations.classes);
-		fill(backgroundSelect, combinations.backgrounds);
+		renderList("species", combinations.species);
+		renderList("class", combinations.classes);
+		renderList("background", combinations.backgrounds);
+		selection.species = `${combinations.species[0].name}|${combinations.species[0].source}`;
+		selection.class = `${combinations.classes[0].name}|${combinations.classes[0].source}`;
+		selection.background = `${combinations.backgrounds[0].name}|${combinations.backgrounds[0].source}`;
+		reflectSelection();
 		editor = createCharacterEditor({
 			container: editorContainer,
 			catalog,
@@ -125,19 +189,12 @@ async function loadData () {
 				}
 			},
 		});
-		examples = createSheetExamples(catalog.dataset);
-		const importedOption = new Option("Current character", "");
-		importedOption.disabled = true;
-		exampleSelect.replaceChildren(importedOption);
-		for (const example of examples) exampleSelect.add(new Option(example.label, example.id));
-		showDocument(examples[0].document, examples[0].id);
-		exampleSelect.disabled = false;
+		preview.innerHTML = startPrompt();
+		preview.setAttribute("aria-busy", "false");
 		importInput.disabled = false;
-		newFighterButton.disabled = false;
-		newWarlockButton.disabled = false;
 		newCharacterButton.disabled = false;
-		for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = false;
-		status.textContent = "Reference character ready. Choose another example or open a saved character.";
+		showSelectionInfo();
+		status.textContent = "Choose a species, class, and background, then select New character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
 		preview.setAttribute("aria-busy", "false");
@@ -147,22 +204,24 @@ async function loadData () {
 	}
 }
 
-exampleSelect.addEventListener("change", () => {
-	const example = examples.find(candidate => candidate.id === exampleSelect.value);
-	if (!example) {
-		exampleSelect.value = selectedExample;
-		return;
-	}
-	++requestId;
+/** Rename the current character without leaving the page. */
+characterName.addEventListener("input", () => {
+	characterName.setCustomValidity("");
+	if (!currentCharacter) return;
+	const name = characterName.value.trim();
+	if (!name) return;
+	editor?.setName(name);
 	try {
-		const result = showDocument(example.document, example.id);
-		editor.close();
-		status.textContent = result === "complete" ? `${example.label} is ready to preview and print.` : "This draft needs the choices listed below before a full sheet can be calculated.";
+		const result = showDocument({...currentCharacter, name});
+		status.textContent = result === "complete" ? "Character sheet updated." : "Complete the choices in the editor to calculate the full sheet.";
 	} catch (error) {
-		exampleSelect.value = selectedExample;
-		printButton.disabled = !hasPreview;
-		showError(`Could not open this example. ${error.message}`);
+		showError(`Could not rename this character. ${error.message}`);
 	}
+});
+characterName.addEventListener("change", () => {
+	if (characterName.value.trim()) return;
+	characterName.setCustomValidity("Enter a character name.");
+	characterName.reportValidity();
 });
 
 importInput.addEventListener("change", async () => {
@@ -198,14 +257,6 @@ printButton.addEventListener("click", () => {
 	if (hasPreview) window.print();
 });
 retryButton.addEventListener("click", loadData);
-newFighterButton.addEventListener("click", () => {
-	++requestId;
-	editor.create("fighter");
-});
-newWarlockButton.addEventListener("click", () => {
-	++requestId;
-	editor.create("warlock");
-});
 newCharacterButton.addEventListener("click", () => {
 	const readRef = value => {
 		const [name, source] = value.split("|");
@@ -214,9 +265,9 @@ newCharacterButton.addEventListener("click", () => {
 	++requestId;
 	try {
 		editor.create("character", {
-			species: readRef(speciesSelect.value),
-			characterClass: readRef(classSelect.value),
-			background: readRef(backgroundSelect.value),
+			species: readRef(selection.species),
+			characterClass: readRef(selection.class),
+			background: readRef(selection.background),
 		});
 	} catch (error) {
 		showError(`Could not create this character. ${error.message}`);
