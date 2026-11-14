@@ -63,6 +63,24 @@ function readClass (sources, ref) {
 }
 
 /**
+ * Render one spell's full text for the editor's spell pickers. The editor has
+ * the pinned spell files at hand, so the description comes from the source
+ * record instead of a summary.
+ */
+export function renderSpellInfo (spells, ref) {
+	const site = globalThis.Renderer;
+	const api = renderer();
+	if (!site || !api || !ref?.name) return null;
+	const list = Array.isArray(spells) ? spells : spells?.spell;
+	if (!Array.isArray(list)) return null;
+	const record = list.find(spell => spell.name === ref.name && spell.source === ref.source);
+	if (!record?.entries) return null;
+	const entries = clone(record.entries);
+	if (Array.isArray(record.entriesHigherLevel)) entries.push(...clone(record.entriesHigherLevel));
+	return api.render({type: "entries", entries});
+}
+
+/**
  * Resolve one reviewed selection to its display name and rendered source text.
  * Return `null` when the data or the renderer is unavailable, so the panel can
  * stay hidden instead of showing an empty heading.

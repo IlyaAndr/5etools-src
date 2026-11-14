@@ -3,6 +3,7 @@ import {
 	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
 } from "./editor-common.js";
 import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
+import {renderSpellInfo} from "./source-info.js";
 import {getBackgroundEquipment} from "./background-choices.js";
 import {filterSpellOptions} from "./spell-catalog.js";
 
@@ -40,6 +41,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	let character;
 	let scoreDrafts;
 	const optionFilters = new Map();
+	const spellPreviews = new Map();
 
 	function element (tag, text, className) {
 		const out = document.createElement(tag);
@@ -401,13 +403,30 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				: "This saved choice is unavailable at the current level. Remove it or restore the previous level.", "cb-editor__help"));
 		}
 		const options = element("div", null, "cb-editor__options");
+		const hasSpells = displayedOptions.some(option => option.spell);
+		const spellInfo = hasSpells ? element("div", null, "cb-editor__spell-info") : null;
+		const showSpell = option => {
+			if (!spellInfo || !option) return;
+			spellPreviews.set(descriptor.id, option.id);
+			let html = null;
+			try { html = option?.spell ? renderSpellInfo(context.spells, option.spell) : null; } catch { html = null; }
+			spellInfo.innerHTML = html || "";
+			spellInfo.hidden = !html;
+		};
 		if (fixedOption) {
 			group.append(element("p", fixedOption.detail ? `${fixedOption.label} · ${fixedOption.detail}` : fixedOption.label, "cb-editor__fixed"));
 		} else if (descriptor.count === 1 && descriptor.selected.length <= 1) {
 			options.append(...renderSingleOption(descriptor, displayedOptions));
+			const field = options.querySelector("select");
+			if (spellInfo && field) {
+				const read = () => showSpell(displayedOptions.find(option => option.id === field.value) || displayedOptions[0]);
+				field.addEventListener("change", read);
+				field.addEventListener("focus", read);
+				field.addEventListener("mouseenter", read);
+			}
 		} else {
 			const atLimit = descriptor.selected.length >= descriptor.count;
-			const spellList = displayedOptions.some(option => option.spell);
+			const spellList = hasSpells;
 			let filterInput = null;
 			let filterStatus = null;
 			if (displayedOptions.length >= OPTION_FILTER_MINIMUM) {
@@ -438,9 +457,14 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				input.disabled = isRequired ? input.checked : ((!descriptor.available && !input.checked) || (atLimit && !input.checked));
 				input.addEventListener("change", () => {
 					const selected = input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id);
+					showSpell(option);
 					publish(setCharacterChoice(character, descriptor.id, selected));
 				});
 				label.append(input, element("span", option.detail ? `${option.label} · ${option.detail}` : option.label));
+				if (spellInfo) {
+					label.addEventListener("mouseenter", () => showSpell(option));
+					label.addEventListener("focusin", () => showSpell(option));
+				}
 				options.append(label);
 				rows.push({option, label});
 			}
@@ -462,7 +486,18 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				applyFilter();
 			}
 		}
-		if (options.childElementCount) group.append(options);
+		if (options.childElementCount) {
+			if (spellInfo) {
+				showSpell(
+					displayedOptions.find(option => option.id === spellPreviews.get(descriptor.id))
+					|| displayedOptions.find(option => descriptor.selected.includes(option.id))
+					|| displayedOptions[0],
+				);
+				const picker = element("div", null, "cb-editor__spell-picker");
+				picker.append(options, spellInfo);
+				group.append(picker);
+			} else group.append(options);
+		}
 		const backgroundEquipment = getBackgroundEquipment(character.build.background, context.rules);
 		if (descriptor.id.endsWith(":equipment") && backgroundEquipment?.gear?.length) group.append(element("p", `Background equipment: ${backgroundEquipment.gear.join(", ")}`, "cb-editor__package"));
 		if (!descriptor.available && hasSavedChoice) {

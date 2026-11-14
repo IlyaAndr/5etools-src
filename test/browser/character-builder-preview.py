@@ -621,6 +621,13 @@ def main():
             assert editor.locator('.cb-editor__filter-status').filter(has_text='No options match this filter').count() == 0
             for label in ['Draconic', 'Elvish', 'Arcana', 'Intimidation', 'Guidance', 'Light', 'Eldritch Blast', 'Mind Sliver', 'Armor of Agathys', 'Hex']:
                 editor.get_by_label(label, exact=True).check()
+            # Spell groups show the selected spell's text on the right.
+            cantrip_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Warlock Cantrips")'))
+            assert cantrip_group.locator('.cb-editor__spell-picker').count() == 1
+            editor.get_by_label('Eldritch Blast', exact=True).focus()
+            assert 'beam of crackling energy' in cantrip_group.locator('.cb-editor__spell-info').inner_text()
+            prepared_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Prepared Warlock Spells")'))
+            assert 'curse on a creature' in prepared_group.locator('.cb-editor__spell-info').inner_text()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 0
             assert page.locator('.cb-resource').filter(has_text='Pact Magic').count() == 1

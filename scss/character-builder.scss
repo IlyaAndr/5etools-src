@@ -265,6 +265,42 @@
 .cb-editor__final-value {
 	font-size: 15px;
 }
+.cb-editor__spell-picker {
+	display: grid;
+	gap: 14px;
+	grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.1fr);
+	align-items: start;
+}
+.cb-editor__spell-info {
+	max-height: 20rem;
+	overflow: auto;
+	padding-left: 12px;
+	border-left: 1px solid var(--cb-line);
+	font-size: 0.9rem;
+	line-height: 1.35;
+}
+.cb-editor__spell-info:empty {
+	display: none;
+}
+.cb-editor__spell-info h4 {
+	margin: 6px 0 2px;
+	font-size: 0.95rem;
+}
+.cb-editor__spell-info p,
+.cb-editor__spell-info ul {
+	margin: 4px 0;
+}
+@media (width <= 900px) {
+	.cb-editor__spell-picker {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.cb-editor__spell-info {
+		padding-top: 8px;
+		padding-left: 0;
+		border-top: 1px solid var(--cb-line);
+		border-left: 0;
+	}
+}
 .cb-editor__option {
 	display: flex;
 	gap: 7px;
