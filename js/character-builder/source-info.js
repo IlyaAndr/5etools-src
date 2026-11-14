@@ -1,16 +1,53 @@
 /**
  * Show the original 5etools text for the three selections that start a
  * character. The page already loads the site renderer and the source records,
- * so the full text (with its own lists, tables, and links) is shown instead of
- * a hand-written summary.
+ * so the same blocks the site displays are shown here: the race's creature
+ * type, size, and speed before its traits, and the class's core traits,
+ * multiclassing block, and source line before its features.
  */
 
 const clone = value => JSON.parse(JSON.stringify(value));
+const renderer = () => globalThis.Renderer?.get?.();
+const styleHint = () => globalThis.VetoolsConfig?.get?.("styleSwitcher", "style") || "one";
 
-/** Render entries with the site's own renderer, keeping source markup faithful. */
-function renderEntries (renderer, entries, name) {
-	if (!Array.isArray(entries) || !entries.length) return "";
-	return renderer.render({type: "entries", ...(name ? {name} : {}), entries: clone(entries)});
+/** Render the race summary the site prints above a race's traits. */
+function renderSpecies (site, api, race) {
+	const record = clone(race);
+	const meta = site.race.getRaceRenderableEntriesMeta(record, {styleHint: styleHint()});
+	return `${meta.entryAttributes ? api.render(meta.entryAttributes) : ""}${api.render(meta.entryMain)}`;
+}
+
+/** Render the class sidebar the site prints above a class's features. */
+function renderClass (site, api, record) {
+	const cls = clone(record);
+	const options = {renderer: api, styleHint: styleHint()};
+	const core = [
+		site.class.getHtmlPtPrimaryAbility(cls, options),
+		site.class.getHtmlPtHitPoints(cls, options),
+		site.class.getHtmlPtSavingThrows(cls, options),
+		site.class.getHtmlPtSkills(cls, options),
+		site.class.getHtmlPtWeaponProficiencies(cls, options),
+		site.class.getHtmlPtToolProficiencies(cls, options),
+		site.class.getHtmlPtArmorProficiencies(cls, options),
+		site.class.getHtmlPtStartingEquipment(cls, options),
+	].filter(Boolean).join("");
+	const sections = [`<h5>Core Traits</h5>${core}`];
+	const mc = cls.multiclassing;
+	if (mc) {
+		const style = options.styleHint;
+		const gained = mc.proficienciesGained;
+		const parts = [];
+		if (cls.primaryAbility) parts.push("<div>To qualify for a new class, you must have a score of at least 13 in the primary ability of the new class and your current classes.</div>");
+		if (gained?.armor) parts.push(`<div><b>Armor Training:</b> ${site.class.getRenderedArmorProfs(gained.armor, {styleHint: style})}</div>`);
+		if (gained?.weapons) parts.push(`<div><b>Weapon Proficiencies:</b> ${site.class.getRenderedWeaponProfs(gained.weapons, {styleHint: style})}</div>`);
+		if (gained?.tools) parts.push(`<div><b>Tool Proficiencies:</b> ${site.class.getRenderedToolProfs(gained.tools, {styleHint: style})}</div>`);
+		if (gained?.skills) parts.push(`<div><b>Skill Proficiencies:</b> ${site.class.getRenderedSkillProfs(gained.skills, {styleHint: style})}</div>`);
+		if (mc.entries) parts.push(api.setFirstSection(true).render({type: "section", entries: clone(mc.entries)}));
+		sections.push(`<h5>Multiclassing</h5>${parts.join("")}`);
+	}
+	const source = site.utils.getSourceAndPageTrHtml(cls);
+	if (source) sections.push(`<p>${source}</p>`);
+	return sections.join("");
 }
 
 /** Read the original class record and its features from the pinned class files. */
@@ -31,23 +68,29 @@ function readClass (sources, ref) {
  * stay hidden instead of showing an empty heading.
  */
 export function renderSelectionInfo (sources, kind, ref) {
-	const renderer = globalThis.Renderer?.get?.();
-	if (!renderer || !ref) return null;
+	const site = globalThis.Renderer;
+	const api = renderer();
+	if (!site || !api || !ref) return null;
 	if (kind === "species") {
 		const record = (sources?.races?.race || []).find(candidate => candidate.name === ref.name && candidate.source === ref.source);
-		const html = record ? renderEntries(renderer, record.entries) : "";
+		if (!record) return null;
+		const html = renderSpecies(site, api, record);
 		return html ? {name: record.name, html} : null;
 	}
 	if (kind === "background") {
 		const record = (sources?.backgrounds?.background || []).find(candidate => candidate.name === ref.name && candidate.source === ref.source);
-		const html = record ? renderEntries(renderer, record.entries) : "";
-		return html ? {name: record.name, html} : null;
+		if (!record?.entries) return null;
+		const source = site.utils.getSourceAndPageTrHtml(clone(record));
+		const html = `${api.render({type: "entries", entries: clone(record.entries)})}${source ? `<p>${source}</p>` : ""}`;
+		return {name: record.name, html};
 	}
 	if (kind === "class") {
 		const found = readClass(sources, ref);
 		if (!found) return null;
-		const html = found.features.map(feature => renderEntries(renderer, feature.entries, `${feature.name} (level ${feature.level})`)).join("");
-		return html ? {name: found.record.name, html} : null;
+		const features = found.features
+			.map(feature => api.render({type: "entries", name: `${feature.name} (level ${feature.level})`, entries: clone(feature.entries)}))
+			.join("");
+		return {name: found.record.name, html: `${renderClass(site, api, found.record)}<h5>Class Features</h5>${features}`};
 	}
 	throw new TypeError(`Unsupported selection info: ${kind}`);
 }

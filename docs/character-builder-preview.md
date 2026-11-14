@@ -25,8 +25,9 @@ the page does not load test fixtures or require Foundry or application globals.
 Select **New Fighter** or **New Warlock** for a reference preset, choose a
 species, class, and background and select **New character** for another
 combination, or edit a supported imported build. The three selectors show the
-original 5etools text of the current choice beside them — the race entry, the
-class feature list with its levels, and the background entry — so the options can
+original 5etools blocks of the current choice beside them — the race summary
+(creature type, size, speed) and traits, the class Core Traits and Multiclassing
+blocks with its features by level, and the background entry — so the options can
 be compared without leaving the page.
 Choose an example or open a saved character file, then select **Print / Save PDF**.
 Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
