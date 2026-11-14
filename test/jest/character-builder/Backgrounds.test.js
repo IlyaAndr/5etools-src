@@ -153,23 +153,31 @@ describe("Reviewed Origin feats", () => {
 		expect(model.issues).toContainEqual(expect.objectContaining({id: "feat:skilled|xphb:proficiencies"}));
 	});
 
-	it("casts Cure Wounds once from Magic Initiate (Druid)", () => {
-		const document = draftFor("Guide");
-		const cantrips = featDescriptors(document).find(entry => entry.id === "feat:magic-initiate-druid|xphb:cantrips");
+	it("offers any level-1 Druid spell and tracks the chosen one as a free cast", () => {
+		const draft = draftFor("Guide");
+		const cantrips = featDescriptors(draft).find(entry => entry.id === "feat:magic-initiate-druid|xphb:cantrips");
 		expect(cantrips.options.map(option => option.id)).toContain("spell:guidance|xphb");
 		expect(cantrips.options.map(option => option.id)).not.toContain("spell:eldritch-blast|xphb");
+		const spells = featDescriptors(draft).find(entry => entry.id === "feat:magic-initiate-druid|xphb:spell");
+		expect(spells.options.length).toBeGreaterThan(1);
+		expect(spells.options.map(option => option.id)).toContain("spell:cure-wounds|xphb");
+		expect(spells.options.every(option => option.spell.level === 1)).toBe(true);
+		const document = setCharacterChoice(draft, "feat:magic-initiate-druid|xphb:spell", ["spell:cure-wounds|xphb"]);
 		const model = modelFor(document);
 		expect(model.issues).toEqual([]);
 		expect(model.resources.find(resource => resource.id === "feat:magic-initiate-druid|xphb:cure-wounds")).toMatchObject({
 			name: "Cure Wounds",
 			maxUses: 1,
 			spellId: "spell:cure-wounds|xphb",
-			healing: {dice: "2d8"},
 		});
 	});
 
-	it("casts Shield once from Magic Initiate (Wizard)", () => {
-		const model = modelFor(draftFor("Sage"));
+	it("offers any level-1 Wizard spell and tracks the chosen one as a free cast", () => {
+		const draft = draftFor("Sage");
+		const spells = featDescriptors(draft).find(entry => entry.id === "feat:magic-initiate-wizard|xphb:spell");
+		expect(spells.options.length).toBeGreaterThan(1);
+		expect(spells.options.map(option => option.id)).toContain("spell:shield|xphb");
+		const model = modelFor(setCharacterChoice(draft, "feat:magic-initiate-wizard|xphb:spell", ["spell:shield|xphb"]));
 		expect(model.issues).toEqual([]);
 		const resource = model.resources.find(entry => entry.id === "feat:magic-initiate-wizard|xphb:shield");
 		expect(resource).toMatchObject({name: "Shield", maxUses: 1, spellId: "spell:shield|xphb"});

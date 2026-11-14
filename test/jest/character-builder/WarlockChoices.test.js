@@ -207,7 +207,10 @@ describe("Warlock editor choices", () => {
 		const choices = getWarlockChoiceDescriptors(withFeat, catalog, context);
 		expect(choices.find(entry => entry.id === `${owner}:feat-ability`).options.map(option => option.id)).toEqual(["int", "wis", "cha"]);
 		expect(choices.find(entry => entry.id === `${owner}:feat-cantrips`).count).toBe(2);
-		expect(choices.find(entry => entry.id === `${owner}:feat-spell`).options.map(option => option.id)).toEqual(["spell:cure-wounds|xphb"]);
+		const spellOptions = choices.find(entry => entry.id === `${owner}:feat-spell`).options;
+		expect(spellOptions.map(option => option.id)).toContain("spell:cure-wounds|xphb");
+		expect(spellOptions.length).toBeGreaterThan(1);
+		expect(spellOptions.every(option => option.spell.level === 1)).toBe(true);
 		const cantrips = choices.find(entry => entry.id === `${owner}:feat-cantrips`).options.slice(0, 2).map(option => option.id);
 		let document = setCharacterChoice(withFeat, `${owner}:feat-ability`, ["wis"]);
 		document = setCharacterChoice(document, `${owner}:feat-cantrips`, cantrips);
@@ -215,7 +218,7 @@ describe("Warlock editor choices", () => {
 		const model = createCharacterSheetModel(document, catalog, context);
 		expect(model.issues).toEqual([]);
 		expect(model.spells.map(entry => entry.id)).toEqual(expect.arrayContaining([...cantrips, "spell:cure-wounds|xphb"]));
-		expect(model.resources.find(resource => resource.name === "Cure Wounds")).toMatchObject({maxUses: 1, spellcastingAbility: "wis", healing: {dice: "2d8"}});
+		expect(model.resources.find(resource => resource.name === "Cure Wounds")).toMatchObject({maxUses: 1, spellcastingAbility: "wis", freeLevel: 1});
 	});
 
 	it("offers a Mystic Arcanum slot at each reviewed level and tracks one free cast", () => {
