@@ -626,6 +626,21 @@ def main():
             assert cantrip_group.locator('.cb-editor__spell-picker').count() == 1
             editor.get_by_label('Eldritch Blast', exact=True).focus()
             assert 'beam of crackling energy' in cantrip_group.locator('.cb-editor__spell-info').inner_text()
+            # A preview repeats the site's stat block, not just the prose, and
+            # uses the same readable card as the species and background text.
+            magic_initiate = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Cantrips")'))
+            editor.get_by_label('Light', exact=True).focus()
+            light_text = magic_initiate.locator('.cb-editor__spell-info').inner_text()
+            assert 'Evocation Cantrip' in light_text, light_text[:200]
+            assert 'Casting Time: Action' in light_text, light_text[:200]
+            assert 'Range: Touch' in light_text, light_text[:200]
+            assert 'Components: V, M (a firefly or phosphorescent moss)' in light_text, light_text[:200]
+            assert 'Duration: 1 hour' in light_text, light_text[:200]
+            card = magic_initiate.locator('.cb-editor__spell-info').evaluate(
+                'el => ({size: parseFloat(getComputedStyle(el).fontSize), bg: getComputedStyle(el).backgroundColor})')
+            assert card['size'] >= 13, card
+            assert card['bg'] == page.locator('.cb-selection-info__entry').first.evaluate(
+                'el => getComputedStyle(el).backgroundColor'), card
             prepared_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Prepared Warlock Spells")'))
             assert 'curse on a creature' in prepared_group.locator('.cb-editor__spell-info').inner_text()
             # The list and its description share the group without spilling

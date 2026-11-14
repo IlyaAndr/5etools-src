@@ -63,21 +63,33 @@ function readClass (sources, ref) {
 }
 
 /**
- * Render one spell's full text for the editor's spell pickers. The editor has
- * the pinned spell files at hand, so the description comes from the source
- * record instead of a summary.
+ * Render one spell's full text for the editor's spell pickers: the level and
+ * school line the site prints above a spell, its casting time, range,
+ * components, and duration, then the entries. The editor has the pinned spell
+ * files at hand, so the description comes from the source record instead of a
+ * summary.
  */
 export function renderSpellInfo (spells, ref) {
 	const site = globalThis.Renderer;
 	const api = renderer();
-	if (!site || !api || !ref?.name) return null;
+	if (!site?.spell || !api || !ref?.name) return null;
 	const list = Array.isArray(spells) ? spells : spells?.spell;
 	if (!Array.isArray(list)) return null;
 	const record = list.find(spell => spell.name === ref.name && spell.source === ref.source);
 	if (!record?.entries) return null;
-	const entries = clone(record.entries);
-	if (Array.isArray(record.entriesHigherLevel)) entries.push(...clone(record.entriesHigherLevel));
-	return api.render({type: "entries", entries});
+	const spell = clone(record);
+	const style = styleHint();
+	const isDisplaySelfArea = globalThis.SourceUtil?.isClassicSource?.(spell.source) ?? false;
+	const meta = [
+		site.spell.getHtmlPtLevelSchoolRitual(spell, {styleHint: style}),
+		site.spell.getHtmlPtCastingTime(spell, {styleHint: style}),
+		site.spell.getHtmlPtRange(spell, {styleHint: style, isDisplaySelfArea}),
+		site.spell.getHtmlPtComponents(spell),
+		site.spell.getHtmlPtDuration(spell, {styleHint: style}),
+	].filter(Boolean).map(html => `<p class="cb-editor__spell-meta">${html}</p>`).join("");
+	const entries = spell.entries;
+	if (Array.isArray(spell.entriesHigherLevel)) entries.push(...spell.entriesHigherLevel);
+	return `${meta}${api.render({type: "entries", entries})}`;
 }
 
 /**
