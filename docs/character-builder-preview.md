@@ -22,16 +22,15 @@ and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
 
-Select **New Fighter** or **New Warlock** for a reference preset, choose a
-species, class, and background and select **New character** for another
-combination, or edit a supported imported build. The three selectors show the
-original 5etools blocks of the current choice beside them — the race summary
-(creature type, size, speed) and traits, the class Core Traits and Multiclassing
-blocks with its features by level, and the background entry — so the options can
-be compared without leaving the page.
-Choose an example or open a saved character file, then select **Print / Save PDF**.
-Use A4 portrait, 100% scale, and disable browser headers and footers. The normal
-examples produce a main sheet and separate references. Full descriptions and
+Pick one species, class, and background from the three lists, then select
+**New character**; the lists sit on the left and the original 5etools blocks of
+the current choice on the right — the race summary (creature type, size, speed)
+and traits, the class Core Traits and Multiclassing blocks with its features by
+level, and the background entry — so the options can be compared without leaving
+the page. Edit a supported imported build, open a saved character file, or import
+a reference build, then select **Print / Save PDF**.
+Use A4 portrait, 100% scale, and disable browser headers and footers. A complete
+build produces a main sheet and separate references. Full descriptions and
 long imported notes may add pages; they are not clipped to fit one page.
 
 ## Current scope
@@ -230,9 +229,9 @@ resources, rests, and browser persistence belong to the later tracker PR.
 Import uses the existing document validator, reviewed species projector, and
 limited character-sheet model. Invalid documents and unsupported source pins
 produce an actionable error and keep the previous successful preview. Builds
-requiring unsupported or unfinished choices show a draft summary. A new example
-selection cancels an older pending file read. The current-character placeholder
-cannot leave the page stuck in a loading state.
+requiring unsupported or unfinished choices show a draft summary. Starting
+another character cancels an older pending file read. Importing never needs a
+placeholder document to stay usable.
 
 Names, notes, and source descriptions are escaped. Full ability and spell
 descriptions must retain the original 5etools content, with tags rendered as
@@ -260,7 +259,7 @@ Chrome/Chromium, plus `pdfinfo` and `pdftotext`. It starts a temporary server on
 Use `--browser /path/to/chrome` or `--output /path/to/artifacts` when needed.
 
 The check covers desktop and mobile navigation, character creation and edits,
-option filtering, JSON round-tripping, all six examples, 390-pixel mobile
+option filtering, JSON round-tripping, the six reference builds loaded through the import input, 390-pixel mobile
 layouts, A4 dimensions and page counts, invalid imports, delayed file-read
 races, pending choices, escaped HTML input, print-button behavior, and full long
 notes in the PDF.

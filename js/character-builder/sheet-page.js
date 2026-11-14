@@ -2,35 +2,32 @@ import {parseCharacterDocument, serializeCharacterDocument} from "./character-do
 import {createSpeciesCatalog} from "./species-catalog.js";
 import {escapeHtml, renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
-import {createSheetExamples} from "./sheet-examples.js";
 import {createCharacterEditor} from "./character-editor.js";
 import {createEditorProfiles, getEditorCombinations} from "./editor-profile.js";
 import {renderSelectionInfo} from "./source-info.js";
 
-const exampleSelect = document.getElementById("example-select");
 const importInput = document.getElementById("character-import");
 const printButton = document.getElementById("print-sheet");
 const status = document.getElementById("status");
 const errorMessage = document.getElementById("error-message");
 const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
-const newFighterButton = document.getElementById("new-fighter");
-const newWarlockButton = document.getElementById("new-warlock");
 const newCharacterButton = document.getElementById("new-character");
-const speciesSelect = document.getElementById("new-species");
-const classSelect = document.getElementById("new-class");
-const backgroundSelect = document.getElementById("new-background");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
 const selectionInfo = document.getElementById("new-character-info");
 const compactToggle = document.getElementById("compact-sheet");
 const pageCount = document.getElementById("sheet-pages");
+const listElements = {
+	species: document.getElementById("species-list"),
+	class: document.getElementById("class-list"),
+	background: document.getElementById("background-list"),
+};
+const selection = {species: "", class: "", background: ""};
 
 let catalog;
 let sheetContext;
-let examples = [];
-let selectedExample = "";
 let hasPreview = false;
 let requestId = 0;
 let currentCharacter;
@@ -46,16 +43,14 @@ function showError (message) {
 	errorMessage.hidden = false;
 }
 
-function showDocument (character, exampleId = "") {
+function showDocument (character) {
 	const model = createCharacterSheetModel(character, catalog, sheetContext);
 	const html = renderCharacterSheet(model, catalog);
 	preview.innerHTML = html;
 	const pages = preview.querySelectorAll(".cb-page").length;
 	pageCount.textContent = pages ? `${pages} ${pages === 1 ? "page" : "pages"} to print.` : "";
 	document.title = `${character.name} — Character Builder`;
-	selectedExample = exampleId;
 	currentCharacter = character;
-	exampleSelect.value = exampleId;
 	hasPreview = true;
 	printButton.disabled = false;
 	saveButton.disabled = false;
@@ -66,6 +61,40 @@ function showDocument (character, exampleId = "") {
 	return model.status;
 }
 
+/** Render one picker list; clicking an option becomes the current selection. */
+function renderList (kind, entries) {
+	listElements[kind].replaceChildren(...entries.map(entry => {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "cb-picker__option";
+		button.textContent = entry.name;
+		button.dataset.value = `${entry.name}|${entry.source}`;
+		button.setAttribute("role", "option");
+		button.addEventListener("click", () => {
+			selection[kind] = button.dataset.value;
+			reflectSelection();
+			showSelectionInfo();
+		});
+		return button;
+	}));
+}
+
+/** Mark the selected option in each list, so the choice is visible at a glance. */
+function reflectSelection () {
+	for (const [kind, container] of Object.entries(listElements)) {
+		for (const button of container.children) {
+			const active = button.dataset.value === selection[kind];
+			button.classList.toggle("is-selected", active);
+			button.setAttribute("aria-selected", `${active}`);
+		}
+	}
+}
+
+/** The placeholder shown before the first character is created. */
+function startPrompt () {
+	return `<section class="cb-page cb-start-note"><h1>Choose a species, class, and background</h1><p>Pick one option in each list, then select <strong>New character</strong>. The calculated sheet appears here, ready to review, print, or save as a PDF.</p></section>`;
+}
+
 /** Show the original text of the species, class, and background being chosen. */
 function showSelectionInfo () {
 	if (!sheetContext) return;
@@ -74,9 +103,9 @@ function showSelectionInfo () {
 		return name && source ? {name, source} : null;
 	};
 	const sections = [
-		["species", "Species", read(speciesSelect.value)],
-		["class", "Class", read(classSelect.value)],
-		["background", "Background", read(backgroundSelect.value)],
+		["species", "Species", read(selection.species)],
+		["class", "Class", read(selection.class)],
+		["background", "Background", read(selection.background)],
 	].map(([kind, label, selection]) => {
 		if (!selection) return "";
 		let info = null;
@@ -101,12 +130,8 @@ async function fetchJson (path) {
 
 async function loadData () {
 	const currentRequest = ++requestId;
-	exampleSelect.disabled = true;
 	importInput.disabled = true;
-	newFighterButton.disabled = true;
-	newWarlockButton.disabled = true;
 	newCharacterButton.disabled = true;
-	for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = true;
 	editFighterButton.disabled = true;
 	saveButton.disabled = true;
 	printButton.disabled = true;
@@ -133,10 +158,13 @@ async function loadData () {
 		catalog = createSpeciesCatalog({races, spells, rules: speciesRules});
 		sheetContext = {rules: characterSheetRules, spells, sources: {races, fighter, warlock, optionalFeatures, feats, itemMasteries, skills, backgrounds, spellLookup, abilityNames: globalThis.Parser.ATB_ABV_TO_FULL}};
 		const combinations = getEditorCombinations({catalog, rules: characterSheetRules});
-		const fill = (select, entries) => select.replaceChildren(...entries.map(entry => new Option(entry.name, `${entry.name}|${entry.source}`)));
-		fill(speciesSelect, combinations.species);
-		fill(classSelect, combinations.classes);
-		fill(backgroundSelect, combinations.backgrounds);
+		renderList("species", combinations.species);
+		renderList("class", combinations.classes);
+		renderList("background", combinations.backgrounds);
+		selection.species = `${combinations.species[0].name}|${combinations.species[0].source}`;
+		selection.class = `${combinations.classes[0].name}|${combinations.classes[0].source}`;
+		selection.background = `${combinations.backgrounds[0].name}|${combinations.backgrounds[0].source}`;
+		reflectSelection();
 		editor = createCharacterEditor({
 			container: editorContainer,
 			catalog,
@@ -154,20 +182,12 @@ async function loadData () {
 				}
 			},
 		});
-		examples = createSheetExamples(catalog.dataset);
-		const importedOption = new Option("Current character", "");
-		importedOption.disabled = true;
-		exampleSelect.replaceChildren(importedOption);
-		for (const example of examples) exampleSelect.add(new Option(example.label, example.id));
-		showDocument(examples[0].document, examples[0].id);
-		exampleSelect.disabled = false;
+		preview.innerHTML = startPrompt();
+		preview.setAttribute("aria-busy", "false");
 		importInput.disabled = false;
-		newFighterButton.disabled = false;
-		newWarlockButton.disabled = false;
 		newCharacterButton.disabled = false;
-		for (const select of [speciesSelect, classSelect, backgroundSelect]) select.disabled = false;
 		showSelectionInfo();
-		status.textContent = "Reference character ready. Choose another example or open a saved character.";
+		status.textContent = "Choose a species, class, and background, then select New character.";
 	} catch (error) {
 		if (currentRequest !== requestId) return;
 		preview.setAttribute("aria-busy", "false");
@@ -176,26 +196,6 @@ async function loadData () {
 		retryButton.hidden = false;
 	}
 }
-
-for (const select of [speciesSelect, classSelect, backgroundSelect]) select.addEventListener("change", showSelectionInfo);
-
-exampleSelect.addEventListener("change", () => {
-	const example = examples.find(candidate => candidate.id === exampleSelect.value);
-	if (!example) {
-		exampleSelect.value = selectedExample;
-		return;
-	}
-	++requestId;
-	try {
-		const result = showDocument(example.document, example.id);
-		editor.close();
-		status.textContent = result === "complete" ? `${example.label} is ready to preview and print.` : "This draft needs the choices listed below before a full sheet can be calculated.";
-	} catch (error) {
-		exampleSelect.value = selectedExample;
-		printButton.disabled = !hasPreview;
-		showError(`Could not open this example. ${error.message}`);
-	}
-});
 
 importInput.addEventListener("change", async () => {
 	const file = importInput.files[0];
@@ -230,14 +230,6 @@ printButton.addEventListener("click", () => {
 	if (hasPreview) window.print();
 });
 retryButton.addEventListener("click", loadData);
-newFighterButton.addEventListener("click", () => {
-	++requestId;
-	editor.create("fighter");
-});
-newWarlockButton.addEventListener("click", () => {
-	++requestId;
-	editor.create("warlock");
-});
 newCharacterButton.addEventListener("click", () => {
 	const readRef = value => {
 		const [name, source] = value.split("|");
@@ -246,9 +238,9 @@ newCharacterButton.addEventListener("click", () => {
 	++requestId;
 	try {
 		editor.create("character", {
-			species: readRef(speciesSelect.value),
-			characterClass: readRef(classSelect.value),
-			background: readRef(backgroundSelect.value),
+			species: readRef(selection.species),
+			characterClass: readRef(selection.class),
+			background: readRef(selection.background),
 		});
 	} catch (error) {
 		showError(`Could not create this character. ${error.message}`);

@@ -333,6 +333,58 @@
 .cb-page-count {
 	font-weight: 700;
 }
+.cb-start {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+	align-items: start;
+	margin: 18px 0 12px;
+}
+.cb-start__lists {
+	display: grid;
+	gap: 10px;
+}
+.cb-picker {
+	border: 1px solid var(--cb-border, #c8c2b4);
+	border-radius: 6px;
+	padding: 6px 8px;
+	margin: 0;
+}
+.cb-picker > legend {
+	font-weight: 700;
+	padding: 0 4px;
+}
+.cb-picker__list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 12rem;
+	overflow: auto;
+}
+.cb-picker__option {
+	text-align: left;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
+	padding: 3px 6px;
+	cursor: pointer;
+	font: inherit;
+}
+.cb-picker__option:hover {
+	background: rgb(0 0 0 / 6%);
+}
+.cb-picker__option.is-selected {
+	border-color: currentcolor;
+	font-weight: 700;
+}
+.cb-start-note {
+	padding: 24px;
+}
+@media (width <= 900px) {
+	.cb-start {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
 .cb-selection-info {
 	display: grid;
 	gap: 10px;
@@ -1016,6 +1068,7 @@
 	.cb-toolbar,
 	.cb-editor,
 	.cb-site-header,
+	.cb-start,
 	.cb-selection-info,
 	.cb-spell-reference .cb-page-footer {
 		display: none;
