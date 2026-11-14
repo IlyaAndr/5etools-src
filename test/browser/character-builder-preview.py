@@ -79,13 +79,12 @@ def pick(page, kind, value):
     page.click(f'#{kind}-list [data-value="{value}"]')
 
 
+def group(editor, page, label):
+    return editor.locator('fieldset').filter(has=page.locator(f'legend:text-is("{label}")'))
+
+
 def group_text(page, editor, label):
-    return editor.locator('fieldset').filter(
-        has=page.locator(f'legend:text-is("{label}")')).first.inner_text()
-
-
-def select_texts(editor, label):
-    return editor.get_by_label(label, exact=True).locator('option').all_inner_texts()
+    return group(editor, page, label).first.inner_text()
 
 
 def final_score(editor, label):
@@ -580,9 +579,10 @@ def main():
             assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
             assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
             assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
-            cleric_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
-            assert any('Healing Word' in text for text in cleric_spells)
-            assert len(cleric_spells) > 2
+            cleric_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Level 1 Spell")'))
+            assert cleric_group.locator('input[type=radio]').count() > 3
+            assert cleric_group.locator('select').count() == 0
+            assert cleric_group.get_by_label('Healing Word', exact=True).count() == 1
             equipment_text = group_text(page, editor, 'Starting Equipment')
             assert 'Leather Armor' in equipment_text
             assert equipment_text.count('Leather Armor') == 1
@@ -595,12 +595,18 @@ def main():
                 'Fiendish Legacy': 'infernal',
                 'Size': 'medium',
                 'Background Ability Increases': 'cha-2.wis-1',
-                'Eldritch Invocations': 'eldritch-mind|xphb',
             }.items():
                 editor.get_by_label(label, exact=True).select_option(value)
+            editor.get_by_label('Eldritch Mind', exact=True).check()
+            # An invocation choice shows the invocation's own text, so the
+            # player does not have to look the name up elsewhere.
+            invocation_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Eldritch Invocations")'))
+            assert invocation_group.locator('.cb-editor__option-picker').count() == 1
+            editor.get_by_label('Eldritch Mind', exact=True).focus()
+            assert 'Advantage on Constitution saving throws' in invocation_group.locator('.cb-editor__option-info').inner_text()
             # Magic Initiate's level-1 spell is a real choice, so the player
             # selects the spell the feat's free cast uses.
-            editor.get_by_label('Magic Initiate (Cleric) Level 1 Spell', exact=True).select_option('spell:healing-word|xphb')
+            editor.get_by_label('Healing Word', exact=True).check()
             # Long option lists can be narrowed by name. Filtering never changes
             # saved decisions; selected entries stay visible, and the query
             # survives an editor redraw.
@@ -623,35 +629,37 @@ def main():
                 editor.get_by_label(label, exact=True).check()
             # Spell groups show the selected spell's text on the right.
             cantrip_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Warlock Cantrips")'))
-            assert cantrip_group.locator('.cb-editor__spell-picker').count() == 1
+            assert cantrip_group.locator('.cb-editor__option-picker').count() == 1
+            editor.get_by_label('Blade Ward', exact=True).hover()
+            assert 'attacker subtracts' in cantrip_group.locator('.cb-editor__option-info').inner_text()
             editor.get_by_label('Eldritch Blast', exact=True).focus()
-            assert 'beam of crackling energy' in cantrip_group.locator('.cb-editor__spell-info').inner_text()
+            assert 'beam of crackling energy' in cantrip_group.locator('.cb-editor__option-info').inner_text()
             # A preview repeats the site's stat block, not just the prose, and
             # uses the same readable card as the species and background text.
             magic_initiate = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Cantrips")'))
             editor.get_by_label('Light', exact=True).focus()
-            light_text = magic_initiate.locator('.cb-editor__spell-info').inner_text()
+            light_text = magic_initiate.locator('.cb-editor__option-info').inner_text()
             assert 'Evocation Cantrip' in light_text, light_text[:200]
             assert 'Casting Time: Action' in light_text, light_text[:200]
             assert 'Range: Touch' in light_text, light_text[:200]
             assert 'Components: V, M (a firefly or phosphorescent moss)' in light_text, light_text[:200]
             assert 'Duration: 1 hour' in light_text, light_text[:200]
-            card = magic_initiate.locator('.cb-editor__spell-info').evaluate(
+            card = magic_initiate.locator('.cb-editor__option-info').evaluate(
                 'el => ({size: parseFloat(getComputedStyle(el).fontSize), bg: getComputedStyle(el).backgroundColor})')
             assert card['size'] >= 13, card
             assert card['bg'] == page.locator('.cb-selection-info__entry').first.evaluate(
                 'el => getComputedStyle(el).backgroundColor'), card
             # The school keeps the site's own colour instead of plain ink.
-            school = magic_initiate.locator('.cb-editor__spell-info span.ve-sp__school--v')
+            school = magic_initiate.locator('.cb-editor__option-info span.ve-sp__school--v')
             assert school.count() == 1
             assert school.evaluate('el => getComputedStyle(el).color') != magic_initiate.locator(
-                '.cb-editor__spell-info').evaluate('el => getComputedStyle(el).color')
+                '.cb-editor__option-info').evaluate('el => getComputedStyle(el).color')
             prepared_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Prepared Warlock Spells")'))
-            assert 'curse on a creature' in prepared_group.locator('.cb-editor__spell-info').inner_text()
+            assert 'curse on a creature' in prepared_group.locator('.cb-editor__option-info').inner_text()
             # The list and its description share the group without spilling
             # out, and the description keeps the larger half of a wide editor.
-            boxes = editor.locator('.cb-editor__spell-picker').evaluate_all('''els => els.map(el => {
-                const info = el.querySelector('.cb-editor__spell-info');
+            boxes = editor.locator('.cb-editor__option-picker').evaluate_all('''els => els.map(el => {
+                const info = el.querySelector('.cb-editor__option-info');
                 return {
                     overflow: el.scrollWidth - el.clientWidth,
                     info: Math.round(info.getBoundingClientRect().width),
@@ -775,8 +783,11 @@ def main():
             editor.get_by_label('Pact of the Blade', exact=True).check()
             editor.get_by_label('Pact Weapon', exact=True).select_option('longsword|xphb')
             editor.get_by_label('Lifedrinker', exact=True).check()
+            # Cleric spells such as Bane also appear in the Magic Initiate list,
+            # so these checks stay inside the prepared-spells group.
+            prepared = group(editor, page, 'Prepared Warlock Spells')
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
-                editor.get_by_label(label, exact=True).check()
+                prepared.get_by_label(label, exact=True).check()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert 'Lifedrinker: 1d6 Necrotic, Psychic, or Radiant' in page.locator('.cb-attack-panel').inner_text()
             assert 'expend one to regain 1d8' in page.locator('.cb-resource').filter(has_text='Hit Dice').inner_text()
@@ -793,7 +804,7 @@ def main():
             editor.get_by_label('Lifedrinker', exact=True).uncheck()
             editor.get_by_label('Pact of the Blade', exact=True).uncheck()
             for label in ['Bane', 'Charm Person', 'Comprehend Languages', 'Detect Magic']:
-                editor.get_by_label(label, exact=True).uncheck()
+                prepared.get_by_label(label, exact=True).uncheck()
             editor.get_by_label('Level', exact=True).select_option('5')
             # The level-8 slot no longer exists at level 5, so its saved choices
             # stay visible as surplus decisions until they are cleared.
@@ -916,9 +927,9 @@ def main():
             pick(page, 'background', 'Sage|XPHB')
             page.click('#new-character')
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Wizard) Spellcasting Ability')
-            wizard_spells = select_texts(editor, 'Magic Initiate (Wizard) Level 1 Spell')
-            assert any('Shield' in text for text in wizard_spells)
-            assert len(wizard_spells) > 2
+            wizard_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Wizard) Level 1 Spell")'))
+            assert wizard_group.get_by_label('Shield', exact=True).count() == 1
+            assert wizard_group.locator('input[type=radio]').count() > 3
             assert editor.get_by_label('Background Tool', exact=True).count() == 0
             # Dwarf and Halfling have no lineages and no species spells, so no
             # species spellcasting-ability group appears for them.
@@ -965,9 +976,9 @@ def main():
             editor.get_by_label('Origin Feat', exact=True).select_option('magic-initiate-cleric|xphb')
             assert 'Sacred Flame' in group_text(page, editor, 'Magic Initiate (Cleric) Cantrips')
             assert 'Wisdom' in group_text(page, editor, 'Magic Initiate (Cleric) Spellcasting Ability')
-            slot_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
-            assert any('Healing Word' in text for text in slot_spells)
-            assert len(slot_spells) > 2
+            slot_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Cleric) Level 1 Spell")'))
+            assert slot_group.get_by_label('Healing Word', exact=True).count() == 1
+            assert slot_group.locator('input[type=radio]').count() > 3
             assert not errors, errors
         finally:
             browser.close()

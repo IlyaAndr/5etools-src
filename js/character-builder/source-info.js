@@ -98,10 +98,31 @@ export function renderSpellInfo (spells, ref) {
 		site.spell.getHtmlPtRange(spell, {styleHint: style, isDisplaySelfArea}),
 		site.spell.getHtmlPtComponents(spell),
 		site.spell.getHtmlPtDuration(spell, {styleHint: style}),
-	].filter(Boolean).map(html => `<p class="cb-editor__spell-meta">${html}</p>`).join("");
+	].filter(Boolean).map(html => `<p class="cb-editor__option-meta">${html}</p>`).join("");
 	const entries = spell.entries;
 	if (Array.isArray(spell.entriesHigherLevel)) entries.push(...spell.entriesHigherLevel);
 	return `${meta}${api.render({type: "entries", entries})}`;
+}
+
+/**
+ * Render one optional feature's full text for the editor's choice lists: the
+ * prerequisite line the site prints above it, then the entries. Invocations are
+ * `optionalfeature` records, so their own text is shown instead of a summary.
+ */
+export function renderFeatureInfo (sources, ref) {
+	const site = globalThis.Renderer;
+	const api = renderer();
+	if (!site || !api || !ref?.name) return null;
+	const records = sources?.optionalFeatures?.optionalfeature;
+	if (!Array.isArray(records)) return null;
+	const record = records.find(candidate => candidate.name === ref.name && candidate.source === ref.source);
+	if (!record?.entries) return null;
+	const feature = clone(record);
+	const prereq = feature.prerequisite
+		? site.utils?.prerequisite?.getHtml?.(feature.prerequisite, {styleHint: styleHint()})
+		: "";
+	const meta = prereq ? `<p class="cb-editor__option-meta">${prereq}</p>` : "";
+	return `${meta}${api.render({type: "entries", entries: feature.entries})}`;
 }
 
 /**

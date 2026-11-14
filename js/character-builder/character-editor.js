@@ -3,7 +3,7 @@ import {
 	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
 } from "./editor-common.js";
 import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
-import {renderSpellInfo} from "./source-info.js";
+import {renderFeatureInfo, renderSpellInfo} from "./source-info.js";
 import {getBackgroundEquipment} from "./background-choices.js";
 import {filterSpellOptions} from "./spell-catalog.js";
 
@@ -41,7 +41,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	let character;
 	let scoreDrafts;
 	const optionFilters = new Map();
-	const spellPreviews = new Map();
+	const optionPreviews = new Map();
 
 	function element (tag, text, className) {
 		const out = document.createElement(tag);
@@ -339,7 +339,6 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	 * a long list such as a feat's level-1 spells stays searchable.
 	 */
 	function renderSingleOption (descriptor, displayedOptions) {
-		const spellList = displayedOptions.some(option => option.spell);
 		const input = select(displayedOptions, descriptor.selected[0], "No selection");
 		input.setAttribute("aria-label", descriptor.label);
 		input.dataset.cbFocus = descriptor.id;
@@ -348,32 +347,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		};
 		disableUnavailable();
 		input.addEventListener("change", () => publish(setCharacterChoice(character, descriptor.id, input.value ? [input.value] : [])));
-		if (!spellList || displayedOptions.length < OPTION_FILTER_MINIMUM) return [input];
-		const filterInput = element("input");
-		filterInput.type = "search";
-		filterInput.value = optionFilters.get(descriptor.id) ?? "";
-		filterInput.placeholder = "Search spells: name, level=1, school=Evocation, ritual";
-		filterInput.setAttribute("aria-label", `Filter ${descriptor.label}`);
-		filterInput.dataset.cbFocus = `filter:${descriptor.id}`;
-		const wrapper = element("label", null, "cb-editor__field cb-editor__filter");
-		wrapper.append(element("span", "Filter spells"), filterInput);
-		const status = element("p", null, "cb-editor__help cb-editor__filter-status");
-		status.setAttribute("aria-live", "polite");
-		const applyFilter = () => {
-			const query = filterInput.value;
-			optionFilters.set(descriptor.id, query);
-			const current = displayedOptions.find(option => option.id === input.value);
-			const matches = filterSpellOptions(displayedOptions, query);
-			const visible = current && !matches.includes(current) ? [current, ...matches] : matches;
-			input.replaceChildren(new Option("No selection", ""), ...visible.map(option => new Option(option.detail ? `${option.label} · ${option.detail}` : option.label, option.id)));
-			input.value = current?.id || "";
-			disableUnavailable();
-			status.hidden = !query.trim() || matches.length === displayedOptions.length;
-			status.textContent = matches.length ? `Showing ${matches.length} of ${displayedOptions.length} spells.` : "No spells match this filter.";
-		};
-		filterInput.addEventListener("input", applyFilter);
-		applyFilter();
-		return [element("p", SPELL_FILTER_HELP, "cb-editor__help"), wrapper, status, input];
+		return [input];
 	}
 
 	/** Render one saved choice as a selector, a checkbox group, or a fixed value. */
@@ -403,30 +377,31 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				: "This saved choice is unavailable at the current level. Remove it or restore the previous level.", "cb-editor__help"));
 		}
 		const options = element("div", null, "cb-editor__options");
-		const hasSpells = displayedOptions.some(option => option.spell);
-		const spellInfo = hasSpells ? element("div", null, "cb-editor__spell-info") : null;
-		const showSpell = option => {
-			if (!spellInfo || !option) return;
-			spellPreviews.set(descriptor.id, option.id);
+		// Spell and invocation options carry the reference their 5etools record
+		// needs, so the list can show the original text beside it.
+		const hasInfo = displayedOptions.some(option => option.spell || option.feature);
+		const optionInfo = hasInfo ? element("div", null, "cb-editor__option-info") : null;
+		const single = descriptor.count === 1;
+		const showInfo = (option, {force = false} = {}) => {
+			if (!optionInfo || !option) return;
+			if (!force && optionInfo.dataset.shown === option.id) return;
+			optionInfo.dataset.shown = option.id;
+			optionPreviews.set(descriptor.id, option.id);
 			let html = null;
-			try { html = option?.spell ? renderSpellInfo(context.spells, option.spell) : null; } catch { html = null; }
-			spellInfo.innerHTML = html || "";
-			spellInfo.hidden = !html;
+			try {
+				if (option.spell) html = renderSpellInfo(context.spells, option.spell);
+				else if (option.feature) html = renderFeatureInfo(context.sources, option.feature);
+			} catch { html = null; }
+			optionInfo.innerHTML = html || "";
+			optionInfo.hidden = !html;
 		};
 		if (fixedOption) {
 			group.append(element("p", fixedOption.detail ? `${fixedOption.label} · ${fixedOption.detail}` : fixedOption.label, "cb-editor__fixed"));
-		} else if (descriptor.count === 1 && descriptor.selected.length <= 1) {
+		} else if (single && descriptor.selected.length <= 1 && !hasInfo) {
 			options.append(...renderSingleOption(descriptor, displayedOptions));
-			const field = options.querySelector("select");
-			if (spellInfo && field) {
-				const read = () => showSpell(displayedOptions.find(option => option.id === field.value) || displayedOptions[0]);
-				field.addEventListener("change", read);
-				field.addEventListener("focus", read);
-				field.addEventListener("mouseenter", read);
-			}
 		} else {
-			const atLimit = descriptor.selected.length >= descriptor.count;
-			const spellList = hasSpells;
+			const atLimit = !single && descriptor.selected.length >= descriptor.count;
+			const spellList = displayedOptions.some(option => option.spell);
 			let filterInput = null;
 			let filterStatus = null;
 			if (displayedOptions.length >= OPTION_FILTER_MINIMUM) {
@@ -445,25 +420,31 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				group.append(wrapper, filterStatus);
 			}
 			const rows = [];
-			for (const option of displayedOptions) {
+			// A single-choice list offers the same clearing row a select had, and the
+			// filter always keeps it visible.
+			const rowOptions = single ? [{id: "", label: "No selection"}, ...displayedOptions] : displayedOptions;
+			for (const option of rowOptions) {
 				const label = element("label", null, "cb-editor__option");
 				const input = element("input");
-				input.type = "checkbox";
+				input.type = single ? "radio" : "checkbox";
+				if (single) input.name = descriptor.id;
 				input.setAttribute("aria-label", option.label);
 				input.dataset.cbFocus = `${descriptor.id}|${option.id}`;
 				if (filterInput) input.dataset.cbFocusFallback = filterInput.dataset.cbFocus;
-				input.checked = descriptor.selected.includes(option.id);
+				input.checked = single ? (option.id ? descriptor.selected[0] === option.id : !descriptor.selected.length) : descriptor.selected.includes(option.id);
 				const isRequired = required.includes(option.id);
 				input.disabled = isRequired ? input.checked : ((!descriptor.available && !input.checked) || (atLimit && !input.checked));
 				input.addEventListener("change", () => {
-					const selected = input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id);
-					showSpell(option);
+					const selected = single
+						? (option.id ? [option.id] : [])
+						: (input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id));
+					showInfo(option);
 					publish(setCharacterChoice(character, descriptor.id, selected));
 				});
 				label.append(input, element("span", option.detail ? `${option.label} · ${option.detail}` : option.label));
-				if (spellInfo) {
-					label.addEventListener("mouseenter", () => showSpell(option));
-					label.addEventListener("focusin", () => showSpell(option));
+				if (optionInfo) {
+					label.addEventListener("mousemove", () => showInfo(option));
+					label.addEventListener("focusin", () => showInfo(option));
 				}
 				options.append(label);
 				rows.push({option, label});
@@ -475,7 +456,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 					const matches = new Set((spellList ? filterSpellOptions : filterOptions)(displayedOptions, query).map(option => option.id));
 					let shown = 0;
 					for (const row of rows) {
-						const keep = matches.has(row.option.id) || descriptor.selected.includes(row.option.id);
+						const keep = !row.option.id || matches.has(row.option.id) || descriptor.selected.includes(row.option.id);
 						row.label.hidden = !keep;
 						if (keep) shown++;
 					}
@@ -487,15 +468,16 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			}
 		}
 		if (options.childElementCount) {
-			if (spellInfo) {
-				showSpell(
-					displayedOptions.find(option => option.id === spellPreviews.get(descriptor.id))
+			if (optionInfo) {
+				showInfo(
+					displayedOptions.find(option => option.id === optionPreviews.get(descriptor.id))
 					|| displayedOptions.find(option => descriptor.selected.includes(option.id))
 					|| displayedOptions[0],
+					{force: true},
 				);
-				const picker = element("div", null, "cb-editor__spell-picker");
+				const picker = element("div", null, "cb-editor__option-picker");
 				group.classList.add("cb-editor__group--wide");
-				picker.append(options, spellInfo);
+				picker.append(options, optionInfo);
 				group.append(picker);
 			} else group.append(options);
 		}

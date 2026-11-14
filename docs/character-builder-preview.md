@@ -85,7 +85,9 @@ root is 10 px, so these texts use pixel sizes rather than rems). The school keep
 the site's own colour (`ve-sp__school--*` from `css/main.css`). Such a group
 takes the full editor width, gives the text the larger share, and stacks the two
 above each other when it is narrow, so long descriptions are never clipped or
-pushed outside the box. An
+pushed outside the box. A single-spell choice is the same list with radio rows
+and an explicit *No selection* row instead of a dropdown, and reviewed invocation
+options show the invocation's own text and prerequisite beside the list. An
 imported build with missing or unsupported choices produces an incomplete draft
 summary rather than invented statistics. Selections no longer available after a
 level change remain visible until the player explicitly removes them. Choice

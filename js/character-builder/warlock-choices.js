@@ -218,7 +218,10 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	const preparedOptions = getSpellQueryOptions(spellCatalog, sourceChoices.spellQueries.prepared).filter(entry => entry.spell.level <= progression.slotLevel);
 	const owner = "class:warlock|xphb";
 	const invocationChoices = decisions.get(`${owner}:invocations`) || [];
-	const invocations = getAvailableInvocations(rules, document.build.level, invocationChoices).map(([id, value]) => option(id, value.name));
+	// Each option carries the reference its own 5etools record needs, so the
+	// editor can show the invocation's text beside the list.
+	const invocations = getAvailableInvocations(rules, document.build.level, invocationChoices)
+		.map(([id, value]) => ({...option(id, value.name), feature: {name: value.name, source: (id.split("|")[1] || "xphb").toUpperCase()}}));
 	const levelFourAbilities = abilities.map(ability => ability.id);
 	const levelFourWeights = [{from: levelFourAbilities, weights: [2]}, {from: levelFourAbilities, weights: [1, 1]}];
 	const invocationDescriptor = descriptor(`${owner}:invocations`, "Eldritch Invocations", progression.invocations, invocations);
