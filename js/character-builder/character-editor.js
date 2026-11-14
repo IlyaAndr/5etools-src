@@ -463,9 +463,6 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			}
 		}
 		if (options.childElementCount) group.append(options);
-		for (const option of descriptor.options) {
-			if (context.rules.equipment[option.id]?.gear) group.append(element("p", option.label, "cb-editor__package"));
-		}
 		const backgroundEquipment = getBackgroundEquipment(character.build.background, context.rules);
 		if (descriptor.id.endsWith(":equipment") && backgroundEquipment?.gear?.length) group.append(element("p", `Background equipment: ${backgroundEquipment.gear.join(", ")}`, "cb-editor__package"));
 		if (!descriptor.available && hasSavedChoice) {

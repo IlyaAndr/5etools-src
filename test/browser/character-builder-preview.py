@@ -583,7 +583,9 @@ def main():
             cleric_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
             assert any('Healing Word' in text for text in cleric_spells)
             assert len(cleric_spells) > 2
-            assert 'Leather Armor' in group_text(page, editor, 'Starting Equipment')
+            equipment_text = group_text(page, editor, 'Starting Equipment')
+            assert 'Leather Armor' in equipment_text
+            assert equipment_text.count('Leather Armor') == 1
             assert editor.locator('legend:text-is("Warlock Skill Proficiencies")').count() == 1
             page.get_by_label('Character name').fill('Created warlock')
             page.get_by_label('Character name').press('Tab')
