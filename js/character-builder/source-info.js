@@ -63,6 +63,18 @@ function readClass (sources, ref) {
 }
 
 /**
+ * Keep the site's colour for the school inside the level-and-school line, the
+ * way the spell tables print it, without changing the text.
+ */
+function colorizeSchool (html, school) {
+	const cssClass = globalThis.Parser?.spSchoolAbvToStyleClass?.(school);
+	const name = globalThis.Parser?.spSchoolAbvToFull?.(school);
+	if (!cssClass || !name) return html;
+	const pattern = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+	return html.replace(pattern, match => `<span class="${cssClass}">${match}</span>`);
+}
+
+/**
  * Render one spell's full text for the editor's spell pickers: the level and
  * school line the site prints above a spell, its casting time, range,
  * components, and duration, then the entries. The editor has the pinned spell
@@ -81,7 +93,7 @@ export function renderSpellInfo (spells, ref) {
 	const style = styleHint();
 	const isDisplaySelfArea = globalThis.SourceUtil?.isClassicSource?.(spell.source) ?? false;
 	const meta = [
-		site.spell.getHtmlPtLevelSchoolRitual(spell, {styleHint: style}),
+		colorizeSchool(site.spell.getHtmlPtLevelSchoolRitual(spell, {styleHint: style}), spell.school),
 		site.spell.getHtmlPtCastingTime(spell, {styleHint: style}),
 		site.spell.getHtmlPtRange(spell, {styleHint: style, isDisplaySelfArea}),
 		site.spell.getHtmlPtComponents(spell),

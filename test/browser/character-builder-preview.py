@@ -641,6 +641,11 @@ def main():
             assert card['size'] >= 13, card
             assert card['bg'] == page.locator('.cb-selection-info__entry').first.evaluate(
                 'el => getComputedStyle(el).backgroundColor'), card
+            # The school keeps the site's own colour instead of plain ink.
+            school = magic_initiate.locator('.cb-editor__spell-info span.ve-sp__school--v')
+            assert school.count() == 1
+            assert school.evaluate('el => getComputedStyle(el).color') != magic_initiate.locator(
+                '.cb-editor__spell-info').evaluate('el => getComputedStyle(el).color')
             prepared_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Prepared Warlock Spells")'))
             assert 'curse on a creature' in prepared_group.locator('.cb-editor__spell-info').inner_text()
             # The list and its description share the group without spilling

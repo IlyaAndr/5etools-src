@@ -81,7 +81,8 @@ or selecting an entry previews it, and the preview stays on the spell you looked
 at through editor redraws. The preview repeats the site's stat block — level and
 school, casting time, range, components, and duration — above the entries, on the
 same card as the species and class text and at the same readable size (the page
-root is 10 px, so these texts use pixel sizes rather than rems). Such a group
+root is 10 px, so these texts use pixel sizes rather than rems). The school keeps
+the site's own colour (`ve-sp__school--*` from `css/main.css`). Such a group
 takes the full editor width, gives the text the larger share, and stacks the two
 above each other when it is narrow, so long descriptions are never clipped or
 pushed outside the box. An
