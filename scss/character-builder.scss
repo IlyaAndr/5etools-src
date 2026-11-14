@@ -421,16 +421,29 @@
 	opacity: 0.5;
 }
 .cb-start {
+	--cb-start-height: 260px;
 	display: grid;
 	gap: 16px;
 	margin: 18px 0 12px;
 }
+/* Each row reads as one block: the list and its text share a height, grow to
+   the taller of the two, and scroll inside it. */
+.cb-start .cb-editor__option-picker {
+	align-items: stretch;
+}
 .cb-start .cb-editor__group {
+	display: flex;
+	flex-direction: column;
+	max-height: var(--cb-start-height);
 	margin: 0;
 }
-/* The class text lists every feature, so the start cards keep a scroll limit. */
+.cb-start .cb-editor__options {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
 .cb-start .cb-editor__option-info {
-	max-height: 26rem;
+	max-height: var(--cb-start-height);
 	overflow: auto;
 }
 .cb-start-note {

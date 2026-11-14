@@ -878,6 +878,9 @@ def main():
             assert retained_warlock['build']['choices'] == mixed_warlock['build']['choices']
             assert retained_warlock['session'] == mixed_warlock['session']
 
+            # The action bar sits at the top, above the name and the selections.
+            tops = page.evaluate('''() => ['.cb-controls', '.cb-name', '.cb-start'].map(selector => Math.round(document.querySelector(selector).getBoundingClientRect().top))''')
+            assert tops[0] < tops[1] < tops[2], tops
             # Compose a cross-preset character through the independent selectors.
             # Each selection sits in its own row, with its original 5etools text
             # in the column beside it.
@@ -906,14 +909,17 @@ def main():
                 return {
                     pickerRight: Math.round(picker.right),
                     pickerTop: Math.round(picker.top),
+                    pickerHeight: Math.round(picker.height),
                     infoLeft: Math.round(box.left),
                     infoTop: Math.round(box.top),
+                    infoHeight: Math.round(box.height),
                 };
             })''')
             assert len(layout) == 3, layout
             assert len({item['infoLeft'] for item in layout}) == 1, layout
             assert all(item['infoLeft'] >= item['pickerRight'] for item in layout), layout
             assert all(abs(item['infoTop'] - item['pickerTop']) <= 2 for item in layout), layout
+            assert all(item['pickerHeight'] == item['infoHeight'] for item in layout), layout
             pick(page, 'species', 'Aasimar|XPHB')
             aasimar = species_info.inner_text()
             assert 'Creature Type' in aasimar and 'Size:' in aasimar and 'Speed:' in aasimar

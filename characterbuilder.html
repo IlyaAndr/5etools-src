@@ -78,6 +78,26 @@
 		<p class="cb-toolbar__eyebrow">D&amp;D 2024 · Character Builder</p>
 		<h1 class="cb-toolbar__title">Your character</h1>
 		<p class="cb-toolbar__intro">Create a character, review a sheet, and print it or save it as a PDF.</p>
+		<div class="cb-controls">
+			<div class="cb-actions">
+				<button id="new-character" class="cb-button cb-button--primary" type="button" disabled>New character</button>
+				<button id="edit-fighter" class="cb-button" type="button" disabled>Edit character</button>
+			</div>
+			<div class="cb-actions">
+				<label class="cb-button cb-button--file">
+					<span>Open character JSON</span>
+					<input id="character-import" class="cb-file-input" type="file" accept=".json,application/json" disabled>
+				</label>
+				<button id="save-character" class="cb-button" type="button" disabled>Save JSON</button>
+			</div>
+			<div class="cb-actions">
+				<label class="cb-toggle" for="compact-sheet">
+					<input id="compact-sheet" type="checkbox">
+					<span>Compact print</span>
+				</label>
+				<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
+			</div>
+		</div>
 		<div class="cb-name">
 			<label for="character-name">Character name</label>
 			<input id="character-name" type="text" maxlength="200" autocomplete="off" spellcheck="false" placeholder="Name your character" disabled>
@@ -103,26 +123,6 @@
 					<div id="background-list" class="cb-editor__options" role="radiogroup" aria-label="Background"></div>
 				</fieldset>
 				<div class="cb-editor__option-info" data-info="background" aria-live="polite" hidden></div>
-			</div>
-		</div>
-		<div class="cb-controls">
-			<div class="cb-actions">
-				<button id="new-character" class="cb-button cb-button--primary" type="button" disabled>New character</button>
-				<button id="edit-fighter" class="cb-button" type="button" disabled>Edit character</button>
-			</div>
-			<div class="cb-actions">
-				<label class="cb-button cb-button--file">
-					<span>Open character JSON</span>
-					<input id="character-import" class="cb-file-input" type="file" accept=".json,application/json" disabled>
-				</label>
-				<button id="save-character" class="cb-button" type="button" disabled>Save JSON</button>
-			</div>
-			<div class="cb-actions">
-				<label class="cb-toggle" for="compact-sheet">
-					<input id="compact-sheet" type="checkbox">
-					<span>Compact print</span>
-				</label>
-				<button id="print-sheet" class="cb-button cb-button--primary" type="button" disabled>Print / Save PDF</button>
 			</div>
 		</div>
 		<p id="status" class="cb-status" role="status" aria-live="polite">Loading character data…</p>
