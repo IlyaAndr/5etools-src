@@ -162,7 +162,27 @@ def main():
             assert page.locator('.cb-actions').last.locator('#print-sheet').count() == 1
             assert page.locator('.cb-button--file').is_visible()
             assert page.locator('.cb-toggle').is_visible()
-            page.wait_for_function("document.querySelector('#status').textContent.startsWith('Choose a species')")
+            page.wait_for_function("document.querySelector('#status').textContent === 'Choose a species, class, and background to create a character.'")
+            # The form starts empty: nothing is preselected, the editor is
+            # hidden, and New character is disabled.
+            assert page.locator('.cb-start input:checked').count() == 0
+            assert page.locator('#fighter-editor').is_hidden()
+            assert page.locator('#new-character').is_disabled()
+            assert page.locator('#character-name').is_disabled()
+            assert page.locator('.cb-start-note h1').inner_text() == 'Choose a species, class, and background'
+            # One or two picks do not create anything; the third pick builds the
+            # character automatically, with no New character click.
+            pick(page, 'species', 'Gnome|XPHB')
+            assert page.locator('#fighter-editor').is_hidden()
+            assert page.locator('#new-character').is_disabled()
+            pick(page, 'class', 'Fighter|XPHB')
+            assert page.locator('#fighter-editor').is_hidden()
+            pick(page, 'background', 'Soldier|XPHB')
+            assert page.locator('#fighter-editor').is_visible()
+            assert page.locator('.cb-character-sheet').count() == 1
+            assert page.get_by_label('Character name').input_value() == 'New Character'
+            assert page.locator('#new-character').is_enabled()
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
             examples = page.evaluate('''async () => {
                 const {createSheetExamples} = await import('/js/character-builder/sheet-examples.js');
                 const rules = await (await fetch('/js/character-builder/rules/character-sheet.json')).json();
@@ -291,7 +311,10 @@ def main():
                 document['name'] = 'Stale imported character'
                 upload(page, document)
                 page.wait_for_function("typeof window.previewResolveFile === 'function'")
-                page.click('#new-character')
+                # Picking another species auto-creates a new character, which
+                # invalidates the pending read.
+                current_species = page.evaluate("document.querySelector('#species-list input:checked')?.dataset.value")
+                pick(page, 'species', 'Gnome|XPHB' if current_species != 'Gnome|XPHB' else 'Tiefling|XPHB')
                 expected_html = page.locator('#sheet-preview').inner_html()
                 page.evaluate('''async ({text, reject}) => {
                     if (reject) window.previewRejectFile(new Error('Stale file failure'));
@@ -341,41 +364,74 @@ def main():
             page.click('#print-sheet')
             assert page.evaluate('window.previewPrintCalled') is True
 
-            # Build and revise a character through the editor, then round-trip its save.
+            # Build a character by picking all three lists; the third pick
+            # creates it automatically, with no New character click.
             pick(page, 'species', 'Gnome|XPHB')
             pick(page, 'class', 'Fighter|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
-            page.click('#new-character')
-            with page.expect_download() as download_info:
-                page.click('#save-character')
-            first_id = json.loads(Path(download_info.value.path()).read_text())['id']
-            pick(page, 'species', 'Gnome|XPHB')
-            pick(page, 'class', 'Fighter|XPHB')
-            pick(page, 'background', 'Soldier|XPHB')
-            page.click('#new-character')
-            with page.expect_download() as download_info:
-                page.click('#save-character')
-            assert json.loads(Path(download_info.value.path()).read_text())['id'] != first_id
             editor = page.locator('#fighter-editor')
             assert editor.is_visible()
+            assert page.locator('.cb-character-sheet').count() == 1
             # The editor stays open while a character exists, so there is no
             # separate edit or close action any more.
             assert page.locator('#edit-fighter').count() == 0
             assert page.get_by_role('button', name='Close editor').count() == 0
-            # The form is grouped in blocks by owner instead of one long run.
-            headings = editor.locator('.cb-editor__section .cb-editor__section-title').all_inner_texts()
-            assert headings[:2] == ['Species', 'Class'], headings
-            assert editor.locator('.cb-editor__section[data-section="class"]').count() == 1
-            # New character clears the open character, but only after a confirm.
-            page.get_by_label('Character name').fill('Before reset')
+            # Choices are collapsible blocks in reading order, each with an
+            # "N of M left" counter, and a sticky nav jumps between them.
+            blocks = editor.locator('.cb-editor__section').evaluate_all('''elements => elements.map(element => ({
+                key: element.dataset.section,
+                title: element.querySelector('.cb-editor__section-title > span').textContent,
+                count: element.querySelector('.cb-editor__section-count').textContent,
+                open: element.open,
+            }))''')
+            assert [block['key'] for block in blocks] == ['scores', 'species', 'class', 'background', 'equipment'], blocks
+            assert [block['title'] for block in blocks] == ['Ability scores', 'Species', 'Class', 'Background', 'Equipment'], blocks
+            assert all(block['open'] for block in blocks), blocks
+            assert {block['key']: block['count'] for block in blocks}['scores'] == '6 of 6 left', blocks
+            assert all(block['count'] for block in blocks), blocks
+            nav = editor.locator('.cb-editor__nav')
+            assert nav.get_attribute('aria-label') == 'Editor sections'
+            assert nav.is_visible()
+            assert nav.locator('button').all_inner_texts() == [block['title'] for block in blocks], blocks
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            first_id = json.loads(Path(download_info.value.path()).read_text())['id']
+            # Changing a picker while a character exists asks first: No keeps
+            # the old character and reverts the picker, Yes rebuilds it.
+            page.get_by_label('Character name').fill('Before change')
             page.get_by_label('Character name').press('Tab')
             confirmations.accept = False
+            pick(page, 'class', 'Warlock|XPHB')
+            assert page.get_by_label('Character name').input_value() == 'Before change'
+            assert page.locator('#class-list input:checked').get_attribute('data-value') == 'Fighter|XPHB'
+            confirmations.accept = True
+            pick(page, 'class', 'Warlock|XPHB')
+            assert page.get_by_label('Character name').input_value() == 'New Character'
+            assert 'Character editor' in editor.inner_text()
+            assert confirmations.messages[-1].startswith('Changing the species, class, or background'), confirmations.messages[-1]
+            # New character clears the form after a confirm: pickers empty,
+            # editor hidden, name blank, and the start prompt restored.
+            confirmations.accept = False
             page.click('#new-character')
-            assert page.get_by_label('Character name').input_value() == 'Before reset'
+            assert editor.is_visible()
             confirmations.accept = True
             page.click('#new-character')
-            assert page.get_by_label('Character name').input_value() != 'Before reset'
-            assert confirmations.messages[-1].startswith('Start a new character?'), confirmations.messages[-1]
+            assert editor.is_hidden()
+            assert page.locator('.cb-start input:checked').count() == 0
+            assert page.locator('.cb-start-note').is_visible()
+            assert page.get_by_label('Character name').input_value() == ''
+            assert page.get_by_label('Character name').is_disabled()
+            assert page.locator('#new-character').is_disabled()
+            assert page.locator('#print-sheet').is_disabled()
+            assert confirmations.messages[-1].startswith('Clear this character?'), confirmations.messages[-1]
+            # Re-picking all three after a clear builds a fresh character with a
+            # new ID.
+            pick(page, 'species', 'Gnome|XPHB')
+            pick(page, 'class', 'Fighter|XPHB')
+            pick(page, 'background', 'Soldier|XPHB')
+            with page.expect_download() as download_info:
+                page.click('#save-character')
+            assert json.loads(Path(download_info.value.path()).read_text())['id'] != first_id
             page.screenshot(path=str(output / 'fighter-editor-desktop.png'))
             page.set_viewport_size({'width': 390, 'height': 844})
             check_width(page)
@@ -423,7 +479,7 @@ def main():
             editor.get_by_label('Point Buy', exact=True).check()
             point_buy_status = editor.locator('.cb-editor__score-status').inner_text()
             assert 'All 27 points are spent.' in point_buy_status, point_buy_status
-            assert '27 points' in group_text(page, editor, 'Base ability scores')
+            assert '27 points' in editor.locator('.cb-editor__methods').inner_text()
             assert editor.get_by_role('button', name='Increase Strength').is_disabled()
             editor.get_by_role('button', name='Decrease Strength').click()
             assert '25 of 27 points spent. 2 left.' in editor.locator('.cb-editor__score-status').inner_text()
@@ -591,9 +647,10 @@ def main():
             pick(page, 'species', 'Tiefling|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Acolyte|XPHB')
-            page.click('#new-character')
             editor = page.locator('#fighter-editor')
             assert 'Warlock editor' in editor.inner_text()
+            # The origin-feat block sits between Ability scores and Species.
+            assert editor.locator('.cb-editor__section').evaluate_all("elements => elements.map(element => element.dataset.section)") == ['scores', 'feat', 'species', 'class', 'equipment']
             # The class fixes Charisma, so every selected source allows exactly
             # one spellcasting ability; it is shown as a fixed value instead of a
             # selector.
@@ -968,7 +1025,6 @@ def main():
             pick(page, 'species', 'Gnome|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
-            page.click('#new-character')
             editor = page.locator('#fighter-editor')
             assert 'Character editor' in editor.inner_text()
             assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == ''
@@ -978,7 +1034,6 @@ def main():
             # Every 2024 background is reviewed; Sage brings its own origin feat,
             # a fixed tool instead of a category choice, and the Wizard spell list.
             pick(page, 'background', 'Sage|XPHB')
-            page.click('#new-character')
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Wizard) Spellcasting Ability')
             wizard_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Magic Initiate (Wizard) Level 1 Spell")'))
             assert wizard_group.get_by_label('Shield', exact=True).count() == 1
@@ -988,31 +1043,26 @@ def main():
             # species spellcasting-ability group appears for them.
             pick(page, 'species', 'Dwarf|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
-            page.click('#new-character')
             assert editor.get_by_label('Gnomish Lineage', exact=True).count() == 0
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             assert editor.get_by_label('Size', exact=True).count() == 0
             # Dragonborn and Goliath choose an ancestry that grants a resistance or
             # a trait, without any species spells.
             pick(page, 'species', 'Dragonborn|XPHB')
-            page.click('#new-character')
             assert editor.get_by_label('Draconic Ancestry', exact=True).count() == 1
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             for label in ['Acid', 'Cold', 'Fire', 'Lightning', 'Poison']:
                 assert label in group_text(page, editor, 'Draconic Ancestry')
             pick(page, 'species', 'Goliath|XPHB')
-            page.click('#new-character')
             assert "Storm's Thunder" in group_text(page, editor, 'Giant Ancestry')
             # Aasimar has no lineage or ability choice: only its size is asked.
             pick(page, 'species', 'Aasimar|XPHB')
-            page.click('#new-character')
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).count() == 0
             assert 'Medium' in group_text(page, editor, 'Size')
             assert 'Small' in group_text(page, editor, 'Size')
             # Elf picks a lineage and one Keen Senses skill; High Elf also picks a
             # cantrip from the reviewed Wizard list.
             pick(page, 'species', 'Elf|XPHB')
-            page.click('#new-character')
             assert 'Wood Elf' in group_text(page, editor, 'Elven Lineage')
             assert 'Survival' in group_text(page, editor, 'Skill')
             assert editor.get_by_label('Elf Cantrip', exact=True).count() == 0
@@ -1020,7 +1070,6 @@ def main():
             assert 'Minor Illusion' in group_text(page, editor, 'Elf Cantrip')
             # Human chooses any skill and an Origin feat from its species slot.
             pick(page, 'species', 'Human|XPHB')
-            page.click('#new-character')
             assert 'Medicine' in group_text(page, editor, 'Skill')
             assert 'Magic Initiate' in group_text(page, editor, 'Origin Feat')
             editor.get_by_label('Origin Feat', exact=True).select_option('skilled|xphb')

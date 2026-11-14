@@ -27,6 +27,7 @@ const isBackgroundIncrease = descriptor => descriptor.id.startsWith("background:
 
 /** Group a choice by the owner in its reviewed identifier. */
 const sectionFor = id => {
+	if (id.endsWith(":equipment")) return "equipment";
 	if (id.startsWith("species:") || id === "character:languages") return "species";
 	if (id.startsWith("class:")) return "class";
 	if (id.startsWith("background:")) return "background";
@@ -49,6 +50,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	const methodGroup = `cb-score-method-${++scoreMethodGroups}`;
 	let character;
 	let scoreDrafts;
+	let sectionObserver = null;
 	const optionFilters = new Map();
 	const optionPreviews = new Map();
 
@@ -286,8 +288,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const ids = abilities.map(({id}) => id);
 		const method = character.build.abilities.method;
 		const draft = methodDraft(method);
-		const fieldset = element("fieldset", null, "cb-editor__group");
-		fieldset.append(element("legend", "Base ability scores"));
+		const fieldset = element("fieldset", null, "cb-editor__group cb-editor__group--wide");
 		fieldset.append(element("p", "Pick how the six scores are assigned. They enter the saved character as soon as all six fit the method; until then the sheet stays incomplete.", "cb-editor__help"), renderMethods(method));
 		const grid = element("div", null, "cb-editor__scores");
 		const manualInputs = {};
@@ -520,23 +521,33 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		level.addEventListener("change", () => updateBuild({level: Number(level.value)}));
 		basic.append(field("Level", level));
 		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
-		const scores = renderScores(descriptors);
-		// One block per owner, so a long form reads as sections instead of one run
-		// of unrelated fieldsets.
+		// One block per owner, in reading order: scores first, then the origin
+		// feat they unlock, then the three sources, and equipment last.
 		const sections = [
-			{key: "species", title: "Species", groups: []},
-			{key: "class", title: "Class", groups: []},
-			{key: "background", title: "Background", groups: []},
-			{key: "feat", title: "Feats and boons", groups: []},
-			{key: "other", title: "Other choices", groups: []},
-		];
+			{key: "scores", title: "Ability scores"},
+			{key: "feat", title: "Feats and boons"},
+			{key: "species", title: "Species"},
+			{key: "class", title: "Class"},
+			{key: "background", title: "Background"},
+			{key: "equipment", title: "Equipment"},
+			{key: "other", title: "Other choices"},
+		].map(section => ({...section, groups: [], chosen: 0, total: 0}));
 		const sectionByKey = new Map(sections.map(section => [section.key, section]));
+		const scoresSection = sectionByKey.get("scores");
+		const scores = renderScores(descriptors);
+		scoresSection.groups.push(scores);
+		const scoreDraft = methodDraft(character.build.abilities.method);
+		scoresSection.total = abilities.length;
+		scoresSection.chosen = abilities.filter(ability => scoreDraft[ability.id] != null).length;
 		for (const descriptor of descriptors) {
 			if (isBackgroundIncrease(descriptor)) continue;
 			const group = renderChoiceGroup(descriptor);
 			if (!group) continue;
 			group.dataset.choice = descriptor.id;
-			sectionByKey.get(sectionFor(descriptor.id)).groups.push(group);
+			const section = sectionByKey.get(sectionFor(descriptor.id));
+			section.groups.push(group);
+			section.total += descriptor.count;
+			section.chosen += Math.min(descriptor.count, descriptor.selected.length);
 		}
 		const unknown = character.build.choices.filter(choice => !descriptors.some(descriptor => descriptor.id === choice.id));
 		if (unknown.length) {
@@ -556,16 +567,49 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			sectionByKey.get("other").groups.push(group);
 		}
 		const choices = element("div", null, "cb-editor__choices");
+		const nav = element("nav", null, "cb-editor__nav");
+		nav.setAttribute("aria-label", "Editor sections");
+		const markCurrent = key => {
+			for (const button of nav.querySelectorAll("button")) {
+				if (button.dataset.target === key) button.setAttribute("aria-current", "true");
+				else button.removeAttribute("aria-current");
+			}
+		};
 		for (const section of sections) {
 			if (!section.groups.length) continue;
-			const block = element("section", null, "cb-editor__section");
+			const missing = Math.max(0, section.total - section.chosen);
+			const block = document.createElement("details");
+			block.className = "cb-editor__section";
 			block.dataset.section = section.key;
+			block.id = `cb-editor-section-${section.key}`;
+			block.open = true;
+			const summary = element("summary", null, "cb-editor__section-title");
+			summary.append(element("span", section.title), element("span", section.total
+				? (missing ? `${missing} of ${section.total} left` : `All ${section.total} chosen`)
+				: "", "cb-editor__section-count"));
 			const groups = element("div", null, "cb-editor__section-groups");
 			groups.append(...section.groups);
-			block.append(element("h3", section.title, "cb-editor__section-title"), groups);
+			block.append(summary, groups);
 			choices.append(block);
+			const jump = element("button", section.title, "cb-editor__nav-button");
+			jump.type = "button";
+			jump.dataset.target = section.key;
+			jump.addEventListener("click", () => {
+				block.scrollIntoView({behavior: "smooth", block: "start"});
+				markCurrent(section.key);
+			});
+			nav.append(jump);
 		}
-		container.replaceChildren(heading, intro, basic, scores, choices);
+		nav.hidden = nav.childElementCount < 2;
+		sectionObserver?.disconnect();
+		if (typeof IntersectionObserver === "function") {
+			sectionObserver = new IntersectionObserver(entries => {
+				const shown = entries.filter(entry => entry.isIntersecting);
+				if (shown.length) markCurrent(shown[0].target.dataset.section);
+			}, {rootMargin: "-90px 0px -55% 0px"});
+			for (const block of choices.querySelectorAll(".cb-editor__section")) sectionObserver.observe(block);
+		}
+		container.replaceChildren(heading, intro, basic, nav, choices);
 		container.hidden = false;
 	}
 

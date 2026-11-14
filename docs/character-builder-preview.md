@@ -22,8 +22,11 @@ and fetches local source JSON, so it must be served over HTTP rather than opened
 directly as a `file://` document. Runtime examples live in the application module;
 the page does not load test fixtures or require Foundry or application globals.
 
-Pick one species, class, and background from the three lists, then select
-**New character**; the lists sit on the left and the original 5etools blocks of
+Pick one species, class, and background from the three lists; the character is
+created automatically once the third list has a selection, so there is no separate
+create step. **New character** clears the open character after a confirmation and
+returns the form to its empty start. The lists sit on the left and the original
+5etools blocks of
 the current choice on the right — the race summary (creature type, size, speed)
 and traits, the class Core Traits and Multiclassing blocks with its features by
 level, and the background entry — so the options can be compared without leaving
@@ -93,12 +96,18 @@ summary rather than invented statistics. Selections no longer available after a
 level change remain visible until the player explicitly removes them. Choice
 groups with at least eight options include a text filter; it narrows only the
 displayed entries, keeps selected entries visible, and never changes the saved
-decisions. New documents have unique IDs. The editor groups its choices into blocks
-by owner — Species, Class, Background, Feats and boons, Other choices — each with a
-heading above its own two-column grid, so a long form reads as sections.
+decisions. New documents have unique IDs. The editor groups its choices into
+collapsible blocks in reading order — Ability scores, Feats and boons, Species,
+Class, Background, Equipment, and Other choices — each with a heading and an
+"N of M left" counter, so a long form reads as sections and its progress is
+visible at a glance. A sticky navigation bar above the blocks jumps to a block and
+marks the one in view; blocks start open, and closing one keeps its choices saved.
 
-Starting a new character clears the open one, so it asks for confirmation first;
-answer No and the current document is untouched. The editor stays open while a
+Changing the species, class, or background while a character is open starts a new
+character, so it asks for confirmation first; answer No and the current document is
+untouched (the picker reverts), answer Yes and a fresh character is created.
+**New character** clears the open character after a similar confirmation and
+returns the form to its empty state. The editor stays open while a
 character exists (there is no separate edit or close action), and opening a saved
 file shows the editor for that file without auto-filling any of its choices.
 

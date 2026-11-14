@@ -56,6 +56,7 @@ function showDocument (character) {
 	hasPreview = true;
 	printButton.disabled = false;
 	saveButton.disabled = false;
+	newCharacterButton.disabled = false;
 	printButton.textContent = model.status === "complete" ? "Print / Save PDF" : "Print draft summary";
 	preview.setAttribute("aria-busy", "false");
 	clearError();
@@ -80,6 +81,7 @@ function renderList (kind, entries) {
 			selection[kind] = input.value;
 			reflectSelection();
 			showSelectionInfo();
+			createFromSelection();
 		});
 		const name = document.createElement("span");
 		name.textContent = entry.name;
@@ -95,9 +97,88 @@ function reflectSelection () {
 	}
 }
 
+const STATUS_PROMPT = "Choose a species, class, and background to create a character.";
+
+/** Read one picker value as a source-qualified reference. */
+function readRef (value) {
+	const [name, source] = `${value}`.split("|");
+	return name && source ? {name, source} : null;
+}
+
+const sameRef = (left, right) => !!left && !!right && left.name === right.name && left.source === right.source;
+
+/** Show the pickers at the values the open character was built from. */
+function selectFrom (character) {
+	const build = character?.build;
+	if (!build?.class || !build?.species || !build?.background) return;
+	selection.species = `${build.species.name}|${build.species.source}`;
+	selection.class = `${build.class.name}|${build.class.source}`;
+	selection.background = `${build.background.name}|${build.background.source}`;
+	reflectSelection();
+	showSelectionInfo();
+}
+
+/** Put the pickers back when the player cancels replacing the open character. */
+function revertSelection () {
+	selectFrom(currentCharacter);
+}
+
+/**
+ * Build the character as soon as the three lists name a combination, so the
+ * form does not need a separate create action. Replacing an open character
+ * discards its choices, so that asks first.
+ */
+function createFromSelection () {
+	const choice = {
+		species: readRef(selection.species),
+		characterClass: readRef(selection.class),
+		background: readRef(selection.background),
+	};
+	if (!choice.species || !choice.characterClass || !choice.background) return;
+	const build = currentCharacter?.build;
+	if (build && sameRef(build.species, choice.species) && sameRef(build.class, choice.characterClass) && sameRef(build.background, choice.background)) return;
+	if (build && !window.confirm("Changing the species, class, or background starts a new character and clears the choices made for the current one.")) {
+		revertSelection();
+		return;
+	}
+	++requestId;
+	try {
+		editor.create("character", choice);
+	} catch (error) {
+		showError(`Could not create this character. ${error.message}`);
+	}
+}
+
+/** Drop the open character and return the form to its empty state. */
+function clearCharacter () {
+	// Invalidate any pending file read, so a late import cannot restore the
+	// character the player just cleared.
+	++requestId;
+	selection.species = "";
+	selection.class = "";
+	selection.background = "";
+	reflectSelection();
+	showSelectionInfo();
+	editor?.close();
+	currentCharacter = undefined;
+	hasPreview = false;
+	preview.innerHTML = startPrompt();
+	preview.setAttribute("aria-busy", "false");
+	characterName.value = "";
+	characterName.disabled = true;
+	pageCount.textContent = "";
+	saveButton.disabled = true;
+	printButton.disabled = true;
+	printButton.textContent = "Print / Save PDF";
+	newCharacterButton.disabled = true;
+	document.title = "Character Builder - 5etools";
+	status.textContent = STATUS_PROMPT;
+	clearError();
+}
+
 /** The placeholder shown before the first character is created. */
 function startPrompt () {
-	return `<section class="cb-page cb-start-note"><h1>Choose a species, class, and background</h1><p>Pick one option in each list, then select <strong>New character</strong>. The calculated sheet appears here, ready to review, print, or save as a PDF.</p></section>`;
+	return `<section class="cb-page cb-start-note"><h1>Choose a species, class, and background</h1><p>Pick one option in each list; the calculated sheet appears here as soon as all three are chosen, ready to review, print, or save as a PDF.</p></section>`;
 }
 
 /** Show the original text of the species, class, and background being chosen. */
@@ -165,9 +246,6 @@ async function loadData () {
 		renderList("species", combinations.species);
 		renderList("class", combinations.classes);
 		renderList("background", combinations.backgrounds);
-		selection.species = `${combinations.species[0].name}|${combinations.species[0].source}`;
-		selection.class = `${combinations.classes[0].name}|${combinations.classes[0].source}`;
-		selection.background = `${combinations.backgrounds[0].name}|${combinations.backgrounds[0].source}`;
 		reflectSelection();
 		editor = createCharacterEditor({
 			container: editorContainer,
@@ -189,9 +267,9 @@ async function loadData () {
 		preview.innerHTML = startPrompt();
 		preview.setAttribute("aria-busy", "false");
 		importInput.disabled = false;
-		newCharacterButton.disabled = false;
+		newCharacterButton.disabled = true;
 		showSelectionInfo();
-		status.textContent = "Choose a species, class, and background, then select New character.";
+		status.textContent = STATUS_PROMPT;
 	} catch (error) {
 		if (currentRequest !== requestId) return;
 		preview.setAttribute("aria-busy", "false");
@@ -239,6 +317,7 @@ importInput.addEventListener("change", async () => {
 		// reachable without a separate edit action.
 		if (editor?.canEdit(character)) editor.open(character, {autoSelect: false});
 		else editor.close();
+		selectFrom(character);
 		status.textContent = result === "complete" ? `Opened ${file.name}. The character sheet is ready to print.` : `Opened ${file.name}. Complete the listed choices to calculate a full character sheet.`;
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -258,22 +337,9 @@ printButton.addEventListener("click", () => {
 });
 retryButton.addEventListener("click", loadData);
 newCharacterButton.addEventListener("click", () => {
-	const readRef = value => {
-		const [name, source] = value.split("|");
-		return {name, source};
-	};
-	// Starting over clears the open character, so it asks first.
-	if (hasPreview && !window.confirm("Start a new character? This clears the current character and every choice and note entered for it.")) return;
-	++requestId;
-	try {
-		editor.create("character", {
-			species: readRef(selection.species),
-			characterClass: readRef(selection.class),
-			background: readRef(selection.background),
-		});
-	} catch (error) {
-		showError(`Could not create this character. ${error.message}`);
-	}
+	if (!hasPreview) return;
+	if (!window.confirm("Clear this character? Every choice and note entered for it is discarded.")) return;
+	clearCharacter();
 });
 saveButton.addEventListener("click", () => {
 	if (!currentCharacter) return;
