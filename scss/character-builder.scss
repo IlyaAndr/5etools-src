@@ -425,82 +425,16 @@
 	gap: 16px;
 	margin: 18px 0 12px;
 }
-.cb-start__row {
-	display: grid;
-	gap: 16px;
-	grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-	align-items: start;
-}
-.cb-picker {
-	border: 1px solid var(--cb-border, #c8c2b4);
-	border-radius: 6px;
-	padding: 6px 8px;
+.cb-start .cb-editor__group {
 	margin: 0;
 }
-.cb-picker > legend {
-	font-weight: 700;
-	padding: 0 4px;
-}
-.cb-picker__list {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	max-height: 12rem;
-	overflow: auto;
-}
-.cb-picker__option {
-	text-align: left;
-	border: 1px solid transparent;
-	border-radius: 4px;
-	background: transparent;
-	padding: 3px 6px;
-	cursor: pointer;
-	font: inherit;
-}
-.cb-picker__option:hover {
-	background: rgb(0 0 0 / 6%);
-}
-.cb-picker__option.is-selected {
-	border-color: currentcolor;
-	font-weight: 700;
-}
-.cb-start-note {
-	padding: 24px;
-}
-@media (width <= 900px) {
-	.cb-start__row {
-		grid-template-columns: minmax(0, 1fr);
-	}
-}
-.cb-selection-info {
-	min-width: 0;
-}
-.cb-selection-info[hidden] {
-	display: none;
-}
-.cb-selection-info__entry {
-	border: 1px solid var(--cb-border, #c8c2b4);
-	border-radius: 6px;
-	background: var(--cb-surface, #fffdf6);
-	padding: 6px 10px;
+/* The class text lists every feature, so the start cards keep a scroll limit. */
+.cb-start .cb-editor__option-info {
 	max-height: 26rem;
 	overflow: auto;
 }
-.cb-selection-info__entry > summary {
-	cursor: pointer;
-	font-weight: 700;
-}
-.cb-selection-info__text {
-	font-size: 14px;
-	line-height: 1.45;
-}
-.cb-selection-info__text h4 {
-	margin: 8px 0 2px;
-	font-size: 15px;
-}
-.cb-selection-info__text p,
-.cb-selection-info__text ul {
-	margin: 4px 0;
+.cb-start-note {
+	padding: 24px;
 }
 .cb-control input,
 .cb-control select {
@@ -1225,7 +1159,6 @@
 	.cb-editor,
 	.cb-site-header,
 	.cb-start,
-	.cb-selection-info,
 	.cb-spell-reference .cb-page-footer {
 		display: none;
 	}

@@ -118,8 +118,11 @@ languages. Rare languages are not offered yet.
 The starting area keeps one row per selection: the Species, Class, and Background
 lists share a column on the left, and each row's original 5etools text sits in the
 column beside it, so the three descriptions line up with the lists that produce
-them. A row stacks the two when the page is narrow, and a description stays hidden
-until its list has a selection. Species, background, origin-feat, class, and equipment choices are supplied by
+them. These rows use the same option list and text card as the editor's choice
+groups — radio rows, the same borders and spacing, the same cream card at 14 px —
+so the start area and the editor read the same. A row stacks the two when the page
+is narrow, a description stays hidden until its list has a selection, and the start
+cards keep a 26 rem scroll limit because a class prints every feature it grants. Species, background, origin-feat, class, and equipment choices are supplied by
 independent providers and composed by shared code. All 16 XPHB backgrounds are
 reviewed: each brings its source ability list, two fixed skills, its tool (fixed,
 or one of every reviewed artisan's tool, musical instrument, or gaming set), its

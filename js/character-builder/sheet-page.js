@@ -1,6 +1,6 @@
 import {parseCharacterDocument, serializeCharacterDocument} from "./character-document.js";
 import {createSpeciesCatalog} from "./species-catalog.js";
-import {escapeHtml, renderCharacterSheet} from "./sheet-renderer.js";
+import {renderCharacterSheet} from "./sheet-renderer.js";
 import {createCharacterSheetModel} from "./character-sheet-model.js";
 import {createCharacterEditor} from "./character-editor.js";
 import {createEditorProfiles, getEditorCombinations} from "./editor-profile.js";
@@ -16,7 +16,7 @@ const newCharacterButton = document.getElementById("new-character");
 const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
-const selectionInfo = new Map([...document.querySelectorAll(".cb-selection-info[data-info]")].map(slot => [slot.dataset.info, slot]));
+const selectionInfo = new Map([...document.querySelectorAll(".cb-editor__option-info[data-info]")].map(slot => [slot.dataset.info, slot]));
 const compactToggle = document.getElementById("compact-sheet");
 const pageCount = document.getElementById("sheet-pages");
 const listElements = {
@@ -64,32 +64,36 @@ function showDocument (character) {
 	return model.status;
 }
 
-/** Render one picker list; clicking an option becomes the current selection. */
+/**
+ * Render one picker list with the same rows the editor uses, so the starting
+ * choices read like the rest of the page; choosing a row is the selection.
+ */
 function renderList (kind, entries) {
 	listElements[kind].replaceChildren(...entries.map(entry => {
-		const button = document.createElement("button");
-		button.type = "button";
-		button.className = "cb-picker__option";
-		button.textContent = entry.name;
-		button.dataset.value = `${entry.name}|${entry.source}`;
-		button.setAttribute("role", "option");
-		button.addEventListener("click", () => {
-			selection[kind] = button.dataset.value;
+		const row = document.createElement("label");
+		row.className = "cb-editor__option";
+		const input = document.createElement("input");
+		input.type = "radio";
+		input.name = kind;
+		input.value = `${entry.name}|${entry.source}`;
+		input.dataset.value = input.value;
+		input.setAttribute("aria-label", entry.name);
+		input.addEventListener("change", () => {
+			selection[kind] = input.value;
 			reflectSelection();
 			showSelectionInfo();
 		});
-		return button;
+		const name = document.createElement("span");
+		name.textContent = entry.name;
+		row.append(input, name);
+		return row;
 	}));
 }
 
 /** Mark the selected option in each list, so the choice is visible at a glance. */
 function reflectSelection () {
 	for (const [kind, container] of Object.entries(listElements)) {
-		for (const button of container.children) {
-			const active = button.dataset.value === selection[kind];
-			button.classList.toggle("is-selected", active);
-			button.setAttribute("aria-selected", `${active}`);
-		}
+		for (const input of container.querySelectorAll("input")) input.checked = input.value === selection[kind];
 	}
 }
 
@@ -105,10 +109,10 @@ function showSelectionInfo () {
 		const [name, source] = `${value}`.split("|");
 		return name && source ? {name, source} : null;
 	};
-	for (const [kind, label, value] of [
-		["species", "Species", read(selection.species)],
-		["class", "Class", read(selection.class)],
-		["background", "Background", read(selection.background)],
+	for (const [kind, value] of [
+		["species", read(selection.species)],
+		["class", read(selection.class)],
+		["background", read(selection.background)],
 	]) {
 		const slot = selectionInfo.get(kind);
 		if (!slot) continue;
@@ -120,9 +124,7 @@ function showSelectionInfo () {
 				showError(`Could not show the ${kind} text. ${error.message}`);
 			}
 		}
-		slot.innerHTML = info
-			? `<details class="cb-selection-info__entry" open><summary>${label}: <strong>${escapeHtml(info.name)}</strong></summary><div class="cb-selection-info__text">${info.html}</div></details>`
-			: "";
+		slot.innerHTML = info ? info.html : "";
 		slot.hidden = !info;
 	}
 }

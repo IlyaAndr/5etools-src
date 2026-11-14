@@ -140,9 +140,9 @@ def main():
             page.goto(url, wait_until='networkidle')
             page.wait_for_selector('.cb-start-note')
             assert page.locator('#print-sheet').is_disabled()
-            assert page.locator('#species-list .cb-picker__option').count() == 10
-            assert page.locator('#class-list .cb-picker__option').count() == 2
-            assert page.locator('#background-list .cb-picker__option').count() == 16
+            assert page.locator('#species-list .cb-editor__option').count() == 10
+            assert page.locator('#class-list .cb-editor__option').count() == 2
+            assert page.locator('#background-list .cb-editor__option').count() == 16
             # The controls are grouped, and the file picker looks like a button.
             assert page.locator('.cb-controls .cb-actions').count() == 3
             assert page.locator('.cb-actions').last.locator('#print-sheet').count() == 1
@@ -647,7 +647,7 @@ def main():
             card = magic_initiate.locator('.cb-editor__option-info').evaluate(
                 'el => ({size: parseFloat(getComputedStyle(el).fontSize), bg: getComputedStyle(el).backgroundColor})')
             assert card['size'] >= 13, card
-            assert card['bg'] == page.locator('.cb-selection-info__entry').first.evaluate(
+            assert card['bg'] == page.locator('.cb-editor__option-info').first.evaluate(
                 'el => getComputedStyle(el).backgroundColor'), card
             # The school keeps the site's own colour instead of plain ink.
             school = magic_initiate.locator('.cb-editor__option-info span.ve-sp__school--v')
@@ -881,9 +881,9 @@ def main():
             # Compose a cross-preset character through the independent selectors.
             # Each selection sits in its own row, with its original 5etools text
             # in the column beside it.
-            species_info = page.locator('.cb-selection-info[data-info="species"]')
-            class_info = page.locator('.cb-selection-info[data-info="class"]')
-            background_info = page.locator('.cb-selection-info[data-info="background"]')
+            species_info = page.locator('.cb-editor__option-info[data-info="species"]')
+            class_info = page.locator('.cb-editor__option-info[data-info="class"]')
+            background_info = page.locator('.cb-editor__option-info[data-info="background"]')
             pick(page, 'species', 'Tiefling|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
@@ -900,8 +900,8 @@ def main():
             # The three rows share one grid, so every description starts in the
             # same column, level with its own list.
             layout = page.locator('.cb-start__row').evaluate_all('''rows => rows.map(row => {
-                const picker = row.querySelector('.cb-picker').getBoundingClientRect();
-                const info = row.querySelector('.cb-selection-info');
+                const picker = row.querySelector('.cb-editor__group').getBoundingClientRect();
+                const info = row.querySelector('.cb-editor__option-info');
                 const box = info.getBoundingClientRect();
                 return {
                     pickerRight: Math.round(picker.right),
@@ -923,13 +923,13 @@ def main():
             assert 'Action Surge' in class_info.inner_text()
             pick(page, 'class', 'Warlock|XPHB')
             # Every reviewed selection renders its own source text.
-            for value in page.locator('#species-list .cb-picker__option').evaluate_all("buttons => buttons.map(button => button.dataset.value)"):
+            for value in page.locator('#species-list input').evaluate_all("inputs => inputs.map(input => input.dataset.value)"):
                 pick(page, 'species', value)
                 assert species_info.inner_text().strip()
-            for value in page.locator('#class-list .cb-picker__option').evaluate_all("buttons => buttons.map(button => button.dataset.value)"):
+            for value in page.locator('#class-list input').evaluate_all("inputs => inputs.map(input => input.dataset.value)"):
                 pick(page, 'class', value)
                 assert class_info.inner_text().strip()
-            for value in page.locator('#background-list .cb-picker__option').evaluate_all("buttons => buttons.map(button => button.dataset.value)"):
+            for value in page.locator('#background-list input').evaluate_all("inputs => inputs.map(input => input.dataset.value)"):
                 pick(page, 'background', value)
                 assert background_info.inner_text().strip()
             pick(page, 'species', 'Gnome|XPHB')
