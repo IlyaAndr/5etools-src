@@ -25,6 +25,15 @@ let scoreMethodGroups = 0;
 
 const isBackgroundIncrease = descriptor => descriptor.id.startsWith("background:") && descriptor.id.endsWith(":ability-increases");
 
+/** Group a choice by the owner in its reviewed identifier. */
+const sectionFor = id => {
+	if (id.startsWith("species:") || id === "character:languages") return "species";
+	if (id.startsWith("class:")) return "class";
+	if (id.startsWith("background:")) return "background";
+	if (id.startsWith("feat:")) return "feat";
+	return "other";
+};
+
 /** A small editor for the subset currently supported by the sheet calculator. */
 export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
 	const abilities = getEditorAbilities(context.sources);
@@ -501,10 +510,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const heading = element("div", null, "cb-editor__heading");
 		const title = element("div");
 		title.append(element("h2", profile.title), element("p", profile.scope));
-		const close = element("button", "Close editor", "cb-button");
-		close.type = "button";
-		close.addEventListener("click", () => { container.hidden = true; });
-		heading.append(title, close);
+		heading.append(title);
 		const intro = element("p", profile.intro, "cb-editor__intro");
 		const basic = element("div", null, "cb-editor__grid");
 		const level = select(Array.from({length: Math.max(1, maxLevelFor(character))}, (_, index) => ({id: `${index + 1}`, label: `Level ${index + 1}`})), `${character.build.level}`);
@@ -515,11 +521,22 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		basic.append(field("Level", level));
 		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
 		const scores = renderScores(descriptors);
-		const choices = element("div", null, "cb-editor__choices");
+		// One block per owner, so a long form reads as sections instead of one run
+		// of unrelated fieldsets.
+		const sections = [
+			{key: "species", title: "Species", groups: []},
+			{key: "class", title: "Class", groups: []},
+			{key: "background", title: "Background", groups: []},
+			{key: "feat", title: "Feats and boons", groups: []},
+			{key: "other", title: "Other choices", groups: []},
+		];
+		const sectionByKey = new Map(sections.map(section => [section.key, section]));
 		for (const descriptor of descriptors) {
 			if (isBackgroundIncrease(descriptor)) continue;
 			const group = renderChoiceGroup(descriptor);
-			if (group) choices.append(group);
+			if (!group) continue;
+			group.dataset.choice = descriptor.id;
+			sectionByKey.get(sectionFor(descriptor.id)).groups.push(group);
 		}
 		const unknown = character.build.choices.filter(choice => !descriptors.some(descriptor => descriptor.id === choice.id));
 		if (unknown.length) {
@@ -536,7 +553,17 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				row.append(element("span", `${choice.id}: ${choice.selected.join(", ") || "(empty)"}`), remove);
 				group.append(row);
 			}
-			choices.append(group);
+			sectionByKey.get("other").groups.push(group);
+		}
+		const choices = element("div", null, "cb-editor__choices");
+		for (const section of sections) {
+			if (!section.groups.length) continue;
+			const block = element("section", null, "cb-editor__section");
+			block.dataset.section = section.key;
+			const groups = element("div", null, "cb-editor__section-groups");
+			groups.append(...section.groups);
+			block.append(element("h3", section.title, "cb-editor__section-title"), groups);
+			choices.append(block);
 		}
 		container.replaceChildren(heading, intro, basic, scores, choices);
 		container.hidden = false;
@@ -555,13 +582,15 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				if (character) render();
 			}
 		},
-		open (document) {
+		open (document, {autoSelect = true} = {}) {
 			if (!profileFor(document)) return;
 			if (document !== character) {
 				scoreDrafts = {};
 				optionFilters.clear();
 				character = document;
-				const next = autoSelectSingleOptions(document);
+				// An imported document keeps the values it was saved with; only a
+				// character built here fills single-option choices automatically.
+				const next = autoSelect ? autoSelectSingleOptions(document) : document;
 				if (next !== document && onChange(next)) character = next;
 			}
 			render();

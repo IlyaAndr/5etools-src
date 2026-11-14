@@ -67,6 +67,18 @@ def export_pdf(page, target, expected_pages=None):
     return pages
 
 
+class DialogAnswer:
+    """Answer window.confirm() deterministically; flip `accept` to cancel."""
+
+    def __init__(self):
+        self.accept = True
+        self.messages = []
+
+    def __call__(self, dialog):
+        self.messages.append(dialog.message)
+        dialog.accept() if self.accept else dialog.dismiss()
+
+
 def upload(page, document, filename='character.json'):
     page.locator('#character-import').set_input_files({
         'name': filename,
@@ -117,6 +129,8 @@ def main():
         try:
             page = browser.new_page(viewport={'width': 1100, 'height': 1300})
             page.on('pageerror', lambda error: errors.append(str(error)))
+            confirmations = DialogAnswer()
+            page.on('dialog', confirmations)
             # The shared Player menu opens the builder and links back on mobile.
             page.goto(url.replace('characterbuilder.html', 'statgen.html'), wait_until='domcontentloaded')
             builder_link = page.locator('#navbar li[data-page="characterbuilder.html"]')
@@ -344,6 +358,24 @@ def main():
             assert json.loads(Path(download_info.value.path()).read_text())['id'] != first_id
             editor = page.locator('#fighter-editor')
             assert editor.is_visible()
+            # The editor stays open while a character exists, so there is no
+            # separate edit or close action any more.
+            assert page.locator('#edit-fighter').count() == 0
+            assert page.get_by_role('button', name='Close editor').count() == 0
+            # The form is grouped in blocks by owner instead of one long run.
+            headings = editor.locator('.cb-editor__section .cb-editor__section-title').all_inner_texts()
+            assert headings[:2] == ['Species', 'Class'], headings
+            assert editor.locator('.cb-editor__section[data-section="class"]').count() == 1
+            # New character clears the open character, but only after a confirm.
+            page.get_by_label('Character name').fill('Before reset')
+            page.get_by_label('Character name').press('Tab')
+            confirmations.accept = False
+            page.click('#new-character')
+            assert page.get_by_label('Character name').input_value() == 'Before reset'
+            confirmations.accept = True
+            page.click('#new-character')
+            assert page.get_by_label('Character name').input_value() != 'Before reset'
+            assert confirmations.messages[-1].startswith('Start a new character?'), confirmations.messages[-1]
             page.screenshot(path=str(output / 'fighter-editor-desktop.png'))
             page.set_viewport_size({'width': 390, 'height': 844})
             check_width(page)
@@ -368,8 +400,6 @@ def main():
             editor.get_by_label('Strength', exact=True).select_option('15')
             assert '1 of 6 assigned. Values left: 14, 13, 12, 10, 8.' in editor.locator('.cb-editor__score-status').inner_text()
             assert editor.get_by_label('Dexterity', exact=True).locator('option[value="15"]').get_attribute('disabled') is not None
-            editor.get_by_role('button', name='Close editor').click()
-            page.click('#edit-fighter')
             assert editor.get_by_label('Strength', exact=True).input_value() == '15'
             for ability, value in {'Strength': 15, 'Dexterity': 13, 'Constitution': 14, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
                 editor.get_by_label(ability, exact=True).select_option(str(value))
@@ -485,7 +515,6 @@ def main():
             saved['build']['choices'].append({'id': 'custom:unknown-choice', 'selected': ['custom-value']})
             upload(page, saved)
             page.wait_for_function("document.querySelector('#status').textContent.startsWith('Opened character.json')")
-            page.click('#edit-fighter')
             assert 'custom:unknown-choice: custom-value' in editor.inner_text()
             page.get_by_label('Character name').fill('Edited fighter')
             page.get_by_label('Character name').press('Tab')
@@ -512,7 +541,6 @@ def main():
             upload(page, level_one)
             page.wait_for_function("document.querySelector('#status').textContent.startsWith('Opened character.json')")
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
-            page.click('#edit-fighter')
             editor.get_by_role('button', name='Remove saved choice Subclass').click()
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
 
@@ -869,7 +897,6 @@ def main():
             mixed_warlock['session']['notes'] = 'Preserve imported session notes.'
             upload(page, mixed_warlock)
             page.wait_for_function("document.querySelector('.cb-character-sheet h1')?.textContent === 'Imported mixed warlock'")
-            page.click('#edit-fighter')
             assert editor.get_by_label('Species Spellcasting Ability', exact=True).input_value() == 'int'
             assert editor.get_by_label('Magic Initiate (Cleric) Spellcasting Ability', exact=True).input_value() == 'wis'
             with page.expect_download() as download_info:

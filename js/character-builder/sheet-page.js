@@ -13,7 +13,6 @@ const errorMessage = document.getElementById("error-message");
 const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
 const newCharacterButton = document.getElementById("new-character");
-const editFighterButton = document.getElementById("edit-fighter");
 const saveButton = document.getElementById("save-character");
 const editorContainer = document.getElementById("fighter-editor");
 const selectionInfo = new Map([...document.querySelectorAll(".cb-editor__option-info[data-info]")].map(slot => [slot.dataset.info, slot]));
@@ -57,7 +56,6 @@ function showDocument (character) {
 	hasPreview = true;
 	printButton.disabled = false;
 	saveButton.disabled = false;
-	editFighterButton.disabled = !editor?.canEdit(character);
 	printButton.textContent = model.status === "complete" ? "Print / Save PDF" : "Print draft summary";
 	preview.setAttribute("aria-busy", "false");
 	clearError();
@@ -139,7 +137,6 @@ async function loadData () {
 	const currentRequest = ++requestId;
 	importInput.disabled = true;
 	newCharacterButton.disabled = true;
-	editFighterButton.disabled = true;
 	saveButton.disabled = true;
 	printButton.disabled = true;
 	retryButton.hidden = true;
@@ -238,7 +235,10 @@ importInput.addEventListener("change", async () => {
 		if (currentRequest !== requestId) return;
 		const character = parseCharacterDocument(text);
 		const result = showDocument(character);
-		editor.close();
+		// Importing shows the editor for the opened character, so its choices stay
+		// reachable without a separate edit action.
+		if (editor?.canEdit(character)) editor.open(character, {autoSelect: false});
+		else editor.close();
 		status.textContent = result === "complete" ? `Opened ${file.name}. The character sheet is ready to print.` : `Opened ${file.name}. Complete the listed choices to calculate a full character sheet.`;
 	} catch (error) {
 		if (currentRequest !== requestId) return;
@@ -262,6 +262,8 @@ newCharacterButton.addEventListener("click", () => {
 		const [name, source] = value.split("|");
 		return {name, source};
 	};
+	// Starting over clears the open character, so it asks first.
+	if (hasPreview && !window.confirm("Start a new character? This clears the current character and every choice and note entered for it.")) return;
 	++requestId;
 	try {
 		editor.create("character", {
@@ -273,7 +275,6 @@ newCharacterButton.addEventListener("click", () => {
 		showError(`Could not create this character. ${error.message}`);
 	}
 });
-editFighterButton.addEventListener("click", () => editor.open(currentCharacter));
 saveButton.addEventListener("click", () => {
 	if (!currentCharacter) return;
 	const file = new Blob([serializeCharacterDocument(currentCharacter)], {type: "application/json"});

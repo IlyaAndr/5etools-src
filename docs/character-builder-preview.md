@@ -93,7 +93,14 @@ summary rather than invented statistics. Selections no longer available after a
 level change remain visible until the player explicitly removes them. Choice
 groups with at least eight options include a text filter; it narrows only the
 displayed entries, keeps selected entries visible, and never changes the saved
-decisions. New documents have unique IDs.
+decisions. New documents have unique IDs. The editor groups its choices into blocks
+by owner — Species, Class, Background, Feats and boons, Other choices — each with a
+heading above its own two-column grid, so a long form reads as sections.
+
+Starting a new character clears the open one, so it asks for confirmation first;
+answer No and the current document is untouched. The editor stays open while a
+character exists (there is no separate edit or close action), and opening a saved
+file shows the editor for that file without auto-filling any of its choices.
 
 Base ability scores are chosen with three labelled method options, and each method
 shows the controls that fit it. The standard array assigns each of 15, 14, 13, 12,
