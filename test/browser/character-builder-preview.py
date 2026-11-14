@@ -144,6 +144,11 @@ def main():
             assert page.locator('#species-list .cb-picker__option').count() == 10
             assert page.locator('#class-list .cb-picker__option').count() == 2
             assert page.locator('#background-list .cb-picker__option').count() == 16
+            # The controls are grouped, and the file picker looks like a button.
+            assert page.locator('.cb-controls .cb-actions').count() == 3
+            assert page.locator('.cb-actions').last.locator('#print-sheet').count() == 1
+            assert page.locator('.cb-button--file').is_visible()
+            assert page.locator('.cb-toggle').is_visible()
             page.wait_for_function("document.querySelector('#status').textContent.startsWith('Choose a species')")
             examples = page.evaluate('''async () => {
                 const {createSheetExamples} = await import('/js/character-builder/sheet-examples.js');
