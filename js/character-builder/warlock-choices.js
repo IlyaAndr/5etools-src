@@ -223,7 +223,7 @@ export function getWarlockClassChoiceDescriptors (document, {rules, sources, spe
 	const levelFourWeights = [{from: levelFourAbilities, weights: [2]}, {from: levelFourAbilities, weights: [1, 1]}];
 	const invocationDescriptor = descriptor(`${owner}:invocations`, "Eldritch Invocations", progression.invocations, invocations);
 	const result = [
-		descriptor(`${owner}:skills`, "Warlock Skills", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => option(id, skillNames.get(id)))),
+		descriptor(`${owner}:skills`, "Warlock Skill Proficiencies", sourceChoices.classSkillCount, sourceChoices.classSkills.map(id => option(id, skillNames.get(id)))),
 		descriptor(`${owner}:cantrips`, "Warlock Cantrips", progression.cantrips, cantripOptions),
 		descriptor(`${owner}:prepared-spells`, "Prepared Warlock Spells", progression.prepared, preparedOptions),
 		invocationDescriptor,
