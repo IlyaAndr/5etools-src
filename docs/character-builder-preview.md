@@ -78,7 +78,9 @@ evaluated against the pinned spell files, and single spell selects offer the
 site's filter search (`level=1 ritual`). Spell groups show the chosen list on the
 left and the selected spell's full source text on the right: hovering, focusing,
 or selecting an entry previews it, and the preview stays on the spell you looked
-at through editor redraws. An
+at through editor redraws. Such a group takes the full editor width, gives the
+text the larger share, and stacks the two above each other when it is narrow, so
+long descriptions are never clipped or pushed outside the box. An
 imported build with missing or unsupported choices produces an incomplete draft
 summary rather than invented statistics. Selections no longer available after a
 level change remain visible until the player explicitly removes them. Choice

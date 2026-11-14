@@ -494,6 +494,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 					|| displayedOptions[0],
 				);
 				const picker = element("div", null, "cb-editor__spell-picker");
+				group.classList.add("cb-editor__group--wide");
 				picker.append(options, spellInfo);
 				group.append(picker);
 			} else group.append(options);

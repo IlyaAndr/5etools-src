@@ -265,35 +265,46 @@
 .cb-editor__final-value {
 	font-size: 15px;
 }
+.cb-editor__group--wide {
+	grid-column: 1 / -1;
+}
 .cb-editor__spell-picker {
 	display: grid;
-	gap: 14px;
-	grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.1fr);
+	gap: 14px 20px;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 	align-items: start;
+	container-type: inline-size;
+}
+.cb-editor__spell-picker > * {
+	min-width: 0;
 }
 .cb-editor__spell-info {
-	max-height: 20rem;
-	overflow: auto;
-	padding-left: 12px;
+	padding-left: 16px;
 	border-left: 1px solid var(--cb-line);
 	font-size: 0.9rem;
-	line-height: 1.35;
+	line-height: 1.4;
+	overflow-wrap: break-word;
 }
 .cb-editor__spell-info:empty {
 	display: none;
 }
 .cb-editor__spell-info h4 {
-	margin: 6px 0 2px;
+	margin: 8px 0 2px;
 	font-size: 0.95rem;
 }
 .cb-editor__spell-info p,
 .cb-editor__spell-info ul {
 	margin: 4px 0;
 }
-@media (width <= 900px) {
+.cb-editor__spell-info img {
+	max-width: 100%;
+}
+@media (width >= 860px) {
 	.cb-editor__spell-picker {
-		grid-template-columns: minmax(0, 1fr);
+		grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.2fr);
 	}
+}
+@container (width < 520px) {
 	.cb-editor__spell-info {
 		padding-top: 8px;
 		padding-left: 0;

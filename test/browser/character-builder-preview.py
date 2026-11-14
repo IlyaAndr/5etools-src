@@ -628,6 +628,19 @@ def main():
             assert 'beam of crackling energy' in cantrip_group.locator('.cb-editor__spell-info').inner_text()
             prepared_group = editor.locator('fieldset').filter(has=page.locator('legend:text-is("Prepared Warlock Spells")'))
             assert 'curse on a creature' in prepared_group.locator('.cb-editor__spell-info').inner_text()
+            # The list and its description share the group without spilling
+            # out, and the description keeps the larger half of a wide editor.
+            boxes = editor.locator('.cb-editor__spell-picker').evaluate_all('''els => els.map(el => {
+                const info = el.querySelector('.cb-editor__spell-info');
+                return {
+                    overflow: el.scrollWidth - el.clientWidth,
+                    info: Math.round(info.getBoundingClientRect().width),
+                    infoOverflow: info.scrollWidth - info.clientWidth,
+                };
+            })''')
+            assert boxes and not any(box['overflow'] or box['infoOverflow'] for box in boxes), boxes
+            assert min(box['info'] for box in boxes) > 300, boxes
+            assert editor.locator('.cb-editor__group--wide').count() >= 2
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('.cb-resource').filter(has_text='Hellish Rebuke').count() == 0
             assert page.locator('.cb-resource').filter(has_text='Pact Magic').count() == 1
