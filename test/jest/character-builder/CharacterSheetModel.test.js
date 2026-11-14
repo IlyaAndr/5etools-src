@@ -364,7 +364,7 @@ describe("Reviewed character sheet calculations", () => {
 		const warlock = project(example("Warlock"));
 		expect(warlock.resources.find(resource => resource.name === "Pact Magic")).toMatchObject({id: "class:warlock|xphb:pact-magic", maxUses: 2, slotLevel: 3, recovery: {short: "all", long: "all"}});
 		expect(warlock.resources.find(resource => resource.name === "Magical Cunning")).toMatchObject({maxUses: 1, recovery: {long: "all"}});
-		expect(warlock.resources.find(resource => resource.name === "Healing Word")).toMatchObject({freeLevel: 1, spellcastingAbility: "cha", healing: {dice: "2d4", modifier: 4}});
+		expect(warlock.resources.find(resource => resource.name === "Healing Word")).toMatchObject({freeLevel: 1, spellcastingAbility: "cha"});
 		for (const resource of [...fighter.resources, ...warlock.resources]) {
 			expect(resource).not.toHaveProperty("detail");
 			expect(typeof resource.recovery).toBe("object");

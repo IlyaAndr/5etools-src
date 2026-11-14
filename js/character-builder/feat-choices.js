@@ -1,5 +1,5 @@
 import {ABILITY_IDS, validateCharacterDocument} from "./character-document.js";
-import {describeChoices, getSpellOptions} from "./choice-common.js";
+import {describeChoices} from "./choice-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getBackgroundRule} from "./background-choices.js";
 import {getSpellQueryOptions, parseSpellQuery, resolveSpellCatalog} from "./spell-catalog.js";
@@ -272,10 +272,12 @@ export function getFeatSpellGroupChoices (featRule, {sources, spells, spellCatal
 	if (!catalog) throw new TypeError("Missing spell list data.");
 	const cantripChoice = sourceChoices.spellChoices.find(choice => choice.id === "cantrips");
 	if (!cantripChoice) throw new TypeError(`${featRule.name}: no cantrip choices`);
+	const spellChoice = sourceChoices.spellChoices.find(choice => choice.id === "spell");
+	if (!spellChoice) throw new TypeError(`${featRule.name}: no level-1 spell choice`);
 	return [
 		{id: `${owner}:feat-ability`, label: `${featRule.name} Spellcasting Ability`, count: 1, options: sourceChoices.abilities.map(id => ({id, label: abilityName(id)}))},
 		{id: `${owner}:feat-cantrips`, label: `${featRule.name} ${cantripChoice.label}`, count: cantripChoice.count, options: getSpellQueryOptions(catalog, cantripChoice.query)},
-		{id: `${owner}:feat-spell`, label: `${featRule.name} Level 1 Spell`, count: featRule.spells.length, options: getSpellOptions(rawSpells, featRule.spells)},
+		{id: `${owner}:feat-spell`, label: `${featRule.name} ${spellChoice.label}`, count: spellChoice.count, options: getSpellQueryOptions(catalog, spellChoice.query)},
 	];
 }
 
@@ -300,13 +302,12 @@ export function getFeatChoiceDescriptors (document, {rules, sources, spells, spe
 	if (!spellCatalog) throw new TypeError("Missing spell list data.");
 	const cantripChoice = sourceChoices.spellChoices.find(choice => choice.id === "cantrips");
 	if (!cantripChoice) throw new TypeError(`${label}: no cantrip choices`);
+	const spellChoice = sourceChoices.spellChoices.find(choice => choice.id === "spell");
+	if (!spellChoice) throw new TypeError(`${label}: no level-1 spell choice`);
 	return [
 		...result,
 		descriptor(`${feat.owner}:ability`, `${feat.rule.name} Spellcasting Ability`, 1, sourceChoices.abilities.map(id => ({id, label: abilityName(id)}))),
 		descriptor(`${feat.owner}:cantrips`, `${feat.rule.name} ${cantripChoice.label}`, cantripChoice.count, getSpellQueryOptions(spellCatalog, cantripChoice.query)),
-		// The level-1 spell carries the feat's free-use mechanic, including the
-		// reviewed Healing Word healing rider, so its reviewed spell stays an
-		// annotation instead of widening to every class spell.
-		descriptor(`${feat.owner}:spell`, `${feat.rule.name} Level 1 Spell`, feat.rule.spells.length, getSpellOptions(rawSpells, feat.rule.spells)),
+		descriptor(`${feat.owner}:spell`, `${feat.rule.name} ${spellChoice.label}`, spellChoice.count, getSpellQueryOptions(spellCatalog, spellChoice.query)),
 	];
 }

@@ -80,6 +80,10 @@ def group_text(page, editor, label):
         has=page.locator(f'legend:text-is("{label}")')).first.inner_text()
 
 
+def select_texts(editor, label):
+    return editor.get_by_label(label, exact=True).locator('option').all_inner_texts()
+
+
 def final_score(editor, label):
     return editor.locator('.cb-editor__final-score').filter(has_text=label).first.inner_text()
 
@@ -564,7 +568,9 @@ def main():
             assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
             assert editor.get_by_label('Agonizing Blast Cantrip', exact=True).count() == 0
             assert editor.get_by_label('Repelling Blast Cantrip', exact=True).count() == 0
-            assert 'Healing Word' in group_text(page, editor, 'Magic Initiate (Cleric) Level 1 Spell')
+            cleric_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
+            assert any('Healing Word' in text for text in cleric_spells)
+            assert len(cleric_spells) > 2
             assert 'Leather Armor' in group_text(page, editor, 'Starting Equipment')
             editor.get_by_label('Character name').fill('Created warlock')
             editor.get_by_label('Character name').press('Tab')
@@ -577,6 +583,9 @@ def main():
                 'Eldritch Invocations': 'eldritch-mind|xphb',
             }.items():
                 editor.get_by_label(label, exact=True).select_option(value)
+            # Magic Initiate's level-1 spell is a real choice, so the player
+            # selects the spell the feat's free cast uses.
+            editor.get_by_label('Magic Initiate (Cleric) Level 1 Spell', exact=True).select_option('spell:healing-word|xphb')
             # Long option lists can be narrowed by name. Filtering never changes
             # saved decisions; selected entries stay visible, and the query
             # survives an editor redraw.
@@ -819,7 +828,9 @@ def main():
             page.select_option('#new-background', 'Sage|XPHB')
             page.click('#new-character')
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Magic Initiate (Wizard) Spellcasting Ability')
-            assert 'Shield' in group_text(page, editor, 'Magic Initiate (Wizard) Level 1 Spell')
+            wizard_spells = select_texts(editor, 'Magic Initiate (Wizard) Level 1 Spell')
+            assert any('Shield' in text for text in wizard_spells)
+            assert len(wizard_spells) > 2
             assert editor.get_by_label('Background Tool', exact=True).count() == 0
             # Dwarf and Halfling have no lineages and no species spells, so no
             # species spellcasting-ability group appears for them.
@@ -866,7 +877,9 @@ def main():
             editor.get_by_label('Origin Feat', exact=True).select_option('magic-initiate-cleric|xphb')
             assert 'Sacred Flame' in group_text(page, editor, 'Magic Initiate (Cleric) Cantrips')
             assert 'Wisdom' in group_text(page, editor, 'Magic Initiate (Cleric) Spellcasting Ability')
-            assert 'Healing Word' in group_text(page, editor, 'Magic Initiate (Cleric) Level 1 Spell')
+            slot_spells = select_texts(editor, 'Magic Initiate (Cleric) Level 1 Spell')
+            assert any('Healing Word' in text for text in slot_spells)
+            assert len(slot_spells) > 2
             assert not errors, errors
         finally:
             browser.close()
