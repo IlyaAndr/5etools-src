@@ -29,6 +29,50 @@ scope.
 Next in the sequence: Fighter 6–20, then the remaining classes in the order in
 "Expand Class and Content Coverage" below.
 
+## UI/UX and Content Backlog (2026-11-14)
+
+PR #54 delivered the source panels, the spell and feature preview panels (option
+list plus the original stat block, with the site's school colour), single-spell
+radio lists, invocation text, aligned start rows with the action bar on top, and
+the collapsible editor blocks (Ability scores → Feats and boons → Species → Class →
+Background → Equipment → Other choices) with "N of M left" counters and a sticky
+section nav.
+
+Open UI/UX items:
+
+- **Sticky-nav refinement** — active-block tracking uses an `IntersectionObserver`;
+  add tuned smooth-scroll offsets and arrow-key navigation. (minor)
+- **Block open state** — blocks render `<details open>`, and a redraw reopens every
+  block; persist each section's open/closed state across redraws.
+- **Completion affordance** — mark a block whose choices are all chosen with a check
+  mark or accent so progress is scannable.
+- **Mobile nav height** — confirm the sticky nav does not take too much vertical
+  space when it wraps at 390 px.
+- **Name focus** — focus the character-name field after auto-create so the player can
+  type immediately.
+- **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the
+  existing "Clear all scores".
+
+Open design question (resolve before implementing):
+
+- **Source pickers should be ordinary creation steps.** The species, class, and
+  background pickers currently sit in the toolbar header, and changing one rebuilds
+  the whole draft, discarding ability scores, equipment, and the other sources'
+  choices. The intended direction is to move the pickers into the editor as normal
+  blocks and to make a source change surgical: keep unrelated choices and invalidate
+  only the choices owned by the changed source. This needs an "update source in
+  place" editor path instead of the current fresh-draft rebuild, plus a review of
+  which `species:` / `class:` / `background:` / `feat:` choices each change
+  invalidates.
+
+Content backlog:
+
+- **Slice C descriptions** — Fiendish Legacy (a species record) and the Magic
+  Initiate spellcasting-ability group still render without their own source text.
+- **Fighter 6–20** — the next content slice after the editor UX settles.
+- Close out the `docs/character-builder-development-plan.md` /
+  `docs/character-builder-pr-findings.md` items once #54 lands.
+
 ## Goal and Initial Release
 
 The user selects a character's options and receives a calculated sheet for online viewing and PDF printing. The sheet includes numerical values, relevant annotations beside them, feature descriptions, spells, and a simple tracker for expendable resources.
