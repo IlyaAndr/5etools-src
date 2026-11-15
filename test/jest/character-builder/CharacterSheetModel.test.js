@@ -399,7 +399,7 @@ describe("Reviewed character sheet calculations", () => {
 		["missing class skill", document => { choice(document, ":skills").selected.pop(); }, ":skills"],
 		["unavailable subclass", document => { choice(document, ":subclass").selected = ["eldritch-knight|xphb"]; }, ":subclass"],
 		["unknown decision", document => { document.build.choices.push({id: "class:fighter|xphb:unknown", selected: ["yes"]}); }, ":unknown"],
-		["background ability outside its options", document => { choice(document, ":ability-increases").selected = ["cha-2.con-1"]; }, ":ability-increases"],
+		["background ability over its 3-point budget", document => { choice(document, ":ability-increases").selected = ["cha-2.wis-2"]; }, ":ability-increases"],
 		["overfull current HP", document => { document.session.hp.current = 999; }, "current-hit-points"],
 		["overfull spent resources", document => { document.session.resources.push({id: "class:fighter|xphb:second-wind", spent: 4}); }, ":second-wind"],
 		["unknown session resource", document => { document.session.resources.push({id: "unknown", spent: 1}); }, "unknown"],

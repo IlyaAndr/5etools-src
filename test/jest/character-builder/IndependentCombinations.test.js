@@ -91,7 +91,7 @@ describe("Independent class and species contributions", () => {
 		expect(skills.find(skill => skill.id === "intimidation").proficient).toBe(false);
 	});
 
-	it("enforces background weighted alternatives independently of the species", () => {
+	it("accepts a custom background increase outside the source's listed abilities", () => {
 		const document = replaceSpecies(example("Warlock", 1), "Gnome", [
 			{id: "species:gnome|xphb:lineage", selected: ["forest"]},
 			{id: "species:gnome|xphb:spellcasting-ability", selected: ["cha"]},
@@ -100,8 +100,7 @@ describe("Independent class and species contributions", () => {
 		const acolyte = modifiedSources.backgrounds.background.find(entry => entry.name === "Acolyte" && entry.source === "XPHB");
 		acolyte.ability[0].choose.weighted.from = ["int", "wis"];
 		const model = createCharacterSheetModel(document, catalog, {...context, sources: modifiedSources});
-		expect(model.status).toBe("incomplete");
-		expect(model.issues).toContainEqual(expect.objectContaining({id: "background:acolyte|xphb:ability-increases"}));
+		expect(model.issues).not.toContainEqual(expect.objectContaining({id: "background:acolyte|xphb:ability-increases"}));
 	});
 
 	it("enforces the Magic Initiate ability source independently of the species", () => {

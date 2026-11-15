@@ -511,6 +511,15 @@ def main():
                 control.focus()
                 control.select_option(value)
                 assert page.evaluate("document.activeElement.getAttribute('aria-label')") == label
+            # A custom background increase distributes 3 points across any abilities.
+            background_select = editor.get_by_label('Background Ability Increases', exact=True)
+            background_select.select_option('custom')
+            assert editor.get_by_label('Strength increase', exact=True).count() == 1
+            editor.get_by_label('Strength increase', exact=True).select_option('2')
+            editor.get_by_label('Wisdom increase', exact=True).select_option('1')
+            assert '17 (+3)' in final_score(editor, 'Strength')
+            assert '11 (+0)' in final_score(editor, 'Wisdom')
+            editor.get_by_label('Background Ability Increases', exact=True).select_option('str-2.con-1')
             assert '17 (+3)' in final_score(editor, 'Strength')
             assert '15 + 2' in final_score(editor, 'Strength')
             # Point buy keeps the entered values where they still fit the

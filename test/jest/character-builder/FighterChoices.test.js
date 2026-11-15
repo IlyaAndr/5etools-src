@@ -130,9 +130,12 @@ describe("Fighter editor choices", () => {
 		const skills = choices.find(choice => choice.id.endsWith(":skills"));
 		expect(skills.options.map(value => value.id)).not.toContain("history");
 		expect(skills.options.map(value => value.id)).toContain("intimidation");
+		// Any abilities with a valid 3-point distribution are a custom increase.
 		const selected = setCharacterChoice(document, increases.id, ["str-2.con-1"]);
 		const model = createCharacterSheetModel(selected, catalog, changedContext);
-		expect(model.issues.some(issue => issue.id === increases.id)).toBe(true);
+		expect(model.issues.some(issue => issue.id === increases.id)).toBe(false);
+		const invalid = setCharacterChoice(document, increases.id, ["con-3"]);
+		expect(createCharacterSheetModel(invalid, catalog, changedContext).issues.some(issue => issue.id === increases.id)).toBe(true);
 	});
 
 	it("rejects missing or unsupported source records rather than falling back to annotations", () => {
@@ -180,14 +183,15 @@ describe("Fighter editor choices", () => {
 		}
 	});
 
-	it("exposes equivalent saved increases without changing their identifier", () => {
+	it("offers a custom increase for a saved equivalent ordering", () => {
 		const original = createFighterDraft(catalog.dataset);
 		const id = "background:soldier|xphb:ability-increases";
 		const saved = setCharacterChoice(original, id, ["con-1.str-2"]);
 		const choice = descriptors(saved).find(value => value.id === id);
 		expect(choice.selected).toEqual(["con-1.str-2"]);
-		expect(choice.options).toContainEqual({id: "con-1.str-2", label: "Strength +2, Constitution +1"});
+		expect(choice.options).toContainEqual({id: "custom", label: "Custom (any abilities)"});
 		expect(saved.build.choices).toEqual([{id, selected: ["con-1.str-2"]}]);
+		expect(createCharacterSheetModel(saved, catalog, context).issues.some(issue => issue.id === id)).toBe(false);
 	});
 
 	it("retains session data and out-of-level selections until explicitly removed", () => {
