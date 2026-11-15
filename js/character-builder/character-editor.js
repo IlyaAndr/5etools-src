@@ -590,6 +590,21 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				else button.removeAttribute("aria-current");
 			}
 		};
+		// Arrow keys move focus between the section buttons; Enter or Space then
+		// jumps to the focused section.
+		nav.addEventListener("keydown", event => {
+			const buttons = [...nav.querySelectorAll("button")];
+			const index = buttons.indexOf(document.activeElement);
+			if (index === -1) return;
+			let next = null;
+			if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % buttons.length;
+			else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + buttons.length) % buttons.length;
+			else if (event.key === "Home") next = 0;
+			else if (event.key === "End") next = buttons.length - 1;
+			if (next === null) return;
+			event.preventDefault();
+			buttons[next].focus();
+		});
 		for (const section of sections) {
 			if (!section.groups.length) continue;
 			const missing = Math.max(0, section.total - section.chosen);

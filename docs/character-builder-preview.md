@@ -105,7 +105,8 @@ Class, Background, Equipment, and Other choices — each with a heading and an
 "N of M left" counter, so a long form reads as sections and its progress is
 visible at a glance. A sticky navigation bar above the blocks jumps to a block and
 marks the one in view; a completed block turns teal with a ✓, a closed block keeps
-its state through a redraw, and closing one keeps its choices saved.
+its state through a redraw, and closing one keeps its choices saved. Arrow keys move
+between the navigation buttons, and the bar stays a single scrollable row on a phone.
 
 Changing the species, class, or background while a character is open keeps the
 rest of the character: only the choices owned by the changed source are reset, so

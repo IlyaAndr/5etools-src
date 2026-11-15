@@ -410,6 +410,13 @@ def main():
             assert nav.get_attribute('aria-label') == 'Editor sections'
             assert nav.is_visible()
             assert nav.locator('button').all_inner_texts() == [block['title'] for block in blocks], blocks
+            # Arrow keys move focus between the section buttons.
+            nav_buttons = editor.locator('.cb-editor__nav button')
+            nav_buttons.first.focus()
+            page.keyboard.press('ArrowRight')
+            assert page.evaluate("document.activeElement === document.querySelectorAll('.cb-editor__nav button')[1]")
+            page.keyboard.press('End')
+            assert page.evaluate("document.activeElement === [...document.querySelectorAll('.cb-editor__nav button')].at(-1)")
             # Completed blocks carry a check mark, and a closed block keeps its
             # state through the redraw that a source change triggers.
             assert editor.locator('.cb-editor__section--complete').count() >= 1
@@ -459,6 +466,7 @@ def main():
             page.screenshot(path=str(output / 'fighter-editor-desktop.png'))
             page.set_viewport_size({'width': 390, 'height': 844})
             check_width(page)
+            assert page.locator('.cb-editor__nav').bounding_box()['height'] <= 56
             page.screenshot(path=str(output / 'fighter-editor-mobile.png'))
             page.set_viewport_size({'width': 1100, 'height': 1300})
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'incomplete'
