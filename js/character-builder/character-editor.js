@@ -3,6 +3,7 @@ import {
 	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
 } from "./editor-common.js";
 import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
+import {renderFeatureInfo, renderSpellInfo} from "./source-info.js";
 import {getBackgroundEquipment} from "./background-choices.js";
 import {filterSpellOptions} from "./spell-catalog.js";
 
@@ -24,6 +25,16 @@ let scoreMethodGroups = 0;
 
 const isBackgroundIncrease = descriptor => descriptor.id.startsWith("background:") && descriptor.id.endsWith(":ability-increases");
 
+/** Group a choice by the owner in its reviewed identifier. */
+const sectionFor = id => {
+	if (id.endsWith(":equipment")) return "equipment";
+	if (id.startsWith("species:") || id === "character:languages") return "species";
+	if (id.startsWith("class:")) return "class";
+	if (id.startsWith("background:")) return "background";
+	if (id.startsWith("feat:")) return "feat";
+	return "other";
+};
+
 /** A small editor for the subset currently supported by the sheet calculator. */
 export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
 	const abilities = getEditorAbilities(context.sources);
@@ -39,7 +50,9 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	const methodGroup = `cb-score-method-${++scoreMethodGroups}`;
 	let character;
 	let scoreDrafts;
+	let sectionObserver = null;
 	const optionFilters = new Map();
+	const optionPreviews = new Map();
 
 	function element (tag, text, className) {
 		const out = document.createElement(tag);
@@ -275,8 +288,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const ids = abilities.map(({id}) => id);
 		const method = character.build.abilities.method;
 		const draft = methodDraft(method);
-		const fieldset = element("fieldset", null, "cb-editor__group");
-		fieldset.append(element("legend", "Base ability scores"));
+		const fieldset = element("fieldset", null, "cb-editor__group cb-editor__group--wide");
 		fieldset.append(element("p", "Pick how the six scores are assigned. They enter the saved character as soon as all six fit the method; until then the sheet stays incomplete.", "cb-editor__help"), renderMethods(method));
 		const grid = element("div", null, "cb-editor__scores");
 		const manualInputs = {};
@@ -337,7 +349,6 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	 * a long list such as a feat's level-1 spells stays searchable.
 	 */
 	function renderSingleOption (descriptor, displayedOptions) {
-		const spellList = displayedOptions.some(option => option.spell);
 		const input = select(displayedOptions, descriptor.selected[0], "No selection");
 		input.setAttribute("aria-label", descriptor.label);
 		input.dataset.cbFocus = descriptor.id;
@@ -346,32 +357,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		};
 		disableUnavailable();
 		input.addEventListener("change", () => publish(setCharacterChoice(character, descriptor.id, input.value ? [input.value] : [])));
-		if (!spellList || displayedOptions.length < OPTION_FILTER_MINIMUM) return [input];
-		const filterInput = element("input");
-		filterInput.type = "search";
-		filterInput.value = optionFilters.get(descriptor.id) ?? "";
-		filterInput.placeholder = "Search spells: name, level=1, school=Evocation, ritual";
-		filterInput.setAttribute("aria-label", `Filter ${descriptor.label}`);
-		filterInput.dataset.cbFocus = `filter:${descriptor.id}`;
-		const wrapper = element("label", null, "cb-editor__field cb-editor__filter");
-		wrapper.append(element("span", "Filter spells"), filterInput);
-		const status = element("p", null, "cb-editor__help cb-editor__filter-status");
-		status.setAttribute("aria-live", "polite");
-		const applyFilter = () => {
-			const query = filterInput.value;
-			optionFilters.set(descriptor.id, query);
-			const current = displayedOptions.find(option => option.id === input.value);
-			const matches = filterSpellOptions(displayedOptions, query);
-			const visible = current && !matches.includes(current) ? [current, ...matches] : matches;
-			input.replaceChildren(new Option("No selection", ""), ...visible.map(option => new Option(option.detail ? `${option.label} · ${option.detail}` : option.label, option.id)));
-			input.value = current?.id || "";
-			disableUnavailable();
-			status.hidden = !query.trim() || matches.length === displayedOptions.length;
-			status.textContent = matches.length ? `Showing ${matches.length} of ${displayedOptions.length} spells.` : "No spells match this filter.";
-		};
-		filterInput.addEventListener("input", applyFilter);
-		applyFilter();
-		return [element("p", SPELL_FILTER_HELP, "cb-editor__help"), wrapper, status, input];
+		return [input];
 	}
 
 	/** Render one saved choice as a selector, a checkbox group, or a fixed value. */
@@ -401,12 +387,30 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				: "This saved choice is unavailable at the current level. Remove it or restore the previous level.", "cb-editor__help"));
 		}
 		const options = element("div", null, "cb-editor__options");
+		// Spell and invocation options carry the reference their 5etools record
+		// needs, so the list can show the original text beside it.
+		const hasInfo = displayedOptions.some(option => option.spell || option.feature);
+		const optionInfo = hasInfo ? element("div", null, "cb-editor__option-info") : null;
+		const single = descriptor.count === 1;
+		const showInfo = (option, {force = false} = {}) => {
+			if (!optionInfo || !option) return;
+			if (!force && optionInfo.dataset.shown === option.id) return;
+			optionInfo.dataset.shown = option.id;
+			optionPreviews.set(descriptor.id, option.id);
+			let html = null;
+			try {
+				if (option.spell) html = renderSpellInfo(context.spells, option.spell);
+				else if (option.feature) html = renderFeatureInfo(context.sources, option.feature);
+			} catch { html = null; }
+			optionInfo.innerHTML = html || "";
+			optionInfo.hidden = !html;
+		};
 		if (fixedOption) {
 			group.append(element("p", fixedOption.detail ? `${fixedOption.label} · ${fixedOption.detail}` : fixedOption.label, "cb-editor__fixed"));
-		} else if (descriptor.count === 1 && descriptor.selected.length <= 1) {
+		} else if (single && descriptor.selected.length <= 1 && !hasInfo) {
 			options.append(...renderSingleOption(descriptor, displayedOptions));
 		} else {
-			const atLimit = descriptor.selected.length >= descriptor.count;
+			const atLimit = !single && descriptor.selected.length >= descriptor.count;
 			const spellList = displayedOptions.some(option => option.spell);
 			let filterInput = null;
 			let filterStatus = null;
@@ -426,21 +430,32 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				group.append(wrapper, filterStatus);
 			}
 			const rows = [];
-			for (const option of displayedOptions) {
+			// A single-choice list offers the same clearing row a select had, and the
+			// filter always keeps it visible.
+			const rowOptions = single ? [{id: "", label: "No selection"}, ...displayedOptions] : displayedOptions;
+			for (const option of rowOptions) {
 				const label = element("label", null, "cb-editor__option");
 				const input = element("input");
-				input.type = "checkbox";
+				input.type = single ? "radio" : "checkbox";
+				if (single) input.name = descriptor.id;
 				input.setAttribute("aria-label", option.label);
 				input.dataset.cbFocus = `${descriptor.id}|${option.id}`;
 				if (filterInput) input.dataset.cbFocusFallback = filterInput.dataset.cbFocus;
-				input.checked = descriptor.selected.includes(option.id);
+				input.checked = single ? (option.id ? descriptor.selected[0] === option.id : !descriptor.selected.length) : descriptor.selected.includes(option.id);
 				const isRequired = required.includes(option.id);
 				input.disabled = isRequired ? input.checked : ((!descriptor.available && !input.checked) || (atLimit && !input.checked));
 				input.addEventListener("change", () => {
-					const selected = input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id);
+					const selected = single
+						? (option.id ? [option.id] : [])
+						: (input.checked ? [...descriptor.selected, option.id] : descriptor.selected.filter(id => id !== option.id));
+					showInfo(option);
 					publish(setCharacterChoice(character, descriptor.id, selected));
 				});
 				label.append(input, element("span", option.detail ? `${option.label} · ${option.detail}` : option.label));
+				if (optionInfo) {
+					label.addEventListener("mousemove", () => showInfo(option));
+					label.addEventListener("focusin", () => showInfo(option));
+				}
 				options.append(label);
 				rows.push({option, label});
 			}
@@ -451,7 +466,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 					const matches = new Set((spellList ? filterSpellOptions : filterOptions)(displayedOptions, query).map(option => option.id));
 					let shown = 0;
 					for (const row of rows) {
-						const keep = matches.has(row.option.id) || descriptor.selected.includes(row.option.id);
+						const keep = !row.option.id || matches.has(row.option.id) || descriptor.selected.includes(row.option.id);
 						row.label.hidden = !keep;
 						if (keep) shown++;
 					}
@@ -462,9 +477,19 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				applyFilter();
 			}
 		}
-		if (options.childElementCount) group.append(options);
-		for (const option of descriptor.options) {
-			if (context.rules.equipment[option.id]?.gear) group.append(element("p", option.label, "cb-editor__package"));
+		if (options.childElementCount) {
+			if (optionInfo) {
+				showInfo(
+					displayedOptions.find(option => option.id === optionPreviews.get(descriptor.id))
+					|| displayedOptions.find(option => descriptor.selected.includes(option.id))
+					|| displayedOptions[0],
+					{force: true},
+				);
+				const picker = element("div", null, "cb-editor__option-picker");
+				group.classList.add("cb-editor__group--wide");
+				picker.append(options, optionInfo);
+				group.append(picker);
+			} else group.append(options);
 		}
 		const backgroundEquipment = getBackgroundEquipment(character.build.background, context.rules);
 		if (descriptor.id.endsWith(":equipment") && backgroundEquipment?.gear?.length) group.append(element("p", `Background equipment: ${backgroundEquipment.gear.join(", ")}`, "cb-editor__package"));
@@ -486,39 +511,43 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const heading = element("div", null, "cb-editor__heading");
 		const title = element("div");
 		title.append(element("h2", profile.title), element("p", profile.scope));
-		const close = element("button", "Close editor", "cb-button");
-		close.type = "button";
-		close.addEventListener("click", () => { container.hidden = true; });
-		heading.append(title, close);
+		heading.append(title);
 		const intro = element("p", profile.intro, "cb-editor__intro");
 		const basic = element("div", null, "cb-editor__grid");
-		const name = element("input");
-		name.type = "text";
-		name.dataset.cbFocus = "character:name";
-		name.maxLength = 200;
-		name.value = character.name;
-		name.addEventListener("change", () => {
-			if (!name.value.trim()) {
-				name.setCustomValidity("Enter a character name.");
-				name.reportValidity();
-				return;
-			}
-			name.setCustomValidity("");
-			publish({...character, name: name.value}, false);
-		});
 		const level = select(Array.from({length: Math.max(1, maxLevelFor(character))}, (_, index) => ({id: `${index + 1}`, label: `Level ${index + 1}`})), `${character.build.level}`);
 		level.remove(0);
 		level.dataset.cbFocus = "character:level";
 		level.value = `${character.build.level}`;
 		level.addEventListener("change", () => updateBuild({level: Number(level.value)}));
-		basic.append(field("Character name", name), field("Level", level));
+		basic.append(field("Level", level));
 		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
+		// One block per owner, in reading order: scores first, then the origin
+		// feat they unlock, then the three sources, and equipment last.
+		const sections = [
+			{key: "scores", title: "Ability scores"},
+			{key: "feat", title: "Feats and boons"},
+			{key: "species", title: "Species"},
+			{key: "class", title: "Class"},
+			{key: "background", title: "Background"},
+			{key: "equipment", title: "Equipment"},
+			{key: "other", title: "Other choices"},
+		].map(section => ({...section, groups: [], chosen: 0, total: 0}));
+		const sectionByKey = new Map(sections.map(section => [section.key, section]));
+		const scoresSection = sectionByKey.get("scores");
 		const scores = renderScores(descriptors);
-		const choices = element("div", null, "cb-editor__choices");
+		scoresSection.groups.push(scores);
+		const scoreDraft = methodDraft(character.build.abilities.method);
+		scoresSection.total = abilities.length;
+		scoresSection.chosen = abilities.filter(ability => scoreDraft[ability.id] != null).length;
 		for (const descriptor of descriptors) {
 			if (isBackgroundIncrease(descriptor)) continue;
 			const group = renderChoiceGroup(descriptor);
-			if (group) choices.append(group);
+			if (!group) continue;
+			group.dataset.choice = descriptor.id;
+			const section = sectionByKey.get(sectionFor(descriptor.id));
+			section.groups.push(group);
+			section.total += descriptor.count;
+			section.chosen += Math.min(descriptor.count, descriptor.selected.length);
 		}
 		const unknown = character.build.choices.filter(choice => !descriptors.some(descriptor => descriptor.id === choice.id));
 		if (unknown.length) {
@@ -535,9 +564,52 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				row.append(element("span", `${choice.id}: ${choice.selected.join(", ") || "(empty)"}`), remove);
 				group.append(row);
 			}
-			choices.append(group);
+			sectionByKey.get("other").groups.push(group);
 		}
-		container.replaceChildren(heading, intro, basic, scores, choices);
+		const choices = element("div", null, "cb-editor__choices");
+		const nav = element("nav", null, "cb-editor__nav");
+		nav.setAttribute("aria-label", "Editor sections");
+		const markCurrent = key => {
+			for (const button of nav.querySelectorAll("button")) {
+				if (button.dataset.target === key) button.setAttribute("aria-current", "true");
+				else button.removeAttribute("aria-current");
+			}
+		};
+		for (const section of sections) {
+			if (!section.groups.length) continue;
+			const missing = Math.max(0, section.total - section.chosen);
+			const block = document.createElement("details");
+			block.className = "cb-editor__section";
+			block.dataset.section = section.key;
+			block.id = `cb-editor-section-${section.key}`;
+			block.open = true;
+			const summary = element("summary", null, "cb-editor__section-title");
+			summary.append(element("span", section.title), element("span", section.total
+				? (missing ? `${missing} of ${section.total} left` : `All ${section.total} chosen`)
+				: "", "cb-editor__section-count"));
+			const groups = element("div", null, "cb-editor__section-groups");
+			groups.append(...section.groups);
+			block.append(summary, groups);
+			choices.append(block);
+			const jump = element("button", section.title, "cb-editor__nav-button");
+			jump.type = "button";
+			jump.dataset.target = section.key;
+			jump.addEventListener("click", () => {
+				block.scrollIntoView({behavior: "smooth", block: "start"});
+				markCurrent(section.key);
+			});
+			nav.append(jump);
+		}
+		nav.hidden = nav.childElementCount < 2;
+		sectionObserver?.disconnect();
+		if (typeof IntersectionObserver === "function") {
+			sectionObserver = new IntersectionObserver(entries => {
+				const shown = entries.filter(entry => entry.isIntersecting);
+				if (shown.length) markCurrent(shown[0].target.dataset.section);
+			}, {rootMargin: "-90px 0px -55% 0px"});
+			for (const block of choices.querySelectorAll(".cb-editor__section")) sectionObserver.observe(block);
+		}
+		container.replaceChildren(heading, intro, basic, nav, choices);
 		container.hidden = false;
 	}
 
@@ -554,17 +626,25 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				if (character) render();
 			}
 		},
-		open (document) {
+		open (document, {autoSelect = true} = {}) {
 			if (!profileFor(document)) return;
 			if (document !== character) {
 				scoreDrafts = {};
 				optionFilters.clear();
 				character = document;
-				const next = autoSelectSingleOptions(document);
+				// An imported document keeps the values it was saved with; only a
+				// character built here fills single-option choices automatically.
+				const next = autoSelect ? autoSelectSingleOptions(document) : document;
 				if (next !== document && onChange(next)) character = next;
 			}
 			render();
 		},
 		close () { container.hidden = true; },
+		// The page owns the character name, so the editor only keeps its copy in step.
+		setName (name) {
+			if (!character || typeof name !== "string" || !name.trim() || character.name === name) return false;
+			character = {...character, name};
+			return true;
+		},
 	};
 }

@@ -7,6 +7,9 @@ function escape (value) {
 	return String(value).replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"})[char]);
 }
 
+/** Escape reviewer text for HTML output. */
+export const escapeHtml = escape;
+
 function title (value) { return value ? value[0].toUpperCase() + value.slice(1) : "Unselected"; }
 function signed (value) { return value >= 0 ? `+${value}` : String(value); }
 
