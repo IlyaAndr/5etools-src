@@ -59,11 +59,10 @@ Design follow-ups:
   background now keeps the document and drops only that source's own choices, so
   ability scores, level, name, session state, and the other sources' choices
   survive; the confirmation is gone.
-- **Source pickers as ordinary creation steps (open).** The species, class, and
-  background pickers still sit in the toolbar header. The intended direction is to
-  move them into the editor as normal blocks (with their description panels) and
-  render an empty editor shell before a draft exists, so creation is one continuous
-  flow.
+- **Source pickers as ordinary creation steps (done, PR #56).** The species, class,
+  and background pickers now live inside the editor card above the choice blocks,
+  with an empty-editor shell before a draft exists, so creation is one continuous
+  flow. Further integration into the collapsible block list remains optional.
 
 Content backlog:
 

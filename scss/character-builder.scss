@@ -89,6 +89,15 @@
 	gap: 18px;
 	margin-top: 14px;
 }
+/* The source pickers live inside the editor card, above the choice blocks. */
+.cb-editor > .cb-start {
+	margin-top: 0;
+}
+.cb-editor__blocks {
+	margin-top: 18px;
+	padding-top: 18px;
+	border-top: 2px solid var(--cb-line);
+}
 .cb-editor__section {
 	scroll-margin-top: 104px;
 	padding-top: 10px;
