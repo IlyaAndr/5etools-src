@@ -14,7 +14,7 @@ const retryButton = document.getElementById("retry-load");
 const preview = document.getElementById("sheet-preview");
 const newCharacterButton = document.getElementById("new-character");
 const saveButton = document.getElementById("save-character");
-const editorContainer = document.getElementById("fighter-editor");
+const editorContainer = document.getElementById("editor-blocks");
 const selectionInfo = new Map([...document.querySelectorAll(".cb-editor__option-info[data-info]")].map(slot => [slot.dataset.info, slot]));
 const compactToggle = document.getElementById("compact-sheet");
 const pageCount = document.getElementById("sheet-pages");

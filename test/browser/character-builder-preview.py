@@ -166,19 +166,23 @@ def main():
             # The form starts empty: nothing is preselected, the editor is
             # hidden, and New character is disabled.
             assert page.locator('.cb-start input:checked').count() == 0
-            assert page.locator('#fighter-editor').is_hidden()
+            # The pickers are part of the creation card, not the toolbar header.
+            assert page.locator('.cb-toolbar .cb-start').count() == 0
+            assert page.locator('#fighter-editor .cb-start').count() == 1
+            assert page.locator('.cb-start').is_visible()
+            assert page.locator('#editor-blocks').is_hidden()
             assert page.locator('#new-character').is_disabled()
             assert page.locator('#character-name').is_disabled()
             assert page.locator('.cb-start-note h1').inner_text() == 'Choose a species, class, and background'
             # One or two picks do not create anything; the third pick builds the
             # character automatically, with no New character click.
             pick(page, 'species', 'Gnome|XPHB')
-            assert page.locator('#fighter-editor').is_hidden()
+            assert page.locator('#editor-blocks').is_hidden()
             assert page.locator('#new-character').is_disabled()
             pick(page, 'class', 'Fighter|XPHB')
-            assert page.locator('#fighter-editor').is_hidden()
+            assert page.locator('#editor-blocks').is_hidden()
             pick(page, 'background', 'Soldier|XPHB')
-            assert page.locator('#fighter-editor').is_visible()
+            assert page.locator('#editor-blocks').is_visible()
             assert page.locator('.cb-character-sheet').count() == 1
             assert page.get_by_label('Character name').input_value() == 'New Character'
             assert page.locator('#new-character').is_enabled()
@@ -374,7 +378,7 @@ def main():
             pick(page, 'species', 'Gnome|XPHB')
             pick(page, 'class', 'Fighter|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
-            editor = page.locator('#fighter-editor')
+            editor = page.locator('#editor-blocks')
             assert editor.is_visible()
             assert page.locator('.cb-character-sheet').count() == 1
             # The editor stays open while a character exists, so there is no
@@ -654,7 +658,7 @@ def main():
             pick(page, 'species', 'Tiefling|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Acolyte|XPHB')
-            editor = page.locator('#fighter-editor')
+            editor = page.locator('#editor-blocks')
             assert 'Warlock editor' in editor.inner_text()
             # The origin-feat block sits between Ability scores and Species.
             assert editor.locator('.cb-editor__section').evaluate_all("elements => elements.map(element => element.dataset.section)") == ['scores', 'feat', 'species', 'class', 'equipment']
@@ -1032,7 +1036,7 @@ def main():
             pick(page, 'species', 'Gnome|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Soldier|XPHB')
-            editor = page.locator('#fighter-editor')
+            editor = page.locator('#editor-blocks')
             assert 'Character editor' in editor.inner_text()
             assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == ''
             assert 'Charisma is the only spellcasting ability' in group_text(page, editor, 'Species Spellcasting Ability')
