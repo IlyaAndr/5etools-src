@@ -87,7 +87,7 @@ export function createCharacterDraft (dataset, {characterClass, species, backgro
 			abilities: {method: "standard", scores: null},
 			choices: [],
 		},
-		session: {hp: {current: null, temporary: 0}, resources: [], notes: ""},
+		session: {hp: {current: null, temporary: 0}, gold: null, resources: [], notes: ""},
 	};
 	validateCharacterDocument(document);
 	return document;

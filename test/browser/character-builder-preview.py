@@ -532,6 +532,8 @@ def main():
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('tr[data-ability="str"] .cb-number').first.inner_text() == '17'
             assert page.locator('.cb-hp-max').inner_text() == '/ 12'
+            assert page.locator('.cb-vitals .cb-field-label').filter(has_text='Gold (GP)').count() == 1
+            assert page.locator('.cb-vitals [aria-label="Gold: blank"]').count() == 1
             assert '+5' in page.locator('.cb-attack-panel').inner_text()
             # Choosing the starting gold instead of the package leaves the
             # character unarmored and unarmed but keeps the full gold amount.
@@ -594,6 +596,7 @@ def main():
 
             saved['session']['notes'] = 'Keep this session note.'
             saved['session']['hp'] = {'current': 9, 'temporary': 2}
+            saved['session']['gold'] = 42
             saved['session']['resources'] = [{'id': 'class:fighter|xphb:second-wind', 'spent': 1}]
             saved['build']['choices'].append({'id': 'custom:unknown-choice', 'selected': ['custom-value']})
             upload(page, saved)

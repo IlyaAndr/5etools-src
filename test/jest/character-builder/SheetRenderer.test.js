@@ -164,13 +164,17 @@ describe("Calculated character sheet renderer", () => {
 		let html = render(document);
 		expect(html).toContain("aria-label=\"Current HP: blank\"");
 		expect(html).toContain("class=\"cb-hp-max\">/ 38</strong>");
+		expect(html).toContain("Gold (GP)");
+		expect(html).toContain("aria-label=\"Gold: blank\"");
 		expect(html).toContain("Mage Armor active; no armor worn");
 		expect(html).toContain("Leather Armor 13 when worn instead.");
 		expect(html).toContain("Without Mage Armor: AC 12.");
 		document.session.hp = {current: 24, temporary: 5};
+		document.session.gold = 42;
 		html = render(document);
 		expect(html).toContain("<strong class=\"cb-value\">24</strong><strong class=\"cb-hp-max\">/ 38</strong>");
 		expect(html).toContain("<strong class=\"cb-value\">5</strong>");
+		expect(html).toContain("<strong class=\"cb-value\">42</strong>");
 		expect(html).toContain("Concentration save: CON +2 · advantage");
 	});
 

@@ -7,7 +7,7 @@ function fail (path, message) {
 	throw new TypeError(`${path}: ${message}`);
 }
 
-function object (value, path, keys) {
+function object (value, path, keys, optional = []) {
 	if (!value || typeof value !== "object" || Array.isArray(value)
 		|| ![Object.prototype, null].includes(Object.getPrototypeOf(value))) fail(path, "expected a plain object");
 	for (const key of Reflect.ownKeys(value)) {
@@ -16,6 +16,7 @@ function object (value, path, keys) {
 		if (!descriptor.enumerable || !Object.hasOwn(descriptor, "value")) fail(path, "expected JSON data fields");
 	}
 	for (const key of keys) {
+		if (optional.includes(key) && !Object.hasOwn(value, key)) continue;
 		if (!Object.hasOwn(value, key)) fail(`${path}.${key}`, "missing field");
 	}
 }
@@ -101,10 +102,11 @@ export function validateCharacterDocument (document) {
 	});
 
 	const {session} = document;
-	object(session, "character.session", ["hp", "resources", "notes"]);
+	object(session, "character.session", ["hp", "resources", "notes", "gold"], ["gold"]);
 	object(session.hp, "character.session.hp", ["current", "temporary"]);
 	if (session.hp.current !== null) integer(session.hp.current, "character.session.hp.current", 0);
 	integer(session.hp.temporary, "character.session.hp.temporary", 0);
+	if (session.gold !== undefined && session.gold !== null) integer(session.gold, "character.session.gold", 0);
 	uniqueRecords(session.resources, "character.session.resources", (resource, path) => {
 		object(resource, path, ["id", "spent"]);
 		identifier(resource.id, `${path}.id`);
