@@ -557,6 +557,7 @@ def main():
             assert page.locator('.cb-hp-max').inner_text() == '/ 12'
             assert page.locator('.cb-vitals .cb-field-label').filter(has_text='Gold (GP)').count() == 1
             assert page.locator('.cb-vitals [aria-label="Gold: blank"]').count() == 1
+            assert page.locator('.cb-vitals [aria-label="Temporary HP: blank"]').count() == 1
             assert '+5' in page.locator('.cb-attack-panel').inner_text()
             # Choosing the starting gold instead of the package leaves the
             # character unarmored and unarmed but keeps the full gold amount.

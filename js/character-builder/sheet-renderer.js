@@ -193,10 +193,13 @@ function resources (model, hasDifferentCasting) {
 
 function vitals (model) {
 	const current = model.hp.current === null ? "<span class=\"cb-write\" aria-label=\"Current HP: blank\"></span>" : `<strong class="cb-value">${model.hp.current}</strong>`;
+	const temporary = model.hp.temporary > 0
+		? `<strong class="cb-value">${model.hp.temporary}</strong>`
+		: "<span class=\"cb-write\" aria-label=\"Temporary HP: blank\"></span>";
 	const gold = model.currentGold === null || model.currentGold === undefined
 		? "<span class=\"cb-write\" aria-label=\"Gold: blank\"></span>"
 		: `<strong class="cb-value">${model.currentGold}</strong>`;
-	return `<div class="cb-vitals"><div><p class="cb-field-label">Current HP / maximum</p><div class="cb-hp-value">${current}<strong class="cb-hp-max">/ ${model.hp.maximum}</strong></div></div><div><p class="cb-field-label">Temporary HP</p><div class="cb-hp-value"><strong class="cb-value">${model.hp.temporary}</strong></div></div><div><p class="cb-field-label">Gold (GP)</p><div class="cb-hp-value">${gold}</div></div><p class="cb-hp-note cb-resource-detail">HP progression: fixed</p></div>`;
+	return `<div class="cb-vitals"><div><p class="cb-field-label">Current HP / maximum</p><div class="cb-hp-value">${current}<strong class="cb-hp-max">/ ${model.hp.maximum}</strong></div></div><div><p class="cb-field-label">Temporary HP</p><div class="cb-hp-value">${temporary}</div></div><div><p class="cb-field-label">Gold (GP)</p><div class="cb-hp-value">${gold}</div></div><p class="cb-hp-note cb-resource-detail">HP progression: fixed</p></div>`;
 }
 
 function attacks (model) {
