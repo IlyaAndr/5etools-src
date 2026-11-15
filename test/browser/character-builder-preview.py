@@ -191,6 +191,8 @@ def main():
             pick(page, 'background', 'Soldier|XPHB')
             assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 1
             assert empty_form.get_by_label('Strength', exact=True).input_value() == '15'
+            # The default name is focused so the player can type it immediately.
+            assert page.evaluate("document.activeElement === document.querySelector('#character-name')")
             assert page.locator('.cb-character-sheet').count() == 1
             assert page.get_by_label('Character name').input_value() == 'New Character'
             assert page.locator('#new-character').is_enabled()
