@@ -48,8 +48,8 @@ Open UI/UX items:
   counter reads "✓ All N chosen".
 - **Mobile nav height (done, PR #61)** — at 390 px the nav is one horizontally
   scrollable row instead of two.
-- **Name focus** — focus the character-name field after auto-create so the player can
-  type immediately.
+- **Name focus (done, PR #62)** — the default character name is focused (and
+  selected) after the third source pick, so the player can type it immediately.
 - **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the
   existing "Clear all scores".
 - **Current money tracker (done, PR #59)** — the sheet shows a Gold (GP) field beside

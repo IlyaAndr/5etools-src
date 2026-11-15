@@ -145,7 +145,14 @@ function createFromSelection () {
 	++requestId;
 	try {
 		if (changing) editor.updateSelection(choice);
-		else editor.create("character", choice);
+		else {
+			editor.create("character", choice);
+			// Focus the default name so the player can type it immediately.
+			if (currentCharacter) {
+				characterName.focus({preventScroll: true});
+				characterName.select();
+			}
+		}
 	} catch (error) {
 		showError(changing ? `Could not change this character. ${error.message}` : `Could not create this character. ${error.message}`);
 	}
