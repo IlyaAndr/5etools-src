@@ -99,6 +99,13 @@ function reflectSelection () {
 
 const STATUS_PROMPT = "Choose a species, class, and background to create a character.";
 
+/** Keep each source's description column present before a choice is made. */
+const SOURCE_PROMPTS = {
+	species: "Choose a species to see its traits here.",
+	class: "Choose a class to see its features here.",
+	background: "Choose a background to see its details here.",
+};
+
 /** Read one picker value as a source-qualified reference. */
 function readRef (value) {
 	const [name, source] = `${value}`.split("|");
@@ -154,10 +161,10 @@ function clearCharacter () {
 	selection.background = "";
 	reflectSelection();
 	showSelectionInfo();
-	editor?.close();
+	editor?.clear();
 	currentCharacter = undefined;
 	hasPreview = false;
-	preview.innerHTML = startPrompt();
+	preview.innerHTML = "";
 	preview.setAttribute("aria-busy", "false");
 	characterName.value = "";
 	characterName.disabled = true;
@@ -169,11 +176,6 @@ function clearCharacter () {
 	document.title = "Character Builder - 5etools";
 	status.textContent = STATUS_PROMPT;
 	clearError();
-}
-
-/** The placeholder shown before the first character is created. */
-function startPrompt () {
-	return `<section class="cb-page cb-start-note"><h1>Choose a species, class, and background</h1><p>Pick one option in each list; the calculated sheet appears here as soon as all three are chosen, ready to review, print, or save as a PDF.</p></section>`;
 }
 
 /** Show the original text of the species, class, and background being chosen. */
@@ -198,8 +200,10 @@ function showSelectionInfo () {
 				showError(`Could not show the ${kind} text. ${error.message}`);
 			}
 		}
-		slot.innerHTML = info ? info.html : "";
-		slot.hidden = !info;
+		// Keep the description column present from the start, so its card does
+		// not pop in once the first option is chosen.
+		slot.innerHTML = info ? info.html : `<p class="cb-editor__option-meta">${SOURCE_PROMPTS[kind]}</p>`;
+		slot.hidden = false;
 	}
 }
 
@@ -259,7 +263,8 @@ async function loadData () {
 				}
 			},
 		});
-		preview.innerHTML = startPrompt();
+		editor.showEmptyForm();
+		preview.innerHTML = "";
 		preview.setAttribute("aria-busy", "false");
 		importInput.disabled = false;
 		newCharacterButton.disabled = true;
