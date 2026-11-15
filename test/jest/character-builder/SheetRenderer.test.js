@@ -164,6 +164,7 @@ describe("Calculated character sheet renderer", () => {
 		let html = render(document);
 		expect(html).toContain("aria-label=\"Current HP: blank\"");
 		expect(html).toContain("class=\"cb-hp-max\">/ 38</strong>");
+		expect(html).toContain("aria-label=\"Temporary HP: blank\"");
 		expect(html).toContain("Gold (GP)");
 		expect(html).toContain("aria-label=\"Gold: blank\"");
 		expect(html).toContain("Mage Armor active; no armor worn");
