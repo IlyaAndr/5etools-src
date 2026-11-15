@@ -40,14 +40,14 @@ section nav.
 
 Open UI/UX items:
 
-- **Sticky-nav refinement** — active-block tracking uses an `IntersectionObserver`;
-  add tuned smooth-scroll offsets and arrow-key navigation. (minor)
+- **Sticky-nav refinement (done, PR #61)** — arrow keys move focus between the
+  section buttons, and the scroll offset is tuned to the sticky bar.
 - **Block open state (done, PR #60)** — a block keeps its open/closed state across
   redraws, and New character resets it.
 - **Completion affordance (done, PR #60)** — a fully chosen block turns teal and its
   counter reads "✓ All N chosen".
-- **Mobile nav height** — confirm the sticky nav does not take too much vertical
-  space when it wraps at 390 px.
+- **Mobile nav height (done, PR #61)** — at 390 px the nav is one horizontally
+  scrollable row instead of two.
 - **Name focus** — focus the character-name field after auto-create so the player can
   type immediately.
 - **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the

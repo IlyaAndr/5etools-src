@@ -99,7 +99,7 @@
 	border-top: 2px solid var(--cb-line);
 }
 .cb-editor__section {
-	scroll-margin-top: 104px;
+	scroll-margin-top: 56px;
 	padding-top: 10px;
 	border-top: 2px solid var(--cb-line);
 }
@@ -1180,6 +1180,14 @@
 	}
 	.cb-toolbar__title {
 		font-size: 25px;
+	}
+	.cb-editor__nav {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+	}
+	.cb-editor__nav-button {
+		flex: none;
 	}
 	.cb-controls {
 		align-items: stretch;
