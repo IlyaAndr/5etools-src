@@ -25,9 +25,11 @@ the page does not load test fixtures or require Foundry or application globals.
 Pick one species, class, and background from the three lists; the character is
 created automatically once the third list has a selection, so there is no separate
 create step. **New character** clears the open character after a confirmation and
-returns the form to its empty start. The three source lists sit in the creation card
-above the editor blocks, each with the original 5etools text of the current choice
-beside it — the race summary (creature type, size, speed)
+returns the form to its empty start. The form is visible from the start: the
+ability-scores block is ready to fill in, and the species, class, and background
+choice blocks join it once all three sources are chosen. The three source lists sit
+in the creation card above the editor blocks, each with the original 5etools text of
+the current choice beside it — the race summary (creature type, size, speed)
 and traits, the class Core Traits and Multiclassing blocks with its features by
 level, and the background entry — so the options can be compared without leaving
 the page. The **character name** sits above the lists and renames the current

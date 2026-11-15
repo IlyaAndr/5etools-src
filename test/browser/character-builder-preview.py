@@ -141,7 +141,7 @@ def main():
             player.locator(':scope > a').click()
             builder_link.locator('a').click()
             page.wait_for_url('**/characterbuilder.html')
-            page.wait_for_selector('.cb-start-note')
+            page.wait_for_selector('#editor-blocks .cb-editor__section')
             assert 've-active' in page.locator('#navbar li[data-page="characterbuilder.html"]').get_attribute('class')
             assert 've-active' in page.locator('#navbar > li.dropdown').filter(has=page.locator('li[data-page="characterbuilder.html"]')).get_attribute('class')
             page.set_viewport_size({'width': 390, 'height': 844})
@@ -152,7 +152,7 @@ def main():
             page.wait_for_url('**/statgen.html')
             page.set_viewport_size({'width': 1100, 'height': 1300})
             page.goto(url, wait_until='networkidle')
-            page.wait_for_selector('.cb-start-note')
+            page.wait_for_selector('#editor-blocks .cb-editor__section')
             assert page.locator('#print-sheet').is_disabled()
             assert page.locator('#species-list .cb-editor__option').count() == 10
             assert page.locator('#class-list .cb-editor__option').count() == 2
@@ -163,26 +163,33 @@ def main():
             assert page.locator('.cb-button--file').is_visible()
             assert page.locator('.cb-toggle').is_visible()
             page.wait_for_function("document.querySelector('#status').textContent === 'Choose a species, class, and background to create a character.'")
-            # The form starts empty: nothing is preselected, the editor is
-            # hidden, and New character is disabled.
+            # The form starts empty: nothing is preselected, the ability-scores
+            # block is already visible, and New character is disabled.
             assert page.locator('.cb-start input:checked').count() == 0
             # The pickers are part of the creation card, not the toolbar header.
             assert page.locator('.cb-toolbar .cb-start').count() == 0
             assert page.locator('#fighter-editor .cb-start').count() == 1
             assert page.locator('.cb-start').is_visible()
-            assert page.locator('#editor-blocks').is_hidden()
+            empty_form = page.locator('#editor-blocks')
+            assert empty_form.is_visible()
+            assert empty_form.locator('.cb-editor__section[data-section="scores"]').count() == 1
+            assert empty_form.locator('.cb-editor__section-count').first.text_content() == '6 of 6 left'
             assert page.locator('#new-character').is_disabled()
             assert page.locator('#character-name').is_disabled()
-            assert page.locator('.cb-start-note h1').inner_text() == 'Choose a species, class, and background'
-            # One or two picks do not create anything; the third pick builds the
-            # character automatically, with no New character click.
+            # Scores entered before the picks are kept for the new character.
+            for ability, value in {'Strength': 15, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
+                empty_form.get_by_label(ability, exact=True).select_option(str(value))
+            assert empty_form.locator('.cb-editor__section-count').first.text_content() == 'All 6 chosen'
+            # One or two picks keep the empty form; the third adds the source
+            # choice blocks and creates the character.
             pick(page, 'species', 'Gnome|XPHB')
-            assert page.locator('#editor-blocks').is_hidden()
+            assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 0
             assert page.locator('#new-character').is_disabled()
             pick(page, 'class', 'Fighter|XPHB')
-            assert page.locator('#editor-blocks').is_hidden()
+            assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 0
             pick(page, 'background', 'Soldier|XPHB')
-            assert page.locator('#editor-blocks').is_visible()
+            assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 1
+            assert empty_form.get_by_label('Strength', exact=True).input_value() == '15'
             assert page.locator('.cb-character-sheet').count() == 1
             assert page.get_by_label('Character name').input_value() == 'New Character'
             assert page.locator('#new-character').is_enabled()
@@ -372,7 +379,7 @@ def main():
             # a fresh build rather than the imported example's preserved state.
             confirmations.accept = True
             page.click('#new-character')
-            assert page.locator('.cb-start-note').is_visible()
+            assert page.locator('#editor-blocks .cb-editor__section[data-section="scores"]').count() == 1
             # Build a character by picking all three lists; the third pick
             # creates it automatically, with no New character click.
             pick(page, 'species', 'Gnome|XPHB')
@@ -418,15 +425,15 @@ def main():
             assert 'Character editor' in editor.inner_text()
             assert page.locator('#class-list input:checked').get_attribute('data-value') == 'Warlock|XPHB'
             # New character clears the form after a confirm: pickers empty,
-            # editor hidden, name blank, and the start prompt restored.
+            # the ability-scores form returns, and the name is blank.
             confirmations.accept = False
             page.click('#new-character')
-            assert editor.is_visible()
+            assert editor.locator('.cb-editor__section[data-section="class"]').count() == 1
             confirmations.accept = True
             page.click('#new-character')
-            assert editor.is_hidden()
+            assert editor.locator('.cb-editor__section[data-section="scores"]').count() == 1
+            assert editor.locator('.cb-editor__section[data-section="class"]').count() == 0
             assert page.locator('.cb-start input:checked').count() == 0
-            assert page.locator('.cb-start-note').is_visible()
             assert page.get_by_label('Character name').input_value() == ''
             assert page.get_by_label('Character name').is_disabled()
             assert page.locator('#new-character').is_disabled()
@@ -654,7 +661,7 @@ def main():
             page.locator('#transaction-test-editor').evaluate('(element) => element.remove()')
             confirmations.accept = True
             page.click('#new-character')
-            assert page.locator('.cb-start-note').is_visible()
+            assert page.locator('#editor-blocks .cb-editor__section[data-section="scores"]').count() == 1
             pick(page, 'species', 'Tiefling|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Acolyte|XPHB')

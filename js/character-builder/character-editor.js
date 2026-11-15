@@ -50,6 +50,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	const methodGroup = `cb-score-method-${++scoreMethodGroups}`;
 	let character;
 	let scoreDrafts;
+	let emptyMethod = "standard";
 	let sectionObserver = null;
 	const optionFilters = new Map();
 	const optionPreviews = new Map();
@@ -132,6 +133,14 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	function commitScores (method, draft, focusKey, fallbackKey) {
 		const previous = methodDraft(method);
 		scoreDrafts = {...scoreDrafts, [method]: draft};
+		// Before a character exists, keep the entries for the draft that the
+		// source picks will create.
+		if (!character) {
+			emptyMethod = method;
+			renderEmpty();
+			restoreFocus(focusKey, fallbackKey);
+			return true;
+		}
 		const scores = scoresForBuild(method, abilities.map(({id}) => id), draft);
 		const next = {...character, build: {...character.build, abilities: {...character.build.abilities, method, scores}}};
 		if (publish(next, true, focusKey, fallbackKey)) return true;
@@ -143,6 +152,11 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 
 	/** Switch methods without discarding either method's entries. */
 	function commitMethod (method) {
+		if (!character) {
+			emptyMethod = method;
+			renderEmpty();
+			return;
+		}
 		const scores = scoresForBuild(method, abilities.map(({id}) => id), methodDraft(method));
 		publish({...character, build: {...character.build, abilities: {...character.build.abilities, method, scores}}}, true, `character:score-method:${method}`);
 	}
@@ -185,7 +199,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	function finalScoreNodes (descriptors, values) {
 		const amounts = Object.fromEntries(abilities.map(({id}) => [id, []]));
 		for (const descriptor of descriptors.filter(entry => entry.available && entry.id.endsWith("ability-increases"))) {
-			const [selected] = character.build.choices.find(choice => choice.id === descriptor.id)?.selected || [];
+			const [selected] = (character?.build.choices || []).find(choice => choice.id === descriptor.id)?.selected || [];
 			for (const {ability, amount} of parseIncreaseOption(selected) || []) amounts[ability].push(amount);
 		}
 		const grid = element("div", null, "cb-editor__scores cb-editor__final-scores");
@@ -286,7 +300,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	/** Render the method chooser, its method-specific controls, and the combined totals. */
 	function renderScores (descriptors) {
 		const ids = abilities.map(({id}) => id);
-		const method = character.build.abilities.method;
+		const method = character?.build.abilities.method ?? emptyMethod;
 		const draft = methodDraft(method);
 		const fieldset = element("fieldset", null, "cb-editor__group cb-editor__group--wide");
 		fieldset.append(element("p", "Pick how the six scores are assigned. They enter the saved character as soon as all six fit the method; until then the sheet stays incomplete.", "cb-editor__help"), renderMethods(method));
@@ -613,18 +627,67 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		container.hidden = false;
 	}
 
+	/** Re-render the form before a draft exists: the ability scores only. */
+	function renderEmpty () {
+		const heading = element("div", null, "cb-editor__heading");
+		const title = element("div");
+		title.append(element("h2", "Character editor"), element("p", "Choose a species, class, and background to unlock the rest of the choices. Ability scores can be entered now and are kept for the new character."));
+		heading.append(title);
+		const block = document.createElement("details");
+		block.className = "cb-editor__section";
+		block.dataset.section = "scores";
+		block.id = "cb-editor-section-scores";
+		block.open = true;
+		const summary = element("summary", null, "cb-editor__section-title");
+		summary.append(element("span", "Ability scores"), element("span", scoreCountText(), "cb-editor__section-count"));
+		const groups = element("div", null, "cb-editor__section-groups");
+		groups.append(renderScores([]));
+		block.append(summary, groups);
+		const choices = element("div", null, "cb-editor__choices");
+		choices.append(block);
+		container.replaceChildren(heading, choices);
+		container.hidden = false;
+	}
+
+	/** The ability-scores counter shown before a draft exists. */
+	function scoreCountText () {
+		const values = readScoreDraft(abilities.map(({id}) => id), methodDraft(emptyMethod));
+		const entered = Object.values(values).filter(value => value != null).length;
+		const missing = abilities.length - entered;
+		return missing ? `${missing} of ${abilities.length} left` : `All ${abilities.length} chosen`;
+	}
+
+	/** Carry the scores entered before the source picks into the new draft. */
+	function applyScoreDraft (document, drafts, method) {
+		const draft = drafts?.[method];
+		if (!draft) return document;
+		const scores = scoresForBuild(method, abilities.map(({id}) => id), draft);
+		return {...document, build: {...document.build, abilities: {method, scores}}};
+	}
+
 	return {
 		canEdit: document => !!profileFor(document),
+		showEmptyForm: renderEmpty,
 		create (profileId, selection) {
 			const profile = profiles.find(candidate => candidate.id === profileId);
 			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);
 			const previous = scoreDrafts;
-			scoreDrafts = {};
 			optionFilters.clear();
-			if (!publish(profile.createDraft(catalog.dataset, selection))) {
+			const draft = applyScoreDraft(profile.createDraft(catalog.dataset, selection), previous, emptyMethod);
+			if (!publish(draft)) {
 				scoreDrafts = previous;
 				if (character) render();
+				else renderEmpty();
 			}
+		},
+		/** Drop the open character and show the empty ability-scores form again. */
+		clear () {
+			character = undefined;
+			scoreDrafts = {};
+			optionFilters.clear();
+			optionPreviews.clear();
+			emptyMethod = "standard";
+			renderEmpty();
 		},
 		/** Replace the source refs, keeping unrelated choices and session state. */
 		updateSelection (selection) {

@@ -63,6 +63,10 @@ Design follow-ups:
   and background pickers now live inside the editor card above the choice blocks,
   with an empty-editor shell before a draft exists, so creation is one continuous
   flow. Further integration into the collapsible block list remains optional.
+- **Visible form before the sources are chosen (done, PR #57).** The ability-scores
+  block renders from the start and its entries carry into the character, and each
+  source's description panel is present from the start instead of appearing only
+  after a selection.
 
 Content backlog:
 
