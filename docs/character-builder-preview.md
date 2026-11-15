@@ -107,6 +107,7 @@ visible at a glance. A sticky navigation bar above the blocks jumps to a block a
 marks the one in view; a completed block turns teal with a ✓, a closed block keeps
 its state through a redraw, and closing one keeps its choices saved. Arrow keys move
 between the navigation buttons, and the bar stays a single scrollable row on a phone.
+Each choice block also offers a "Clear choices" action for its own selections.
 
 Changing the species, class, or background while a character is open keeps the
 rest of the character: only the choices owned by the changed source are reset, so

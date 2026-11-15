@@ -109,6 +109,16 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return true;
 	}
 
+	/** Clear every saved choice owned by one block, leaving the other blocks alone. */
+	function resetSection (ids) {
+		if (!character) return false;
+		const selected = ids.filter(id => (character.build.choices.find(choice => choice.id === id)?.selected || []).length);
+		if (!selected.length) return false;
+		let next = character;
+		for (const id of selected) next = setCharacterChoice(next, id, []);
+		return publish(next);
+	}
+
 	function updateBuild (changes, redraw = true) {
 		return publish({...character, build: {...character.build, ...changes}}, redraw);
 	}
@@ -621,7 +631,17 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				: "", "cb-editor__section-count"));
 			const groups = element("div", null, "cb-editor__section-groups");
 			groups.append(...section.groups);
-			block.append(summary, groups);
+			block.append(summary);
+			const choiceIds = section.groups.map(group => group.dataset.choice).filter(Boolean);
+			if (choiceIds.length) {
+				const reset = element("button", "Clear choices", "cb-editor__section-reset");
+				reset.type = "button";
+				reset.setAttribute("aria-label", `Reset ${section.title} choices`);
+				reset.dataset.cbFocus = `reset:${section.key}`;
+				reset.addEventListener("click", () => resetSection(choiceIds));
+				block.append(reset);
+			}
+			block.append(groups);
 			choices.append(block);
 			const jump = element("button", section.title, "cb-editor__nav-button");
 			jump.type = "button";

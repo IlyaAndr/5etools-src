@@ -442,6 +442,10 @@ def main():
             assert 'Character editor' in editor.inner_text()
             assert page.locator('#class-list input:checked').get_attribute('data-value') == 'Warlock|XPHB'
             assert editor.locator('.cb-editor__section[data-section="class"]').evaluate('element => element.open') is False
+            # A block can clear its own choices without touching the others.
+            assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == 'forest'
+            editor.get_by_role('button', name='Reset Species choices').click()
+            assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == ''
             # New character clears the form after a confirm: pickers empty,
             # the ability-scores form returns, and the name is blank.
             confirmations.accept = False

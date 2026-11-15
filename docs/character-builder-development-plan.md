@@ -50,8 +50,8 @@ Open UI/UX items:
   scrollable row instead of two.
 - **Name focus (done, PR #62)** — the default character name is focused (and
   selected) after the third source pick, so the player can type it immediately.
-- **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the
-  existing "Clear all scores".
+- **Per-block reset (done, PR #63)** — each choice block has a "Clear choices" action
+  that resets only its own choices; the ability-scores block keeps its method reset.
 - **Current money tracker (done, PR #59)** — the sheet shows a Gold (GP) field beside
   the HP values: the saved `session.gold`, or a blank pencil box for the current
   amount.
