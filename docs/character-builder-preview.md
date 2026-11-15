@@ -104,7 +104,8 @@ collapsible blocks in reading order — Ability scores, Feats and boons, Species
 Class, Background, Equipment, and Other choices — each with a heading and an
 "N of M left" counter, so a long form reads as sections and its progress is
 visible at a glance. A sticky navigation bar above the blocks jumps to a block and
-marks the one in view; blocks start open, and closing one keeps its choices saved.
+marks the one in view; a completed block turns teal with a ✓, a closed block keeps
+its state through a redraw, and closing one keeps its choices saved.
 
 Changing the species, class, or background while a character is open keeps the
 rest of the character: only the choices owned by the changed source are reset, so
