@@ -100,6 +100,11 @@ export function createEditorDraft (dataset, {characterClass, species, background
 		const feat = getFeatRule(background, context.rules);
 		if (feat?.rule.spellGroup) document.build.choices.push({id: `${feat.owner}:ability`, selected: [ability]});
 	}
+	// Start on the class's own equipment package; its starting-gold alternative
+	// is the other selectable option.
+	const classId = refKey(characterClass);
+	const packageEntry = Object.entries(context.rules?.equipment || {}).find(([, value]) => value.classId === classId);
+	if (packageEntry) document.build.choices.push({id: `class:${classId}:equipment`, selected: [packageEntry[0]]});
 	validateCharacterDocument(document);
 	return document;
 }

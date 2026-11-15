@@ -3,6 +3,7 @@ import "../../../js/parser.js";
 import {applySingleOptionSelections, setCharacterChoice} from "../../../js/character-builder/editor-common.js";
 import {createEditorDraft, findSharedSpellcastingAbility, getEditorChoiceDescriptors, getEditorCombinations, isSupportedEditorDocument} from "../../../js/character-builder/editor-profile.js";
 import {createCharacterSheetModel} from "../../../js/character-builder/character-sheet-model.js";
+import {resolveStartingEquipment} from "../../../js/character-builder/equipment-choices.js";
 import {createSpeciesCatalog} from "../../../js/character-builder/species-catalog.js";
 
 const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -132,9 +133,25 @@ describe("Independent editor composition", () => {
 		expect(findSharedSpellcastingAbility({species: ref("Gnome"), characterClass: ref("Warlock"), background: ref("Soldier")}, context)).toBe("cha");
 		expect(findSharedSpellcastingAbility({species: ref("Tiefling"), characterClass: ref("Fighter"), background: ref("Acolyte")}, context)).toBeNull();
 		const warlock = draftFor({species: ref("Gnome"), characterClass: ref("Warlock"), background: ref("Soldier")});
-		expect(warlock.build.choices).toEqual([{id: "species:gnome|xphb:spellcasting-ability", selected: ["cha"]}]);
+		expect(warlock.build.choices).toEqual([
+			{id: "species:gnome|xphb:spellcasting-ability", selected: ["cha"]},
+			{id: "class:warlock|xphb:equipment", selected: ["warlock-pact-mage"]},
+		]);
 		const fighter = draftFor({species: ref("Tiefling"), characterClass: ref("Fighter"), background: ref("Acolyte")});
-		expect(fighter.build.choices).toEqual([]);
+		expect(fighter.build.choices).toEqual([{id: "class:fighter|xphb:equipment", selected: ["fighter-sword-and-shield"]}]);
+	});
+
+	it("offers the class starting gold instead of the equipment package", () => {
+		const document = completeDocument(draftFor({species: ref("Gnome"), characterClass: ref("Fighter"), background: ref("Soldier")}));
+		const descriptor = getEditorChoiceDescriptors(document, catalog, context).find(entry => entry.id === "class:fighter|xphb:equipment");
+		expect(descriptor.options.map(option => option.id)).toEqual(["fighter-sword-and-shield", "gold"]);
+		expect(descriptor.selected).toEqual(["fighter-sword-and-shield"]);
+		const withGold = setCharacterChoice(document, "class:fighter|xphb:equipment", ["gold"]);
+		expect(resolveStartingEquipment(withGold, context.rules, "gold")).toMatchObject({id: "gold", classCost: 0, armor: null, weapons: []});
+		const model = createCharacterSheetModel(withGold, catalog, context);
+		expect(model.status).toBe("complete");
+		expect(model.armorClass.value).toBe(10 + model.abilities.find(ability => ability.id === "dex").modifier);
+		expect(model.attacks).toEqual([]);
 	});
 
 	it("fills single-option choices without inventing multi-option decisions", () => {
