@@ -51,6 +51,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	let character;
 	let scoreDrafts;
 	let emptyMethod = "standard";
+	const sectionOpen = new Map();
 	let sectionObserver = null;
 	const optionFilters = new Map();
 	const optionPreviews = new Map();
@@ -596,10 +597,12 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			block.className = "cb-editor__section";
 			block.dataset.section = section.key;
 			block.id = `cb-editor-section-${section.key}`;
-			block.open = true;
+			block.open = sectionOpen.get(section.key) ?? true;
+			block.classList.toggle("cb-editor__section--complete", !!section.total && !missing);
+			block.addEventListener("toggle", () => sectionOpen.set(section.key, block.open));
 			const summary = element("summary", null, "cb-editor__section-title");
 			summary.append(element("span", section.title), element("span", section.total
-				? (missing ? `${missing} of ${section.total} left` : `All ${section.total} chosen`)
+				? (missing ? `${missing} of ${section.total} left` : `✓ All ${section.total} chosen`)
 				: "", "cb-editor__section-count"));
 			const groups = element("div", null, "cb-editor__section-groups");
 			groups.append(...section.groups);
@@ -637,7 +640,9 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		block.className = "cb-editor__section";
 		block.dataset.section = "scores";
 		block.id = "cb-editor-section-scores";
-		block.open = true;
+		block.open = sectionOpen.get("scores") ?? true;
+		block.classList.toggle("cb-editor__section--complete", scoreComplete());
+		block.addEventListener("toggle", () => sectionOpen.set("scores", block.open));
 		const summary = element("summary", null, "cb-editor__section-title");
 		summary.append(element("span", "Ability scores"), element("span", scoreCountText(), "cb-editor__section-count"));
 		const groups = element("div", null, "cb-editor__section-groups");
@@ -649,12 +654,21 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		container.hidden = false;
 	}
 
+	/** The ability-scores draft before a character exists. */
+	function scoreValues () {
+		return readScoreDraft(abilities.map(({id}) => id), methodDraft(emptyMethod));
+	}
+
+	function scoreComplete () {
+		return Object.values(scoreValues()).every(value => value != null);
+	}
+
 	/** The ability-scores counter shown before a draft exists. */
 	function scoreCountText () {
-		const values = readScoreDraft(abilities.map(({id}) => id), methodDraft(emptyMethod));
+		const values = scoreValues();
 		const entered = Object.values(values).filter(value => value != null).length;
 		const missing = abilities.length - entered;
-		return missing ? `${missing} of ${abilities.length} left` : `All ${abilities.length} chosen`;
+		return missing ? `${missing} of ${abilities.length} left` : `✓ All ${abilities.length} chosen`;
 	}
 
 	/** Carry the scores entered before the source picks into the new draft. */
@@ -686,6 +700,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			scoreDrafts = {};
 			optionFilters.clear();
 			optionPreviews.clear();
+			sectionOpen.clear();
 			emptyMethod = "standard";
 			renderEmpty();
 		},

@@ -42,10 +42,10 @@ Open UI/UX items:
 
 - **Sticky-nav refinement** — active-block tracking uses an `IntersectionObserver`;
   add tuned smooth-scroll offsets and arrow-key navigation. (minor)
-- **Block open state** — blocks render `<details open>`, and a redraw reopens every
-  block; persist each section's open/closed state across redraws.
-- **Completion affordance** — mark a block whose choices are all chosen with a check
-  mark or accent so progress is scannable.
+- **Block open state (done, PR #60)** — a block keeps its open/closed state across
+  redraws, and New character resets it.
+- **Completion affordance (done, PR #60)** — a fully chosen block turns teal and its
+  counter reads "✓ All N chosen".
 - **Mobile nav height** — confirm the sticky nav does not take too much vertical
   space when it wraps at 390 px.
 - **Name focus** — focus the character-name field after auto-create so the player can

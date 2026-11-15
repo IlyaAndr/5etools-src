@@ -179,7 +179,8 @@ def main():
             # Scores entered before the picks are kept for the new character.
             for ability, value in {'Strength': 15, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
                 empty_form.get_by_label(ability, exact=True).select_option(str(value))
-            assert empty_form.locator('.cb-editor__section-count').first.text_content() == 'All 6 chosen'
+            assert empty_form.locator('.cb-editor__section-count').first.text_content() == '✓ All 6 chosen'
+            assert empty_form.locator('.cb-editor__section--complete').count() == 1
             # One or two picks keep the empty form; the third adds the source
             # choice blocks and creates the character.
             pick(page, 'species', 'Gnome|XPHB')
@@ -409,6 +410,13 @@ def main():
             assert nav.get_attribute('aria-label') == 'Editor sections'
             assert nav.is_visible()
             assert nav.locator('button').all_inner_texts() == [block['title'] for block in blocks], blocks
+            # Completed blocks carry a check mark, and a closed block keeps its
+            # state through the redraw that a source change triggers.
+            assert editor.locator('.cb-editor__section--complete').count() >= 1
+            assert '✓' in editor.locator('.cb-editor__section--complete .cb-editor__section-count').first.inner_text()
+            editor.locator('.cb-editor__section[data-section="class"] summary').click()
+            page.wait_for_timeout(100)
+            assert editor.locator('.cb-editor__section[data-section="class"]').evaluate('element => element.open') is False
             with page.expect_download() as download_info:
                 page.click('#save-character')
             first_id = json.loads(Path(download_info.value.path()).read_text())['id']
@@ -424,6 +432,7 @@ def main():
             assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == 'forest'
             assert 'Character editor' in editor.inner_text()
             assert page.locator('#class-list input:checked').get_attribute('data-value') == 'Warlock|XPHB'
+            assert editor.locator('.cb-editor__section[data-section="class"]').evaluate('element => element.open') is False
             # New character clears the form after a confirm: pickers empty,
             # the ability-scores form returns, and the name is blank.
             confirmations.accept = False
