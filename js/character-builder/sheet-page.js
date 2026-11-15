@@ -118,15 +118,10 @@ function selectFrom (character) {
 	showSelectionInfo();
 }
 
-/** Put the pickers back when the player cancels replacing the open character. */
-function revertSelection () {
-	selectFrom(currentCharacter);
-}
-
 /**
  * Build the character as soon as the three lists name a combination, so the
- * form does not need a separate create action. Replacing an open character
- * discards its choices, so that asks first.
+ * form does not need a separate create action. Replacing one source keeps the
+ * rest of the character: only that source's own choices are reset.
  */
 function createFromSelection () {
 	const choice = {
@@ -137,15 +132,15 @@ function createFromSelection () {
 	if (!choice.species || !choice.characterClass || !choice.background) return;
 	const build = currentCharacter?.build;
 	if (build && sameRef(build.species, choice.species) && sameRef(build.class, choice.characterClass) && sameRef(build.background, choice.background)) return;
-	if (build && !window.confirm("Changing the species, class, or background starts a new character and clears the choices made for the current one.")) {
-		revertSelection();
-		return;
-	}
+	// Changing a source only works on a document the editor can edit; an
+	// unsupported import falls back to a fresh character from the pickers.
+	const changing = !!(currentCharacter && editor.canEdit(currentCharacter));
 	++requestId;
 	try {
-		editor.create("character", choice);
+		if (changing) editor.updateSelection(choice);
+		else editor.create("character", choice);
 	} catch (error) {
-		showError(`Could not create this character. ${error.message}`);
+		showError(changing ? `Could not change this character. ${error.message}` : `Could not create this character. ${error.message}`);
 	}
 }
 

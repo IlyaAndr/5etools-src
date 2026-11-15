@@ -1,6 +1,6 @@
 import {
 	ABILITY_SCORE_METHODS, MANUAL_SCORE_RANGE, POINT_BUY_BUDGET, POINT_BUY_COSTS, POINT_BUY_RANGE, STANDARD_ARRAY,
-	applySingleOptionSelections, createScoreDrafts, getEditorAbilities, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
+	applySingleOptionSelections, createScoreDrafts, dropOrphanedChoices, getEditorAbilities, pointBuySpent, pruneDependentChoices, readScoreDraft, replaceSources, scoresForBuild, setCharacterChoice,
 } from "./editor-common.js";
 import {filterOptions, parseIncreaseOption, refKey} from "./choice-common.js";
 import {renderFeatureInfo, renderSpellInfo} from "./source-info.js";
@@ -625,6 +625,23 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 				scoreDrafts = previous;
 				if (character) render();
 			}
+		},
+		/** Replace the source refs, keeping unrelated choices and session state. */
+		updateSelection (selection) {
+			if (!character) return false;
+			const previous = character;
+			let next = replaceSources(previous, selection);
+			if (next === previous) return false;
+			const previousProfile = profileFor(previous);
+			const nextProfile = profileFor(next);
+			if (previousProfile && nextProfile) {
+				next = dropOrphanedChoices(
+					next,
+					previousProfile.getChoiceDescriptors(previous, catalog, context),
+					nextProfile.getChoiceDescriptors(next, catalog, context),
+				);
+			}
+			return publish(next);
 		},
 		open (document, {autoSelect = true} = {}) {
 			if (!profileFor(document)) return;

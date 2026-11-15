@@ -106,6 +106,49 @@ export function setCharacterChoice (document, id, selected) {
 	return next;
 }
 
+/** Two source references name the same record. */
+const sameSource = (left, right) => left?.name === right?.name && left?.source === right?.source;
+
+/**
+ * Replace the species, class, and/or background refs, dropping only the saved
+ * choices owned by a source that actually changed. Ability scores, level, name,
+ * session state, and the other sources' choices are preserved; the editor's
+ * `publish()` then re-selects single options and prunes dependent choices.
+ */
+export function replaceSources (document, {species, characterClass, background} = {}) {
+	validateCharacterDocument(document);
+	const targets = {species, class: characterClass, background};
+	const next = copy(document);
+	const changed = [];
+	for (const [field, ref] of Object.entries(targets)) {
+		if (!ref || sameSource(next.build[field], ref)) continue;
+		next.build[field] = copy(ref);
+		changed.push(field);
+	}
+	if (!changed.length) return document;
+	const prefixes = changed.map(field => `${field}:`);
+	next.build.choices = next.build.choices.filter(choice => !prefixes.some(prefix => choice.id.startsWith(prefix)));
+	validateCharacterDocument(next);
+	return next;
+}
+
+/**
+ * Drop saved choices that the previous descriptors offered but the current
+ * document no longer offers, such as a background feat's sub-choices after the
+ * background changes. Choices that were already unknown are preserved, so a
+ * custom or imported entry is never removed silently.
+ */
+export function dropOrphanedChoices (document, previousDescriptors, nextDescriptors) {
+	const previousIds = new Set(previousDescriptors.map(descriptor => descriptor.id));
+	const nextIds = new Set(nextDescriptors.map(descriptor => descriptor.id));
+	const choices = document.build.choices.filter(choice => nextIds.has(choice.id) || !previousIds.has(choice.id));
+	if (choices.length === document.build.choices.length) return document;
+	const next = copy(document);
+	next.build.choices = choices;
+	validateCharacterDocument(next);
+	return next;
+}
+
 /**
  * Drop the saved selection of a choice whose reviewed prerequisite was removed
  * by the same edit, such as an invocation's Pact Weapon or cantrip after the

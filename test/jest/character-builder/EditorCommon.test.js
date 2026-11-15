@@ -1,6 +1,6 @@
 import {
 	MANUAL_SCORE_RANGE, POINT_BUY_BUDGET, POINT_BUY_COSTS, STANDARD_ARRAY,
-	createCharacterDraft, createScoreDrafts, pointBuySpent, pruneDependentChoices, readScoreDraft, scoresForBuild, setCharacterChoice,
+	createCharacterDraft, createScoreDrafts, dropOrphanedChoices, pointBuySpent, pruneDependentChoices, readScoreDraft, replaceSources, scoresForBuild, setCharacterChoice,
 } from "../../../js/character-builder/editor-common.js";
 
 const abilityIds = ["str", "dex", "con", "int", "wis", "cha"];
@@ -125,5 +125,95 @@ describe("Dependent choices", () => {
 		const previous = draftWithPactWeapon();
 		const next = setCharacterChoice(previous, `${owner}:invocations`, []);
 		expect(pruneDependentChoices(previous, next, [])).toBe(next);
+	});
+});
+
+describe("Source replacement", () => {
+	const dataset = {id: "5etools", version: "test", revision: "a".repeat(40)};
+	const selection = {
+		characterClass: {name: "Fighter", source: "XPHB"},
+		species: {name: "Gnome", source: "XPHB"},
+		background: {name: "Soldier", source: "XPHB"},
+	};
+	const draftWithChoices = () => {
+		let document = createCharacterDraft(dataset, selection);
+		for (const [id, selected] of [
+			["species:gnome|xphb:lineage", ["forest"]],
+			["class:fighter|xphb:style", ["defense"]],
+			["background:soldier|xphb:tool", ["dice-set|xphb"]],
+			["feat:savage-attacker|xphb:ability", ["str"]],
+			["character:languages", ["elvish|xphb"]],
+		]) document = setCharacterChoice(document, id, selected);
+		return document;
+	};
+
+	it("replaces a source and drops only that source's choices", () => {
+		const previous = draftWithChoices();
+		const next = replaceSources(previous, {...selection, characterClass: {name: "Warlock", source: "XPHB"}});
+		expect(next.build.class).toEqual({name: "Warlock", source: "XPHB"});
+		expect(next.build.choices.map(choice => choice.id)).toEqual([
+			"species:gnome|xphb:lineage",
+			"background:soldier|xphb:tool",
+			"feat:savage-attacker|xphb:ability",
+			"character:languages",
+		]);
+	});
+
+	it("keeps ability scores, level, name, and session state", () => {
+		const previous = {
+			...draftWithChoices(),
+			name: "Kept name",
+			session: {hp: {current: 7, temporary: 2}, resources: [], notes: "Kept note"},
+		};
+		previous.build = {
+			...previous.build,
+			level: 3,
+			abilities: {method: "manual", scores: {str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8}},
+		};
+		const next = replaceSources(previous, {...selection, species: {name: "Dwarf", source: "XPHB"}});
+		expect(next.name).toBe("Kept name");
+		expect(next.session).toEqual(previous.session);
+		expect(next.build.level).toBe(3);
+		expect(next.build.abilities).toEqual(previous.build.abilities);
+		expect(next.build.choices.some(choice => choice.id.startsWith("species:"))).toBe(false);
+	});
+
+	it("returns the same document when no source changes", () => {
+		const previous = draftWithChoices();
+		expect(replaceSources(previous, selection)).toBe(previous);
+	});
+
+	it("changes only the source that differs", () => {
+		const previous = draftWithChoices();
+		const next = replaceSources(previous, {...selection, background: {name: "Acolyte", source: "XPHB"}});
+		expect(next.build.species).toEqual(selection.species);
+		expect(next.build.class).toEqual(selection.characterClass);
+		expect(next.build.background).toEqual({name: "Acolyte", source: "XPHB"});
+		expect(next.build.choices.some(choice => choice.id.startsWith("background:"))).toBe(false);
+		expect(next.build.choices.some(choice => choice.id.startsWith("species:"))).toBe(true);
+	});
+
+	it("drops choices the new document no longer offers and keeps already-unknown ones", () => {
+		const previous = setCharacterChoice(draftWithChoices(), "custom:unknown", ["value"]);
+		const previousDescriptors = [
+			"species:gnome|xphb:lineage", "class:fighter|xphb:style",
+			"background:soldier|xphb:tool", "feat:savage-attacker|xphb:ability", "character:languages",
+		].map(id => ({id}));
+		const nextDescriptors = [
+			"species:gnome|xphb:lineage", "class:fighter|xphb:style", "character:languages",
+		].map(id => ({id}));
+		const pruned = dropOrphanedChoices(previous, previousDescriptors, nextDescriptors);
+		expect(pruned.build.choices.map(choice => choice.id)).toEqual([
+			"species:gnome|xphb:lineage",
+			"class:fighter|xphb:style",
+			"character:languages",
+			"custom:unknown",
+		]);
+	});
+
+	it("returns the same document when no choice is orphaned", () => {
+		const previous = draftWithChoices();
+		const descriptors = previous.build.choices.map(choice => ({id: choice.id}));
+		expect(dropOrphanedChoices(previous, descriptors, descriptors)).toBe(previous);
 	});
 });
