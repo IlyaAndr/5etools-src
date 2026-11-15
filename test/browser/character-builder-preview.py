@@ -364,6 +364,11 @@ def main():
             page.click('#print-sheet')
             assert page.evaluate('window.previewPrintCalled') is True
 
+            # Start from the empty form, so the blocks and counters below reflect
+            # a fresh build rather than the imported example's preserved state.
+            confirmations.accept = True
+            page.click('#new-character')
+            assert page.locator('.cb-start-note').is_visible()
             # Build a character by picking all three lists; the third pick
             # creates it automatically, with no New character click.
             pick(page, 'species', 'Gnome|XPHB')
@@ -396,19 +401,18 @@ def main():
             with page.expect_download() as download_info:
                 page.click('#save-character')
             first_id = json.loads(Path(download_info.value.path()).read_text())['id']
-            # Changing a picker while a character exists asks first: No keeps
-            # the old character and reverts the picker, Yes rebuilds it.
+            # Changing a picker keeps the rest of the character: only that
+            # source's own choices reset, and no confirmation is needed.
             page.get_by_label('Character name').fill('Before change')
             page.get_by_label('Character name').press('Tab')
-            confirmations.accept = False
+            editor.get_by_label('Gnomish Lineage', exact=True).select_option('forest')
+            dialogs_before_change = len(confirmations.messages)
             pick(page, 'class', 'Warlock|XPHB')
+            assert len(confirmations.messages) == dialogs_before_change, confirmations.messages
             assert page.get_by_label('Character name').input_value() == 'Before change'
-            assert page.locator('#class-list input:checked').get_attribute('data-value') == 'Fighter|XPHB'
-            confirmations.accept = True
-            pick(page, 'class', 'Warlock|XPHB')
-            assert page.get_by_label('Character name').input_value() == 'New Character'
+            assert editor.get_by_label('Gnomish Lineage', exact=True).input_value() == 'forest'
             assert 'Character editor' in editor.inner_text()
-            assert confirmations.messages[-1].startswith('Changing the species, class, or background'), confirmations.messages[-1]
+            assert page.locator('#class-list input:checked').get_attribute('data-value') == 'Warlock|XPHB'
             # New character clears the form after a confirm: pickers empty,
             # editor hidden, name blank, and the start prompt restored.
             confirmations.accept = False
@@ -644,6 +648,9 @@ def main():
 
             # Create a Warlock from scratch and verify level-based spell grants.
             page.locator('#transaction-test-editor').evaluate('(element) => element.remove()')
+            confirmations.accept = True
+            page.click('#new-character')
+            assert page.locator('.cb-start-note').is_visible()
             pick(page, 'species', 'Tiefling|XPHB')
             pick(page, 'class', 'Warlock|XPHB')
             pick(page, 'background', 'Acolyte|XPHB')

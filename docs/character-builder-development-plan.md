@@ -53,17 +53,17 @@ Open UI/UX items:
 - **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the
   existing "Clear all scores".
 
-Open design question (resolve before implementing):
+Design follow-ups:
 
-- **Source pickers should be ordinary creation steps.** The species, class, and
-  background pickers currently sit in the toolbar header, and changing one rebuilds
-  the whole draft, discarding ability scores, equipment, and the other sources'
-  choices. The intended direction is to move the pickers into the editor as normal
-  blocks and to make a source change surgical: keep unrelated choices and invalidate
-  only the choices owned by the changed source. This needs an "update source in
-  place" editor path instead of the current fresh-draft rebuild, plus a review of
-  which `species:` / `class:` / `background:` / `feat:` choices each change
-  invalidates.
+- **Surgical source changes (done, PR #55).** Changing the species, class, or
+  background now keeps the document and drops only that source's own choices, so
+  ability scores, level, name, session state, and the other sources' choices
+  survive; the confirmation is gone.
+- **Source pickers as ordinary creation steps (open).** The species, class, and
+  background pickers still sit in the toolbar header. The intended direction is to
+  move them into the editor as normal blocks (with their description panels) and
+  render an empty editor shell before a draft exists, so creation is one continuous
+  flow.
 
 Content backlog:
 

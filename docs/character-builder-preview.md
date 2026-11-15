@@ -103,10 +103,10 @@ Class, Background, Equipment, and Other choices — each with a heading and an
 visible at a glance. A sticky navigation bar above the blocks jumps to a block and
 marks the one in view; blocks start open, and closing one keeps its choices saved.
 
-Changing the species, class, or background while a character is open starts a new
-character, so it asks for confirmation first; answer No and the current document is
-untouched (the picker reverts), answer Yes and a fresh character is created.
-**New character** clears the open character after a similar confirmation and
+Changing the species, class, or background while a character is open keeps the
+rest of the character: only the choices owned by the changed source are reset, so
+ability scores, level, name, session state, and the other sources' choices
+survive. **New character** clears the open character after a confirmation and
 returns the form to its empty state. The editor stays open while a
 character exists (there is no separate edit or close action), and opening a saved
 file shows the editor for that file without auto-filling any of its choices.
