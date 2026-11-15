@@ -183,6 +183,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		damageRiders: [],
 		training: [],
 		gear: [],
+		currentGold: session.gold ?? null,
 		languages: [],
 		spells: [],
 		spellcasting: [],

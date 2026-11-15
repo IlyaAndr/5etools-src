@@ -47,7 +47,8 @@ references. The model calculates ability scores, saving throws, skills, maximum
 HP, AC, attacks, spellcasting values, and supported features from the selected
 build. Gnomish Cunning is annotated alongside the relevant saving throws.
 All 18 skills are shown. Known current and temporary HP are displayed from the
-imported session.
+imported session, and a Gold (GP) field shows the saved current gold or a blank
+pencil box, since the amount changes between sessions.
 
 The editors support every combination of the ten XPHB species, the Warlock or
 Fighter, and any of the 16 XPHB backgrounds, including Champion and all four XPHB

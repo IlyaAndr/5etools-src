@@ -81,6 +81,17 @@ describe("Character builder draft documents", () => {
 		expect(() => serializeCharacterDocument(document)).toThrow(`unexpected field ${field}`);
 	});
 
+	it("accepts optional session gold and rejects a negative amount", () => {
+		const document = loadFixture("gnome-fighter-draft");
+		expect(validateCharacterDocument(document)).toBe(true);
+		document.session.gold = 42;
+		expect(validateCharacterDocument(document)).toBe(true);
+		document.session.gold = null;
+		expect(validateCharacterDocument(document)).toBe(true);
+		document.session.gold = -1;
+		expect(() => validateCharacterDocument(document)).toThrow("character.session.gold");
+	});
+
 	it("rejects unknown nested fields and incomplete source references", () => {
 		const document = loadFixture("gnome-fighter-draft");
 		document.build.species.saveBonus = 5;

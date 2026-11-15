@@ -52,9 +52,9 @@ Open UI/UX items:
   type immediately.
 - **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the
   existing "Clear all scores".
-- **Current money tracker** — show a GP field on the sheet beside the HP values, with
-  a blank pencil box (and an optional saved `session.gold`), since the current gold
-  changes between sessions.
+- **Current money tracker (done, PR #59)** — the sheet shows a Gold (GP) field beside
+  the HP values: the saved `session.gold`, or a blank pencil box for the current
+  amount.
 
 Design follow-ups:
 
