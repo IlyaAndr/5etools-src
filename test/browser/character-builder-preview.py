@@ -459,8 +459,10 @@ def main():
             assert editor.get_by_label('Subclass', exact=True).count() == 0
             assert editor.get_by_label('Level 4 Feat', exact=True).count() == 0
             assert editor.get_by_label('Level 4 Ability Increases', exact=True).count() == 0
-            assert 'Only one option is legal' in group_text(page, editor, 'Starting Equipment')
-            assert 'Chain Mail' in group_text(page, editor, 'Starting Equipment')
+            # The class can be equipped from its package or its starting gold.
+            equipment_options = editor.get_by_label('Starting Equipment', exact=True).locator('option').all_inner_texts()
+            assert any('Starting gold' in label for label in equipment_options), equipment_options
+            assert any('Chain Mail' in label for label in equipment_options), equipment_options
             assert 'Defense' in group_text(page, editor, 'Fighting Style')
             assert 'Dice Set' in group_text(page, editor, 'Background Tool')
             page.get_by_label('Character name').fill('Created fighter')
@@ -530,6 +532,16 @@ def main():
             assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
             assert page.locator('tr[data-ability="str"] .cb-number').first.inner_text() == '17'
             assert page.locator('.cb-hp-max').inner_text() == '/ 12'
+            assert '+5' in page.locator('.cb-attack-panel').inner_text()
+            # Choosing the starting gold instead of the package leaves the
+            # character unarmored and unarmed but keeps the full gold amount.
+            equipment_select = editor.get_by_label('Starting Equipment', exact=True)
+            equipment_select.select_option('gold')
+            assert page.locator('.cb-character-sheet').get_attribute('data-sheet-status') == 'complete'
+            assert 'Starting gold: 205 GP' in page.locator('.cb-character-sheet').inner_text()
+            assert 'Chain Mail' not in page.locator('.cb-character-sheet').inner_text()
+            assert page.locator('.cb-attack-panel').count() == 0
+            equipment_select.select_option('fighter-sword-and-shield')
             assert '+5' in page.locator('.cb-attack-panel').inner_text()
             for ability in ['int', 'wis', 'cha']:
                 assert 'Adv.' in page.locator(f'tr[data-ability="{ability}"] .cb-save').inner_text()

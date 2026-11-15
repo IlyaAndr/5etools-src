@@ -23,7 +23,7 @@ scope.
 | Fighter (XPHB) | Champion, levels 1–5: Fighting Style, Weapon Mastery, Action Surge, Second Wind, Remarkable Athlete, and Improved Critical. |
 | Species (XPHB) | All ten, including Dragonborn ancestry resistances, Elf lineages, Goliath ancestries, Aasimar transforms, Human's Versatile feat slot, Dwarf/Halfling/Orc traits, and Tiefling legacies. |
 | Backgrounds and feats (XPHB) | All 16 backgrounds with their ability, skill, tool, gear, and gold; all 10 Origin feats with their spell, skill, and tool choices; all 42 general feats; all 12 Epic Boons at level 19. |
-| Equipment | Class starting packages and background gear inside the reviewed budget, with Weapon Mastery and Pact Weapon attacks. |
+| Equipment | Class starting packages or starting gold, and background gear inside the reviewed budget, with Weapon Mastery and Pact Weapon attacks. |
 | Known narrative-only gaps | Epic Boon riders other than their ability increase and truesight, and subclass riders that need per-turn bookkeeping the sheet does not track (for example Psychic Spells' component and damage-type options). Their source text is still printed on the reference pages. |
 
 Next in the sequence: Fighter 6–20, then the remaining classes in the order in
@@ -52,6 +52,9 @@ Open UI/UX items:
   type immediately.
 - **Per-block reset** — add "Clear scores" / "Reset species"-style actions beside the
   existing "Clear all scores".
+- **Current money tracker** — show a GP field on the sheet beside the HP values, with
+  a blank pencil box (and an optional saved `session.gold`), since the current gold
+  changes between sessions.
 
 Design follow-ups:
 
@@ -133,7 +136,8 @@ model both use. The reference presets remain convenience starting points; the
 editor also creates and edits any combination with reviewed coverage. Background
 skills are removed from the class skill list, species and feat spellcasting
 abilities are limited to a shared ability when one exists, and each class selects
-its own equipment package while the background adds its fixed gear independently.
+either its own equipment package or its starting gold while the background adds
+its fixed gear independently.
 Keep unsupported combinations incomplete until every required contribution has
 reviewed coverage. Changing an entity must preserve unrelated decisions and
 session state, and flag stale or incompatible choices for explicit correction.

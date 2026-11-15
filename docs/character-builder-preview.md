@@ -152,9 +152,9 @@ starting-gold budget. The ten XPHB Origin feats are annotated too; Magic Initiat
 feat may declare a `proficiencyChoice` so Skilled, Crafter, and Musician offer
 their skills and tools from the reviewed `rules.tools` catalog. The sheet
 calculator applies
-the same composition. Each class selects its own starting equipment package, and
+the same composition. Each class selects either its starting equipment package or its starting gold (the Fighter keeps 155 GP and the Warlock 100 GP instead of the package), and
 the selected background adds its fixed gear independently, so changing a
-background never changes the class package or its armor and weapons. Background
+background never changes the class choice. Background
 skills are removed from the class skill list, and species and feat spellcasting
 abilities are limited to a shared ability when every source allows one. Imported
 characters retain their explicit values, which remain visible beside the allowed

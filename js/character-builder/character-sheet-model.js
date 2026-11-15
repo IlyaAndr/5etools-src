@@ -590,7 +590,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		level: build.level,
 		invocations,
 		knownSpells: [...cantrips, ...prepared, ...initiateCantrips, ...(initiateSpell ? [initiateSpell] : []), ...species.spells.map(spell => spell.id), ...featSpells.map(grant => grant.id)],
-		wearingArmor: equipment.armor.worn !== false,
+		wearingArmor: equipment.armor ? equipment.armor.worn !== false : false,
 		choices: decisions,
 		hasSource: source => (originalSources[source.type] || []).filter(candidate => ["name", "source", "page", "className", "classSource", "subclassShortName", "subclassSource", "level"].every(field => source[field] === undefined || source[field] === candidate[field])).length === 1,
 		refs: {level: fighterSourceChoices ? {...levelRule, secondWind: fighterSourceChoices.secondWind(build.level), masteries: fighterSourceChoices.masteries(build.level)} : levelRule, characterLevel: build.level, modifiers: mods, healingLight: build.level + 1, darkOnesLuck: Math.max(1, mods.cha), darkOnesBlessing: Math.max(1, build.level + mods.cha), levelPlusCharisma: build.level + mods.cha},
@@ -605,7 +605,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		save: mods[id] + (saveProficiencies.has(id) ? pb : 0),
 		saveProficient: saveProficiencies.has(id),
 		savingThrowAdvantages: species.savingThrowAdvantages.filter(advantage => advantage.ability === id).map(advantage => ({...advantage})),
-		skills: skills.map(({id: skillId, name: skillName}) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb * (featExpertise.has(skillId) ? 2 : 1) : 0), proficient: skillProficiencies.has(skillId), expertise: featExpertise.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor.stealthDisadvantage === true})),
+		skills: skills.map(({id: skillId, name: skillName}) => ({id: skillId, name: skillName, modifier: mods[id] + (skillProficiencies.has(skillId) ? pb * (featExpertise.has(skillId) ? 2 : 1) : 0), proficient: skillProficiencies.has(skillId), expertise: featExpertise.has(skillId), advantage: effectsOf("skillAdvantage").some(effect => effect.skill === skillId), disadvantage: skillId === "stealth" && equipment.armor?.stealthDisadvantage === true})),
 	}));
 	for (const effect of effectsOf("savingThrowAdvantage")) {
 		const ability = model.abilities.find(candidate => candidate.id === effect.ability);
@@ -618,22 +618,31 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 	model.training = [...new Set([...classRule.training, backgroundTool, ...featTools, ...featTraining].filter(Boolean))];
 	model.gear = [...equipment.gear];
 	model.gold = Math.round((classRule.gold + background.gold - equipment.classCost) * 100) / 100;
-	model.gear.push(`Unspent starting gold: ${model.gold} GP`);
+	model.gear.push(`${equipment.id === "gold" ? "Starting gold" : "Unspent starting gold"}: ${model.gold} GP`);
 	const armor = equipment.armor;
-	const armorValue = armor.base + (armor.dexterity ? mods.dex : 0) + armor.shield + effectsOf("armorBonus").reduce((sum, effect) => sum + effect.amount, 0);
 	const overrides = effectsOf("armorOverride");
 	if (overrides.length > 1) throw new TypeError("Multiple armor overrides are not supported.");
 	const override = overrides[0];
+	const armorValue = armor
+		? armor.base + (armor.dexterity ? mods.dex : 0) + armor.shield + effectsOf("armorBonus").reduce((sum, effect) => sum + effect.amount, 0)
+		: 10 + mods.dex;
 	if (override) {
 		const abilityModifier = mods[override.ability];
 		if (abilityModifier === undefined) throw new TypeError(`Unknown armor ability: ${override.ability}.`);
 		const fallback = override.fallbackBase + abilityModifier;
-		model.armorClass = {value: override.base + abilityModifier, condition: `${override.name} active; no armor worn`, fallback, detail: `Unarmored ${fallback}; ${armor.name} ${armorValue} when worn instead.`};
-	} else {
+		model.armorClass = {
+			value: override.base + abilityModifier,
+			condition: `${override.name} active; no armor worn`,
+			fallback,
+			detail: armor ? `Unarmored ${fallback}; ${armor.name} ${armorValue} when worn instead.` : `Unarmored ${fallback}.`,
+		};
+	} else if (armor) {
 		const sources = [armor.name, ...(armor.shield ? ["Shield"] : []), ...effectsOf("armorBonus").map(effect => effect.source.name)];
 		model.armorClass = {value: armorValue, condition: sources.join(" + "), fallback: null, detail: null};
+	} else {
+		model.armorClass = {value: armorValue, condition: "Unarmored", fallback: null, detail: null};
 	}
-	if (armor.strength && scores.str < armor.strength) {
+	if (armor?.strength && scores.str < armor.strength) {
 		model.speed = Math.max(0, model.speed - 10);
 		model.defenses.push({type: "speed-penalty", amount: 10, armor: armor.name, minimumStrength: armor.strength});
 	}
