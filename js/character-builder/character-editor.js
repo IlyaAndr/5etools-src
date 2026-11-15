@@ -407,7 +407,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		const custom = customIncreaseMode.get(descriptor.id) ?? savedIsCustom;
 		const group = element("fieldset", null, "cb-editor__group cb-editor__group--wide");
 		group.append(element("legend", descriptor.label));
-		const main = select(descriptor.options, custom ? "custom" : saved, "Choose…");
+		const main = select(descriptor.options, custom ? "custom" : saved, "No selection");
 		main.setAttribute("aria-label", descriptor.label);
 		main.dataset.cbFocus = descriptor.id;
 		main.addEventListener("change", () => {
@@ -423,13 +423,15 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			customIncreaseDraft.delete(descriptor.id);
 			publish(setCharacterChoice(character, descriptor.id, main.value ? [main.value] : []));
 		});
-		group.append(main);
+		const field = element("div", null, "cb-editor__field");
+		field.append(main);
+		group.append(field);
 		if (!custom) return group;
 		const draft = increaseDraftFor(descriptor);
 		const total = Object.values(draft).reduce((sum, amount) => sum + amount, 0);
 		const customBox = element("div", null, "cb-editor__custom-increase");
 		customBox.append(element("p", "Distribute 3 points: +2 and +1 to two abilities, or +1 to three.", "cb-editor__help"));
-		const grid = element("div", null, "cb-editor__scores");
+		const grid = element("div", null, "cb-editor__scores cb-editor__custom-increase-grid");
 		for (const ability of descriptor.customAbilities) {
 			const row = element("div", null, "cb-editor__field");
 			const input = document.createElement("select");
@@ -446,7 +448,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			row.append(element("span", ability.label), input);
 			grid.append(row);
 		}
-		customBox.append(grid, element("p", `${total} of 3 points assigned.`, total === 3 ? "cb-editor__help" : "cb-editor__help cb-editor__score-status--invalid"));
+		customBox.append(grid, element("p", `${total} of 3 points assigned.`, total === 3 ? "cb-editor__increase-total" : "cb-editor__increase-total cb-editor__increase-total--invalid"));
 		group.append(customBox);
 		return group;
 	}
