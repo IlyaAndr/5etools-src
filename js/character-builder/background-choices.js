@@ -1,5 +1,5 @@
 import {validateCharacterDocument} from "./character-document.js";
-import {describeChoices, getIncreaseOptions, option, refKey, selectedIds} from "./choice-common.js";
+import {describeChoices, getIncreaseOptions, option, refKey} from "./choice-common.js";
 import {createSkillCatalog} from "./skill-catalog.js";
 import {getBackgroundSourceChoices} from "./source-choices.js";
 
@@ -22,14 +22,15 @@ export function getBackgroundChoiceDescriptors (document, {rules, sources} = {})
 	const abilityName = abilityId => abilities.find(ability => ability.id === abilityId)?.name || abilityId;
 	const descriptor = describeChoices(document);
 	const increaseId = `background:${id}:ability-increases`;
-	const result = [
-		descriptor(increaseId, "Background Ability Increases", 1, getIncreaseOptions(
-			sourceChoices.backgroundAbilityIds,
-			sourceChoices.backgroundWeights,
-			abilityName,
-			selectedIds(document, increaseId),
-		)),
-	];
+	const increase = descriptor(increaseId, "Background Ability Increases", 1, [
+		...getIncreaseOptions(sourceChoices.backgroundAbilityIds, sourceChoices.backgroundWeights, abilityName),
+		option("custom", "Custom (any abilities)"),
+	]);
+	// A custom increase may use any ability; the editor renders a six-row
+	// distribution when this option is selected.
+	increase.custom = true;
+	increase.customAbilities = abilities.map(({id, name}) => ({id, label: name}));
+	const result = [increase];
 	if (rule.toolOptions) result.push(descriptor(`background:${id}:tool`, "Background Tool", 1, Object.entries(rule.toolOptions).map(([toolId, label]) => option(toolId, label))));
 	return result;
 }

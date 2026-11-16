@@ -130,6 +130,9 @@ method keeps its own entries, so switching between methods restores what was
 already entered there instead of clearing it, and the totals update beside the
 controls. Background ability increases are edited inside the same block, and the
 combined scores (base, background, and the level 4 increase) are shown beside them.
+The increase selector keeps the background's reviewed options and adds a Custom
+(any abilities) entry, which distributes the three points as +2/+1 or +1/+1/+1
+across any abilities.
 A choice with exactly one legal option, such as a shared
 spellcasting ability, is displayed as a fixed value with the reason instead of a
 selector; imported values that differ remain selectable so they are never

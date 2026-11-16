@@ -364,7 +364,9 @@ describe("Warlock editor choices", () => {
 		expect(choice(draft, ":ability").selected).toEqual(["wis"]);
 		expect(choice(draft, ":spellcasting-ability").options.map(value => value.id)).toEqual(expect.arrayContaining(["cha", "int"]));
 		expect(choice(draft, ":ability").options.map(value => value.id)).toEqual(expect.arrayContaining(["cha", "wis"]));
-		expect(choice(draft, ":ability-increases").options).toContainEqual({id: "wis-1.cha-2", label: "Charisma +2, Wisdom +1"});
+		expect(choice(draft, ":ability-increases").selected).toEqual(["wis-1.cha-2"]);
+		expect(choice(draft, ":ability-increases").options).toContainEqual({id: "custom", label: "Custom (any abilities)"});
+		expect(createCharacterSheetModel(draft, catalog, context).issues.some(issue => issue.id === "background:acolyte|xphb:ability-increases")).toBe(false);
 	});
 
 	it("rejects malformed source records instead of silently falling back", () => {

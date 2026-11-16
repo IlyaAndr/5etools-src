@@ -235,6 +235,29 @@
 	margin-top: 10px;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr));
 }
+.cb-editor__custom-increase {
+	margin-top: 10px;
+	padding: 10px 12px;
+	border: 1px dashed var(--cb-line);
+	border-radius: 6px;
+	background: var(--cb-wash);
+}
+.cb-editor__custom-increase .cb-editor__help {
+	margin: 0 0 8px !important;
+}
+.cb-editor__custom-increase-grid {
+	margin-top: 0;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
+}
+.cb-editor__increase-total {
+	margin: 8px 0 0 !important;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--cb-teal);
+}
+.cb-editor__increase-total--invalid {
+	color: var(--cb-accent);
+}
 .cb-editor__field input[aria-invalid="true"] {
 	border-color: var(--cb-accent);
 }

@@ -55,6 +55,8 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	let sectionObserver = null;
 	const optionFilters = new Map();
 	const optionPreviews = new Map();
+	const customIncreaseMode = new Map();
+	const customIncreaseDraft = new Map();
 
 	function element (tag, text, className) {
 		const out = document.createElement(tag);
@@ -385,8 +387,75 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return [input];
 	}
 
+	/** The six-row draft for a custom background increase. */
+	function increaseDraftFor (descriptor) {
+		const saved = descriptor.selected[0] || "";
+		const parsed = saved && !descriptor.options.some(option => option.id === saved) ? parseIncreaseOption(saved) : null;
+		const draft = customIncreaseDraft.get(descriptor.id) ?? Object.fromEntries((parsed || []).map(value => [value.ability, value.amount]));
+		return Object.fromEntries(descriptor.customAbilities.map(({id}) => [id, draft[id] || 0]));
+	}
+
+	/** Store a distribution as `ability-amount.ability-amount`. */
+	function increaseDraftValue (descriptor, draft) {
+		return descriptor.customAbilities.filter(({id}) => draft[id] > 0).map(({id}) => `${id}-${draft[id]}`).join(".");
+	}
+
+	/** A background increase that may use any ability, chosen from six rows. */
+	function renderCustomIncrease (descriptor) {
+		const saved = descriptor.selected[0] || "";
+		const savedIsCustom = !!saved && !descriptor.options.some(option => option.id === saved);
+		const custom = customIncreaseMode.get(descriptor.id) ?? savedIsCustom;
+		const group = element("fieldset", null, "cb-editor__group cb-editor__group--wide");
+		group.append(element("legend", descriptor.label));
+		const main = select(descriptor.options, custom ? "custom" : saved, "No selection");
+		main.setAttribute("aria-label", descriptor.label);
+		main.dataset.cbFocus = descriptor.id;
+		main.addEventListener("change", () => {
+			if (main.value === "custom") {
+				customIncreaseMode.set(descriptor.id, true);
+				const draft = increaseDraftFor(descriptor);
+				customIncreaseDraft.set(descriptor.id, draft);
+				const total = Object.values(draft).reduce((sum, amount) => sum + amount, 0);
+				publish(setCharacterChoice(character, descriptor.id, total === 3 ? [increaseDraftValue(descriptor, draft)] : []));
+				return;
+			}
+			customIncreaseMode.set(descriptor.id, false);
+			customIncreaseDraft.delete(descriptor.id);
+			publish(setCharacterChoice(character, descriptor.id, main.value ? [main.value] : []));
+		});
+		const field = element("div", null, "cb-editor__field");
+		field.append(main);
+		group.append(field);
+		if (!custom) return group;
+		const draft = increaseDraftFor(descriptor);
+		const total = Object.values(draft).reduce((sum, amount) => sum + amount, 0);
+		const customBox = element("div", null, "cb-editor__custom-increase");
+		customBox.append(element("p", "Distribute 3 points: +2 and +1 to two abilities, or +1 to three.", "cb-editor__help"));
+		const grid = element("div", null, "cb-editor__scores cb-editor__custom-increase-grid");
+		for (const ability of descriptor.customAbilities) {
+			const row = element("div", null, "cb-editor__field");
+			const input = document.createElement("select");
+			for (const amount of [0, 1, 2]) input.add(new Option(amount ? `+${amount}` : "—", `${amount}`));
+			input.value = `${draft[ability.id] || 0}`;
+			input.setAttribute("aria-label", `${ability.label} increase`);
+			input.dataset.cbFocus = `${descriptor.id}|custom:${ability.id}`;
+			input.addEventListener("change", () => {
+				const next = {...increaseDraftFor(descriptor), [ability.id]: Number(input.value)};
+				customIncreaseDraft.set(descriptor.id, next);
+				const nextTotal = Object.values(next).reduce((sum, amount) => sum + amount, 0);
+				publish(setCharacterChoice(character, descriptor.id, nextTotal === 3 ? [increaseDraftValue(descriptor, next)] : []));
+			});
+			row.append(element("span", ability.label), input);
+			grid.append(row);
+		}
+		customBox.append(grid, element("p", `${total} of 3 points assigned.`, total === 3 ? "cb-editor__increase-total" : "cb-editor__increase-total cb-editor__increase-total--invalid"));
+		group.append(customBox);
+		return group;
+	}
+
 	/** Render one saved choice as a selector, a checkbox group, or a fixed value. */
 	function renderChoiceGroup (descriptor) {
+		if (descriptor.custom) return renderCustomIncrease(descriptor);
 		const hasSavedChoice = character.build.choices.some(choice => choice.id === descriptor.id);
 		if (!descriptor.available && !descriptor.selected.length && !hasSavedChoice) return null;
 		const group = element("fieldset", null, "cb-editor__group");

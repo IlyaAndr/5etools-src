@@ -259,16 +259,16 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		consumed.add(id);
 		const selected = decisions.get(id) || [];
 		const descriptor = sharedChoices.get(id);
-		if (descriptor && (selected.length !== descriptor.count || selected.some(value => !descriptor.options.some(option => option.id === value)))) {
+		const customValue = descriptor?.custom && selected.length === 1 && !descriptor.options.some(option => option.id === selected[0]);
+		if (descriptor && !customValue && (selected.length !== descriptor.count || selected.some(value => !descriptor.options.some(option => option.id === value)))) {
 			issue(id, "Choose a supported ability increase.");
 			return;
 		}
 		const values = selected.length === 1 ? parseIncreaseOption(selected[0]) : null;
 		const total = (values || []).reduce((sum, value) => sum + value.amount, 0);
 		if (!values || values.some(value => !allowed.includes(value.ability)) || total !== (isBackground ? 3 : 2)
-			|| (isBackground && values.length !== 2 && values.length !== 3)
-			|| (isBackground && backgroundSourceChoices && !backgroundSourceChoices.backgroundWeights.some(weighted => values.every(value => weighted.from.includes(value.ability)) && values.map(value => value.amount).sort().join() === [...weighted.weights].sort().join()))) {
-			issue(id, isBackground ? "Select +2/+1 to two background abilities, or +1 to all three." : "Select a +2 ability increase or +1 to two abilities.");
+			|| (isBackground && values.length !== 2 && values.length !== 3)) {
+			issue(id, isBackground ? "Select +2/+1 to two abilities, or +1 to all three." : "Select a +2 ability increase or +1 to two abilities.");
 			return;
 		}
 		for (const value of values) {
@@ -284,7 +284,7 @@ export function createCharacterSheetModel (document, catalog, {rules, spells, so
 		const costs = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9};
 		if (Object.values(scores).some(score => costs[score] === undefined) || Object.values(scores).reduce((sum, score) => sum + (costs[score] ?? 100), 0) !== 27) issue("ability-scores", "Point buy requires scores from 8 to 15 costing 27 points.");
 	}
-	increases(`${backgroundOwner}:ability-increases`, backgroundSourceChoices?.backgroundAbilityIds || background.abilities, scores, true);
+	increases(`${backgroundOwner}:ability-increases`, ABILITY_IDS, scores, true);
 	const backgroundSkills = backgroundSourceChoices?.backgroundSkills || background.skills;
 	const classSkills = select(`${classOwner}:skills`, classSourceChoices?.classSkills || classRule.skillOptions, classSourceChoices?.classSkillCount || 2, "Class skills");
 	if (classSkills.some(skill => backgroundSkills.includes(skill))) issue(`${classOwner}:skills`, "Choose class skills distinct from the background proficiencies; replacement choices are outside this subset.");

@@ -302,8 +302,10 @@ characterName.addEventListener("input", () => {
 });
 characterName.addEventListener("change", () => {
 	if (characterName.value.trim()) return;
-	characterName.setCustomValidity("Enter a character name.");
-	characterName.reportValidity();
+	// Restore the last name instead of a validation bubble that would steal
+	// focus from whatever control the player clicked next.
+	characterName.setCustomValidity("");
+	characterName.value = currentCharacter?.name || "";
 });
 
 importInput.addEventListener("change", async () => {
