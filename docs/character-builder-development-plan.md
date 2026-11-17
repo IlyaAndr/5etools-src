@@ -52,6 +52,9 @@ Open UI/UX items:
   selected) after the third source pick, so the player can type it immediately.
 - **Per-block reset (done, PR #63)** — each choice block has a "Clear choices" action
   that resets only its own choices; the ability-scores block keeps its method reset.
+- **Source-picker block (done, PR #66)** — the species, class, and background
+  pickers are the first collapsible block with a chosen counter, instead of
+  sitting above the block list.
 - **Current money tracker (done, PR #59)** — the sheet shows a Gold (GP) field beside
   the HP values: the saved `session.gold`, or a blank pencil box for the current
   amount.
@@ -63,9 +66,10 @@ Design follow-ups:
   ability scores, level, name, session state, and the other sources' choices
   survive; the confirmation is gone.
 - **Source pickers as ordinary creation steps (done, PR #56).** The species, class,
-  and background pickers now live inside the editor card above the choice blocks,
-  with an empty-editor shell before a draft exists, so creation is one continuous
-  flow. Further integration into the collapsible block list remains optional.
+  and background pickers now live inside the editor card, with an empty-editor
+  shell before a draft exists, so creation is one continuous flow. PR #66 made them
+  the first collapsible block, "Species, class, and background", with a chosen
+  counter.
 - **Visible form before the sources are chosen (done, PR #57).** The ability-scores
   block renders from the start and its entries carry into the character, and each
   source's description panel is present from the start instead of appearing only

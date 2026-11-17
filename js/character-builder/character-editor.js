@@ -36,8 +36,9 @@ const sectionFor = id => {
 };
 
 /** A small editor for the subset currently supported by the sheet calculator. */
-export function createCharacterEditor ({container, catalog, context, onChange, profiles}) {
+export function createCharacterEditor ({container, catalog, context, onChange, profiles, start}) {
 	const abilities = getEditorAbilities(context.sources);
+	const startNode = start || null;
 	const maxLevelFor = document => {
 		const ref = document?.build?.class;
 		if (!ref || typeof ref.name !== "string" || typeof ref.source !== "string") return 0;
@@ -57,6 +58,8 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	const optionPreviews = new Map();
 	const customIncreaseMode = new Map();
 	const customIncreaseDraft = new Map();
+	let sourcesSection = null;
+	let sourcesCount = null;
 
 	function element (tag, text, className) {
 		const out = document.createElement(tag);
@@ -599,6 +602,88 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		return group;
 	}
 
+	/** Update the source block counter from the chosen pickers. */
+	function updateSourcesCount () {
+		if (!sourcesSection) return;
+		const chosen = character ? 3 : startNode.querySelectorAll("input[type=radio]:checked").length;
+		const missing = Math.max(0, 3 - chosen);
+		sourcesCount.textContent = missing ? `${missing} of 3 left` : "✓ All 3 chosen";
+		sourcesSection.classList.toggle("cb-editor__section--complete", missing === 0);
+	}
+
+	/**
+	 * The species, class, and background pickers are one persistent block, so
+	 * their lists keep their listeners and focus while the form redraws.
+	 */
+	function sourcesSectionNode () {
+		if (!startNode) return null;
+		if (!sourcesSection) {
+			sourcesSection = document.createElement("details");
+			sourcesSection.className = "cb-editor__section";
+			sourcesSection.dataset.section = "sources";
+			sourcesSection.id = "cb-editor-section-sources";
+			sourcesSection.addEventListener("toggle", () => sectionOpen.set("sources", sourcesSection.open));
+			const summary = element("summary", null, "cb-editor__section-title");
+			sourcesCount = element("span", "", "cb-editor__section-count");
+			summary.append(element("span", "Species, class, and background"), sourcesCount);
+			const groups = element("div", null, "cb-editor__section-groups cb-editor__section-groups--pickers");
+			groups.append(startNode);
+			sourcesSection.append(summary, groups);
+		}
+		updateSourcesCount();
+		sourcesSection.open = sectionOpen.get("sources") ?? true;
+		return sourcesSection;
+	}
+
+	/** Jump buttons and scroll tracking for the visible section blocks. */
+	function renderNav (choices, sections) {
+		const nav = element("nav", null, "cb-editor__nav");
+		nav.setAttribute("aria-label", "Editor sections");
+		const markCurrent = key => {
+			for (const button of nav.querySelectorAll("button")) {
+				if (button.dataset.target === key) button.setAttribute("aria-current", "true");
+				else button.removeAttribute("aria-current");
+			}
+		};
+		// Arrow keys move focus between the section buttons; Enter or Space then
+		// jumps to the focused section.
+		nav.addEventListener("keydown", event => {
+			const buttons = [...nav.querySelectorAll("button")];
+			const index = buttons.indexOf(document.activeElement);
+			if (index === -1) return;
+			let next = null;
+			if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % buttons.length;
+			else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + buttons.length) % buttons.length;
+			else if (event.key === "Home") next = 0;
+			else if (event.key === "End") next = buttons.length - 1;
+			if (next === null) return;
+			event.preventDefault();
+			buttons[next].focus();
+		});
+		for (const section of sections) {
+			const block = choices.querySelector(`.cb-editor__section[data-section="${section.key}"]`);
+			if (!block) continue;
+			const jump = element("button", section.title, "cb-editor__nav-button");
+			jump.type = "button";
+			jump.dataset.target = section.key;
+			jump.addEventListener("click", () => {
+				block.scrollIntoView({behavior: "smooth", block: "start"});
+				markCurrent(section.key);
+			});
+			nav.append(jump);
+		}
+		nav.hidden = nav.childElementCount < 2;
+		sectionObserver?.disconnect();
+		if (typeof IntersectionObserver === "function") {
+			sectionObserver = new IntersectionObserver(entries => {
+				const shown = entries.filter(entry => entry.isIntersecting);
+				if (shown.length) markCurrent(shown[0].target.dataset.section);
+			}, {rootMargin: "-90px 0px -55% 0px"});
+			for (const block of choices.querySelectorAll(".cb-editor__section")) sectionObserver.observe(block);
+		}
+		return nav;
+	}
+
 	function render () {
 		const profile = profileFor(character);
 		if (!profile) throw new TypeError("Character is outside the supported editor profiles.");
@@ -615,8 +700,8 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		level.addEventListener("change", () => updateBuild({level: Number(level.value)}));
 		basic.append(field("Level", level));
 		const descriptors = profile.getChoiceDescriptors(character, catalog, context);
-		// One block per owner, in reading order: scores first, then the origin
-		// feat they unlock, then the three sources, and equipment last.
+		// The picker block comes first, then one block per owner in reading order:
+		// scores, the origin feat they unlock, the three sources, and equipment last.
 		const sections = [
 			{key: "scores", title: "Ability scores"},
 			{key: "feat", title: "Feats and boons"},
@@ -661,29 +746,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			sectionByKey.get("other").groups.push(group);
 		}
 		const choices = element("div", null, "cb-editor__choices");
-		const nav = element("nav", null, "cb-editor__nav");
-		nav.setAttribute("aria-label", "Editor sections");
-		const markCurrent = key => {
-			for (const button of nav.querySelectorAll("button")) {
-				if (button.dataset.target === key) button.setAttribute("aria-current", "true");
-				else button.removeAttribute("aria-current");
-			}
-		};
-		// Arrow keys move focus between the section buttons; Enter or Space then
-		// jumps to the focused section.
-		nav.addEventListener("keydown", event => {
-			const buttons = [...nav.querySelectorAll("button")];
-			const index = buttons.indexOf(document.activeElement);
-			if (index === -1) return;
-			let next = null;
-			if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % buttons.length;
-			else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + buttons.length) % buttons.length;
-			else if (event.key === "Home") next = 0;
-			else if (event.key === "End") next = buttons.length - 1;
-			if (next === null) return;
-			event.preventDefault();
-			buttons[next].focus();
-		});
+		if (startNode) choices.append(sourcesSectionNode());
 		for (const section of sections) {
 			if (!section.groups.length) continue;
 			const missing = Math.max(0, section.total - section.chosen);
@@ -712,24 +775,11 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 			}
 			block.append(groups);
 			choices.append(block);
-			const jump = element("button", section.title, "cb-editor__nav-button");
-			jump.type = "button";
-			jump.dataset.target = section.key;
-			jump.addEventListener("click", () => {
-				block.scrollIntoView({behavior: "smooth", block: "start"});
-				markCurrent(section.key);
-			});
-			nav.append(jump);
 		}
-		nav.hidden = nav.childElementCount < 2;
-		sectionObserver?.disconnect();
-		if (typeof IntersectionObserver === "function") {
-			sectionObserver = new IntersectionObserver(entries => {
-				const shown = entries.filter(entry => entry.isIntersecting);
-				if (shown.length) markCurrent(shown[0].target.dataset.section);
-			}, {rootMargin: "-90px 0px -55% 0px"});
-			for (const block of choices.querySelectorAll(".cb-editor__section")) sectionObserver.observe(block);
-		}
+		const nav = renderNav(choices, [
+			...(startNode ? [{key: "sources", title: "Species, class, and background"}] : []),
+			...sections,
+		]);
 		container.replaceChildren(heading, intro, basic, nav, choices);
 		container.hidden = false;
 	}
@@ -753,8 +803,15 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 		groups.append(renderScores([]));
 		block.append(summary, groups);
 		const choices = element("div", null, "cb-editor__choices");
+		const navSections = [];
+		if (startNode) {
+			choices.append(sourcesSectionNode());
+			navSections.push({key: "sources", title: "Species, class, and background"});
+		}
 		choices.append(block);
-		container.replaceChildren(heading, choices);
+		navSections.push({key: "scores", title: "Ability scores"});
+		const nav = renderNav(choices, navSections);
+		container.replaceChildren(heading, nav, choices);
 		container.hidden = false;
 	}
 
@@ -786,6 +843,7 @@ export function createCharacterEditor ({container, catalog, context, onChange, p
 	return {
 		canEdit: document => !!profileFor(document),
 		showEmptyForm: renderEmpty,
+		refreshSources: updateSourcesCount,
 		create (profileId, selection) {
 			const profile = profiles.find(candidate => candidate.id === profileId);
 			if (!profile) throw new TypeError(`Unknown editor profile: ${profileId}.`);

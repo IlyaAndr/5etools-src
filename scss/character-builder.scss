@@ -158,6 +158,12 @@
 .cb-editor__section-groups > .cb-editor__group {
 	margin: 0;
 }
+.cb-editor__section-groups--pickers {
+	grid-template-columns: 1fr;
+}
+.cb-editor__section-groups--pickers .cb-start {
+	margin: 0;
+}
 .cb-editor__nav {
 	position: sticky;
 	top: 0;

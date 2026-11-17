@@ -172,23 +172,30 @@ def main():
             assert page.locator('.cb-start').is_visible()
             empty_form = page.locator('#editor-blocks')
             assert empty_form.is_visible()
+            # The species, class, and background pickers are the first block.
+            sources = empty_form.locator('.cb-editor__section[data-section="sources"]')
+            assert sources.count() == 1
+            assert sources.locator('.cb-editor__section-count').text_content() == '3 of 3 left'
             assert empty_form.locator('.cb-editor__section[data-section="scores"]').count() == 1
-            assert empty_form.locator('.cb-editor__section-count').first.text_content() == '6 of 6 left'
+            assert empty_form.locator('.cb-editor__section[data-section="scores"] .cb-editor__section-count').text_content() == '6 of 6 left'
             assert page.locator('#new-character').is_disabled()
             assert page.locator('#character-name').is_disabled()
             # Scores entered before the picks are kept for the new character.
             for ability, value in {'Strength': 15, 'Dexterity': 14, 'Constitution': 13, 'Intelligence': 12, 'Wisdom': 10, 'Charisma': 8}.items():
                 empty_form.get_by_label(ability, exact=True).select_option(str(value))
-            assert empty_form.locator('.cb-editor__section-count').first.text_content() == '✓ All 6 chosen'
+            assert empty_form.locator('.cb-editor__section[data-section="scores"] .cb-editor__section-count').text_content() == '✓ All 6 chosen'
             assert empty_form.locator('.cb-editor__section--complete').count() == 1
-            # One or two picks keep the empty form; the third adds the source
-            # choice blocks and creates the character.
+            # One or two picks keep the empty form; the counter tracks them, and
+            # the third adds the source choice blocks and creates the character.
             pick(page, 'species', 'Gnome|XPHB')
+            assert sources.locator('.cb-editor__section-count').text_content() == '2 of 3 left'
             assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 0
             assert page.locator('#new-character').is_disabled()
             pick(page, 'class', 'Fighter|XPHB')
+            assert sources.locator('.cb-editor__section-count').text_content() == '1 of 3 left'
             assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 0
             pick(page, 'background', 'Soldier|XPHB')
+            assert sources.locator('.cb-editor__section-count').text_content() == '✓ All 3 chosen'
             assert empty_form.locator('.cb-editor__section[data-section="class"]').count() == 1
             assert empty_form.get_by_label('Strength', exact=True).input_value() == '15'
             # The default name is focused so the player can type it immediately.
@@ -403,8 +410,8 @@ def main():
                 count: element.querySelector('.cb-editor__section-count').textContent,
                 open: element.open,
             }))''')
-            assert [block['key'] for block in blocks] == ['scores', 'species', 'class', 'background', 'equipment'], blocks
-            assert [block['title'] for block in blocks] == ['Ability scores', 'Species', 'Class', 'Background', 'Equipment'], blocks
+            assert [block['key'] for block in blocks] == ['sources', 'scores', 'species', 'class', 'background', 'equipment'], blocks
+            assert [block['title'] for block in blocks] == ['Species, class, and background', 'Ability scores', 'Species', 'Class', 'Background', 'Equipment'], blocks
             assert all(block['open'] for block in blocks), blocks
             assert {block['key']: block['count'] for block in blocks}['scores'] == '6 of 6 left', blocks
             assert all(block['count'] for block in blocks), blocks
@@ -716,7 +723,7 @@ def main():
             editor = page.locator('#editor-blocks')
             assert 'Warlock editor' in editor.inner_text()
             # The origin-feat block sits between Ability scores and Species.
-            assert editor.locator('.cb-editor__section').evaluate_all("elements => elements.map(element => element.dataset.section)") == ['scores', 'feat', 'species', 'class', 'equipment']
+            assert editor.locator('.cb-editor__section').evaluate_all("elements => elements.map(element => element.dataset.section)") == ['sources', 'scores', 'feat', 'species', 'class', 'equipment']
             # The class fixes Charisma, so every selected source allows exactly
             # one spellcasting ability; it is shown as a fixed value instead of a
             # selector.
