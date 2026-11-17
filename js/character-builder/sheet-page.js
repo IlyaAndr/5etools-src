@@ -76,11 +76,13 @@ function renderList (kind, entries) {
 		input.name = kind;
 		input.value = `${entry.name}|${entry.source}`;
 		input.dataset.value = input.value;
+		input.dataset.cbFocus = `source:${kind}:${input.value}`;
 		input.setAttribute("aria-label", entry.name);
 		input.addEventListener("change", () => {
 			selection[kind] = input.value;
 			reflectSelection();
 			showSelectionInfo();
+			editor?.refreshSources?.();
 			createFromSelection();
 		});
 		const name = document.createElement("span");
@@ -123,6 +125,7 @@ function selectFrom (character) {
 	selection.background = `${build.background.name}|${build.background.source}`;
 	reflectSelection();
 	showSelectionInfo();
+	editor?.refreshSources?.();
 }
 
 /**
@@ -255,6 +258,7 @@ async function loadData () {
 		reflectSelection();
 		editor = createCharacterEditor({
 			container: editorContainer,
+			start: document.querySelector(".cb-start"),
 			catalog,
 			context: sheetContext,
 			profiles: createEditorProfiles({catalog, ...sheetContext}),
